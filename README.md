@@ -20,3 +20,7 @@
 git clone https://github.com/YOUR-USERNAME/YouthMind.git
 cd YouthMind
 # Follow setup instructions per subfolder (e.g., frontend/, backend/, ai/)
+
+## 👥 Contributors
+
+- [@Kevin0304-Li](https://github.com/Kevin0304-Li) – CTO, Backend/AI Lead 
