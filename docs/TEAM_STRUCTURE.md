@@ -200,7 +200,7 @@ Our team structure emphasizes **cross-functional collaboration**, **domain exper
 
 ---
 
-#### **Kevin** - *AI Lead & Service Architecture Lead*
+#### **Kevin** - *AI Service Architecture Lead and Architect *
 **Primary Responsibilities:**
 - FastAPI service architecture and deployment
 - AI API endpoints for questions and summaries
