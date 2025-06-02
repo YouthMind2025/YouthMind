@@ -32,7 +32,7 @@ Our team structure emphasizes **cross-functional collaboration**, **domain exper
 
 ### **iOS Development Squad**
 
-#### **Dawei** - *Lead iOS Developer*
+#### **Dawei** - *iOS Developer*
 **Primary Responsibilities:**
 - SwiftUI architecture design and implementation
 - iOS app performance optimization
@@ -72,7 +72,7 @@ Our team structure emphasizes **cross-functional collaboration**, **domain exper
 
 ---
 
-#### **Alex** - *Identity & Integration Developer*
+#### **Youssef** - *Identity & Integration Developer*
 **Primary Responsibilities:**
 - UUID-based anonymous identity system
 - Frontend-backend API integration
@@ -94,7 +94,7 @@ Our team structure emphasizes **cross-functional collaboration**, **domain exper
 
 ### **Backend Engineering Team**
 
-#### **Mustafo** - *API Architecture Lead*
+#### **Mustafo** - *API Architecture Developer*
 **Primary Responsibilities:**
 - REST API design and implementation
 - Post creation and feed retrieval endpoints
@@ -109,7 +109,7 @@ Our team structure emphasizes **cross-functional collaboration**, **domain exper
 
 **Tools & Technologies:**
 - Spring Boot 3.x, Maven
-- IntelliJ IDEA for development
+- IntelliJ IDEA or VSCode for development
 - Docker for containerization
 
 ---
@@ -152,7 +152,7 @@ Our team structure emphasizes **cross-functional collaboration**, **domain exper
 - PostgreSQL 14+, JPA/Hibernate
 - dbdiagram.io for schema design
 - Grafana for monitoring
-- Docker Compose for local development
+- IntelliJ IDEA or VSCode for development
 
 ---
 
@@ -200,30 +200,33 @@ Our team structure emphasizes **cross-functional collaboration**, **domain exper
 
 ---
 
-#### **Kevin** - *AI Service Architecture Lead*
+#### **Kevin** - *AI Lead & Service Architecture Lead*
 **Primary Responsibilities:**
 - FastAPI service architecture and deployment
 - AI API endpoints for questions and summaries
 - Backend-AI service communication protocols
 - Elastic logging for AI operations
 - API and AI service uptime monitoring
+- Overall AI strategy and technical leadership
+- Service integration architecture across all platforms
 
 **Secondary Contributions:**
 - AI model deployment and scaling
 - Performance optimization for AI services
 - Integration testing and validation
+- Cross-service communication protocols
 
 **Tools & Technologies:**
 - FastAPI, Uvicorn ASGI server
 - Docker for AI service deployment
-- VSCode for development
+- VSCode or IntelliJ IDEA for development
 - Grafana for monitoring dashboards
 
 ---
 
 ### **Cross-Platform Integration**
 
-#### **Youssef** - *Full-Stack Integration Specialist*
+#### **Alex** - *Full-Stack Integration Specialist*
 **Primary Responsibilities:**
 - Administrative endpoints and content management systems
 - reCAPTCHA integration for bot protection
@@ -250,7 +253,7 @@ Our team structure emphasizes **cross-functional collaboration**, **domain exper
 - **Morning Standups**: 15-minute team sync at 9:00 AM
 - **Code Reviews**: All pull requests require 2+ approvals
 - **Pair Programming**: Complex features developed collaboratively
-- **Architecture Discussions**: Weekly technical design sessions
+- **Architecture Discussions**: Weekly technical design sessions led by Kevin
 
 ### **Communication Channels**
 - **Slack**: Real-time communication and quick questions
@@ -274,12 +277,12 @@ Our team structure emphasizes **cross-functional collaboration**, **domain exper
 - **Performance Optimization**: Coordinated efforts to minimize API latency
 
 ### **Backend ↔ AI Services**
-- **Service Communication Protocols**: RESTful API integration patterns
+- **Service Communication Protocols**: RESTful API integration patterns led by Kevin
 - **Data Format Standardization**: Consistent JSON schemas and validation
 - **Fallback Mechanism Design**: Robust error handling and service recovery
 
 ### **Full-Team Coordination**
-- **Weekly Architecture Reviews**: Cross-functional technical discussions
+- **Weekly Architecture Reviews**: Cross-functional technical discussions led by Kevin
 - **Sprint Planning**: Coordinated feature development across all teams
 - **Integration Testing**: End-to-end system validation and debugging
 
@@ -294,7 +297,7 @@ Our team structure emphasizes **cross-functional collaboration**, **domain exper
 - **Internal Tech Talks**: Team members present on specialized topics
 
 ### **Career Progression**
-- **Technical Leadership**: Senior developers mentor junior team members
+- **Technical Leadership**: Kevin provides technical guidance and mentorship
 - **Specialty Expertise**: Deep knowledge development in specific domains
 - **Project Management**: Opportunities to lead feature development
 - **Architecture Design**: Participation in system-level decision making

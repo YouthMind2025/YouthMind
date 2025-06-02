@@ -24,28 +24,28 @@ Our cross-functional team of 10 specialists brings together mobile development, 
 ### Development Teams
 
 #### **iOS Development Squad** *(3 members)*
-- **Dawei** - Lead iOS Developer, SwiftUI Architecture
+- **Dawei** - iOS Developer, SwiftUI Architecture
 - **Dexter** - UI/UX Implementation, Feed Systems
-- **Alex** - Identity Management, API Integration
+- **Youssef** - Identity Management, API Integration
 
 *Primary Tools*: Xcode, SwiftUI, Combine Framework, URLSession, CoreData
 
 #### **Backend Engineering Team** *(4 members)*
-- **Mustafo** - API Architecture, Service Integration
+- **Mustafo** - API Architecture Developer, Service Integration
 - **Junayd** - Project Manager & Backend Developer, System Design
 - **Ahmed** - Database Design, Performance Optimization
 - **Harley** - Caching Systems, Redis Implementation
 
-*Primary Tools*: IntelliJ IDEA, Spring Boot, PostgreSQL, Redis, Docker
+*Primary Tools*: IntelliJ IDEA or VSCode, Spring Boot, PostgreSQL, Redis, Docker
 
 #### **AI & Machine Learning Division** *(2 members)*
 - **Andy** - Emotional Intelligence Models, NLP Pipeline
-- **Kevin** - AI Service Architecture, Model Deployment
+- **Kevin** - AI Lead & Service Architecture Lead, Model Deployment & System Integration
 
-*Primary Tools*: VSCode, FastAPI, HuggingFace Transformers, Docker, Python
+*Primary Tools*: VSCode or IntelliJ IDEA, FastAPI, HuggingFace Transformers, Docker, Python
 
 #### **Cross-Platform Integration** *(1 member)*
-- **Youssef** - Full-stack Development, Admin Systems, Testing
+- **Alex** - Full-stack Development, Admin Systems, Testing
 
 *Primary Tools*: Java, Python, React, Postman, Administrative Tools
 
@@ -61,14 +61,14 @@ Our cross-functional team of 10 specialists brings together mobile development, 
 | **Task** | **Assignee** | **Deliverable** | **Duration** |
 |----------|--------------|-----------------|--------------|
 | Feature scope finalization & technical requirements | Junayd | Complete feature specification document | 2 days |
-| API blueprint design & documentation | Mustafo, Youssef, Junayd | Swagger/OpenAPI specification | 3 days |
+| API blueprint design & documentation | Mustafo, Alex, Junayd | Swagger/OpenAPI specification | 3 days |
 | Database schema design & optimization | Ahmed | ER diagram, migration scripts | 3 days |
 
 #### Platform Setup Tasks
 | **Task** | **Assignee** | **Deliverable** | **Duration** |
 |----------|--------------|-----------------|--------------|
 | iOS project initialization & folder structure | Dawei, Dexter | Xcode project with organized modules | 2 days |
-| UUID identity system implementation | Alex | Anonymous user management system | 3 days |
+| UUID identity system implementation | Youssef | Anonymous user management system | 3 days |
 | Backend project scaffolding | Mustafo, Harley, Junayd | Spring Boot application structure | 2 days |
 | AI microservice skeleton | Andy, Kevin | FastAPI service template | 3 days |
 
@@ -77,7 +77,7 @@ Our cross-functional team of 10 specialists brings together mobile development, 
 |----------|--------------|-----------------|--------------|
 | Local development environment setup | Mustafo, Ahmed | Docker Compose configuration | 2 days |
 | Redis caching layer configuration | Mustafo, Ahmed | Redis instance with basic configuration | 1 day |
-| REST API route definitions | Mustafo, Youssef, Junayd | Complete API endpoint mapping | 2 days |
+| REST API route definitions | Mustafo, Alex, Junayd | Complete API endpoint mapping | 2 days |
 
 ---
 
@@ -90,7 +90,7 @@ Our cross-functional team of 10 specialists brings together mobile development, 
 |----------|--------------|-----------------|--------------|
 | Post creation interface with validation | Dawei | SwiftUI post composer with input validation | 4 days |
 | Feed view with lazy loading implementation | Dexter | Infinite scroll feed with performance optimization | 4 days |
-| Frontend-backend API integration | Alex | URLSession networking layer | 3 days |
+| Frontend-backend API integration | Youssef | URLSession networking layer | 3 days |
 
 #### Backend Development Stream
 | **Task** | **Assignee** | **Deliverable** | **Duration** |
@@ -133,7 +133,7 @@ Our cross-functional team of 10 specialists brings together mobile development, 
 #### Quality Assurance
 | **Task** | **Assignee** | **Deliverable** | **Duration** |
 |----------|--------------|-----------------|--------------|
-| AI endpoint testing with production data | Youssef | Comprehensive API test suite | 2 days |
+| AI endpoint testing with production data | Alex | Comprehensive API test suite | 2 days |
 
 ---
 
@@ -146,13 +146,13 @@ Our cross-functional team of 10 specialists brings together mobile development, 
 |----------|--------------|-----------------|--------------|
 | AI Secretary chat interface | Dawei | Interactive chat system with SwiftUI | 5 days |
 | Emotion Museum timeline visualization | Dexter | Historical emotion tracking interface | 4 days |
-| Local draft storage system | Alex | CoreData implementation for drafts | 3 days |
+| Local draft storage system | Youssef | CoreData implementation for drafts | 3 days |
 
 #### Backend Intelligence Enhancement
 | **Task** | **Assignee** | **Deliverable** | **Duration** |
 |----------|--------------|-----------------|--------------|
 | Advanced AI routing and fallback logic | Ahmed, Junayd | Robust AI service integration | 4 days |
-| Administrative endpoints for content management | Youssef | Admin API for post and user management | 4 days |
+| Administrative endpoints for content management | Alex | Admin API for post and user management | 4 days |
 
 #### AI Algorithm Refinement
 | **Task** | **Assignee** | **Deliverable** | **Duration** |
@@ -171,12 +171,12 @@ Our cross-functional team of 10 specialists brings together mobile development, 
 |----------|--------------|-----------------|--------------|
 | HTTPS configuration with SSL certificates | Backend Team | Let's Encrypt + Nginx setup | 2 days |
 | Spring Security with JWT authentication | Harley | Secure authentication system | 3 days |
-| reCAPTCHA integration for bot protection | Youssef | Anti-spam verification system | 2 days |
+| reCAPTCHA integration for bot protection | Alex | Anti-spam verification system | 2 days |
 
 #### Monitoring & Analytics
 | **Task** | **Assignee** | **Deliverable** | **Duration** |
 |----------|--------------|-----------------|--------------|
-| Crash analytics integration | Alex | Firebase Crashlytics implementation | 2 days |
+| Crash analytics integration | Youssef | Firebase Crashlytics implementation | 2 days |
 | Log aggregation and monitoring | Kevin, Ahmed | Grafana/ELK stack deployment | 4 days |
 
 #### Quality Assurance & Documentation
@@ -206,7 +206,7 @@ Our cross-functional team of 10 specialists brings together mobile development, 
 #### Final Security & Content Validation
 | **Task** | **Assignee** | **Deliverable** | **Duration** |
 |----------|--------------|-----------------|--------------|
-| Security workflow validation | Youssef | Penetration testing and security audit | 2 days |
+| Security workflow validation | Alex | Penetration testing and security audit | 2 days |
 | AI content safety and guardrails | Andy | Content filtering and safety measures | 3 days |
 
 ---
@@ -271,7 +271,7 @@ Internet → Nginx (HTTPS) → [Backend API] → PostgreSQL
 ## Risk Management & Mitigation Strategies
 
 ### **Technical Risks**
-- **AI Model Performance**: Implement fallback mechanisms and model versioning
+- **AI Model Performance**: Implement fallback mechanisms and model versioning under Kevin's leadership
 - **Database Scalability**: Design with horizontal scaling and read replicas
 - **iOS App Store Approval**: Follow Apple guidelines strictly and prepare backup submission timeline
 
