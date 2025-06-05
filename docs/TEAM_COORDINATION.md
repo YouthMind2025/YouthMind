@@ -137,8 +137,6 @@ Cross-team features requiring coordination
 **Level 3: AI Team Consultation**
 - Issues specifically related to AI integration or algorithm performance
 - Scheduled discussion in next AI coordination meeting
-- Not for general app development questions
-
 ### Knowledge Boundaries
 
 **What Kevin and Andy CAN Help With**:
@@ -147,8 +145,10 @@ Cross-team features requiring coordination
 - Question generation logic and templates
 - AI service API design and optimization
 - Machine learning model deployment
+- Questions regarding the UI implementation and app functions
 
-**What Kevin and Andy CANNOT Help With**:
+**What Kevin CAN Help With**:
+(Questions or possible solutions but not actual implementation)
 - iOS UI implementation and SwiftUI issues
 - Backend API development and Spring Boot configuration
 - Database schema design and optimization
