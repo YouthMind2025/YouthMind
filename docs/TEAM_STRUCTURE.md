@@ -3,6 +3,9 @@
 
 *Comprehensive overview of team roles, responsibilities, and collaboration framework*
 
+**📋 For quick team overview and coordination**: See [README.md](../README.md#-team-structure--coordination)  
+**📅 For meeting protocols and daily workflows**: See [Team Coordination Guide](./TEAM_COORDINATION.md)
+
 ---
 
 ## Organizational Philosophy
