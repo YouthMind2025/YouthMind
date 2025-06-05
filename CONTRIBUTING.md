@@ -22,10 +22,11 @@ YouthMind is an open-source project focused on creating safe, anonymous spaces f
 ### **Areas Where We Need Help**
 
 #### **Development Contributions**
-- **iOS App Development**: SwiftUI interfaces, performance optimization, accessibility features
-- **Backend Services**: API development, database optimization, security enhancements
-- **AI/ML Engineering**: Emotion detection models, question generation, content safety
-- **DevOps & Infrastructure**: Deployment automation, monitoring, scalability improvements
+- **iOS App Development**: SwiftUI interfaces, post creation/viewing, emotion museum features
+- **Backend Services**: REST API design, PostgreSQL/Redis optimization, Spring Security
+- **AI/ML Engineering**: FastAPI services, sentiment analysis, personalized question generation
+- **Cross-Platform Integration**: Admin panels, security validation, API testing
+- **DevOps & Infrastructure**: Docker deployment, monitoring, performance optimization
 
 #### **Non-Development Contributions**
 - **Mental Health Expertise**: Content safety guidelines, crisis intervention protocols
@@ -33,6 +34,38 @@ YouthMind is an open-source project focused on creating safe, anonymous spaces f
 - **Documentation**: Technical writing, user guides, API documentation
 - **Testing**: Quality assurance, security testing, accessibility testing
 - **Translation**: Internationalization support for multiple languages
+
+---
+
+## Team Organization & Coordination
+
+### **Current Team Structure**
+
+Our development team is organized into specialized squads with clear domains of expertise:
+
+#### **Leadership & Architecture**
+- **Kevin**: AI Service Architecture Lead - FastAPI services, AI strategy, technical leadership
+- **Junayd**: Project Manager & System Designer - Coordination, requirements, timeline management
+
+#### **iOS Development Squad**
+- **Dawei**: iOS Developer - SwiftUI architecture, performance optimization
+- **Dexter**: UI/UX Implementation Specialist - Feed systems, Emotion Museum interfaces
+- **Youssef**: Identity & Integration Developer - UUID systems, API integration
+
+#### **Backend Engineering Team**
+- **Mustafo**: API Architecture Developer - REST API design, Spring Boot services
+- **Ahmed**: Database & Performance Specialist - PostgreSQL, JPA/Hibernate optimization  
+- **Harley**: Caching & Performance Engineer - Redis implementation, Spring Security
+
+#### **AI & Cross-Platform**
+- **Andy**: Emotional Intelligence Researcher - AI question generation, sentiment analysis
+- **Alex**: Full-Stack Integration Specialist - Admin panels, security validation, API testing
+
+### **Development Tools & Environment**
+- **IDE Options**: Both IntelliJ IDEA and VSCode are officially supported
+- **Communication**: Slack for real-time coordination, Notion for documentation
+- **Project Management**: GitHub Issues, Trello for task tracking
+- **Code Quality**: 70% test coverage requirement, peer code reviews
 
 ---
 
@@ -45,6 +78,7 @@ YouthMind is an open-source project focused on creating safe, anonymous spaces f
 - **Backend Development**: Java 17+, Maven 3.6+, Docker
 - **AI Development**: Python 3.9+, CUDA-capable GPU (recommended)
 - **General**: Git, Docker, PostgreSQL, Redis
+- **IDE Options**: IntelliJ IDEA or VSCode (both fully supported)
 
 #### Local Setup
 ```bash
@@ -107,8 +141,15 @@ YouthMind/
 
 #### **Before You Start**
 1. **Check existing issues**: Browse [GitHub Issues](https://github.com/Kevin0304-li/YouthMind/issues) for open tasks
-2. **Discuss new features**: Create an issue to discuss significant changes before implementation
-3. **Read our guidelines**: Familiarize yourself with our coding standards and mental health considerations
+2. **Review team structure**: Understand which team handles your area of contribution ([Team Structure](./docs/TEAM_STRUCTURE.md))
+3. **Discuss new features**: Create an issue to discuss significant changes before implementation
+4. **Read our guidelines**: Familiarize yourself with our coding standards and mental health considerations
+
+#### **Development Coordination**
+- **Morning Standups**: Daily 15-minute team sync at 9:00 AM
+- **Architecture Reviews**: Weekly technical discussions led by Kevin (AI Lead)
+- **Sprint Planning**: Coordinated feature development across iOS, Backend, and AI teams
+- **Cross-team Dependencies**: Clear protocols for iOS↔Backend and Backend↔AI integration
 
 #### **Making Changes**
 1. **Fork the repository** and create a feature branch from `main`
@@ -173,8 +214,8 @@ public class PostService {
 
 ##### AI Development
 ```python
-# FastAPI service example with safety considerations
-from fastapi import HTTPException
+# FastAPI service example led by Kevin (AI Service Architecture Lead)
+from fastapi import HTTPException, BackgroundTasks
 from typing import List, Optional
 
 @app.post("/analyze/sentiment")
@@ -184,6 +225,7 @@ async def analyze_sentiment(
 ) -> SentimentResponse:
     """
     Analyze emotional sentiment with crisis detection.
+    Architecture follows Kevin's AI service design patterns.
     
     Args:
         request: Text content and analysis options
@@ -196,7 +238,7 @@ async def analyze_sentiment(
         HTTPException: For content safety violations
     """
     
-    # Content safety check
+    # Content safety check using Kevin's safety framework
     if await content_filter.is_harmful(request.text):
         background_tasks.add_task(alert_moderation_team, request)
         raise HTTPException(status_code=400, detail="Content flagged for review")
@@ -413,14 +455,15 @@ We are committed to providing a welcoming, inclusive environment for all contrib
 
 #### **Communication Channels**
 - **GitHub Issues**: For bug reports and feature requests
-- **Discussions**: For general questions and community chat
-- **Discord**: Real-time developer communication (invite link in README)
+- **GitHub Discussions**: For general questions and community chat
+- **Slack**: Real-time team communication and coordination
+- **Notion**: Project management and comprehensive documentation
 - **Email**: security@youthmind.dev for security-related concerns
 
 #### **Documentation Resources**
-- [Development Workflow](./docs/DEVELOPMENT_WORKFLOW.md)
+- [Team Structure & Roles](./docs/TEAM_STRUCTURE.md)
+- [Team Coordination Guide](./docs/TEAM_COORDINATION.md)
 - [API Reference](./docs/API_REFERENCE.md)
-- [Team Structure](./docs/TEAM_STRUCTURE.md)
 - [Deployment Guide](./docs/DEPLOYMENT.md)
 
 ---
@@ -476,7 +519,8 @@ We will respond within 48 hours and work with you to address any security concer
 *Thank you for contributing to YouthMind and helping us create a safer, more supportive digital space for young people. Together, we can make a meaningful difference in youth mental health.*
 
 ## Quick Links
-- [Development Setup Guide](./docs/DEVELOPMENT_WORKFLOW.md#local-development-setup)
+- [Team Structure & Organization](./docs/TEAM_STRUCTURE.md)
+- [Team Coordination Guidelines](./docs/TEAM_COORDINATION.md)
 - [API Documentation](./docs/API_REFERENCE.md)
 - [Issue Templates](https://github.com/Kevin0304-li/YouthMind/issues/new/choose)
 - [Project Roadmap](https://github.com/Kevin0304-li/YouthMind/projects)
