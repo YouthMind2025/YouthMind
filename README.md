@@ -48,29 +48,242 @@ Our platform creates a safe space where young people can express themselves anon
 - **💾 Data Storage**: PostgreSQL 14+ with JSONB columns, Redis 7+ for caching
 - **🐳 Infrastructure**: Docker & Kubernetes, GitHub Actions for CI/CD
 
-### Service Architecture
+### 1. iOS Client (SwiftUI)
+
+**Features**: Anonymous browsing, user registration/login, post creation, resonance ("like") system, commenting, emotion museum, avatar/cover design, push notifications.
+
+**Backend Interactions**:
+
+- **Anonymous Browsing**: Direct `GET /v1/posts/feed` to retrieve cached/database post lists
+- **Registration/Login**: `POST /v1/auth/register` (email/phone → OTP verification → generate anonymous UUID and JWT), JWT stored in Keychain
+- **Post Creation**: `POST /v1/posts/create` (with JWT, title, content, emotion tags, optional avatar/cover). Response includes AI-computed sentiment scores and question suggestions
+- **Resonance/Comments**: Call `POST /v1/resonances/create` and `POST /v1/comments/create` respectively, backend writes to database, updates counters, generates notifications
+- **Emotion Museum**: `GET /v1/posts/user/{userId}` to retrieve all user posts in chronological order, client renders timeline or puzzle view
+- **Notifications**: `GET /v1/notifications?userId={}` to pull unread messages, mark as read with `POST /v1/notifications/mark-read`
+
+### 2. Admin Dashboard (React SPA)
+
+**Features**: Admin login, view "flagged" reports list, delete violating posts, view basic statistics (total posts, daily new posts, active users).
+
+**Backend Interactions**:
+
+- **Login**: `POST /v1/admin/login` → returns admin JWT
+- **Fetch Review Queue**: `GET /v1/admin/posts?flagged=true` to display all posts marked as "flagged"
+- **Delete**: `DELETE /v1/admin/posts/{postId}` to delete corresponding database records and synchronize cache cleanup
+
+### 3. Backend Core (Spring Boot)
+
+**Role**: Central business logic hub responsible for authentication, routing, data access, AI service calls, caching strategies, security validation.
+
+**Main Modules**:
+
+**Authentication**: Spring Security + JWT
+- Anonymous endpoints (like `/v1/posts/feed`) require no JWT; other endpoints must provide valid JWT
+- Admin endpoints require additional role validation
+
+**User Module (AuthController)**:
+- `POST /v1/auth/register`: Generate UUID, send OTP, verify and store hashed email/phone, issue JWT
+- `POST /v1/auth/login` (optional): Allow existing accounts to login for new JWT
+
+**Post Module (PostController)**:
+- `GET /v1/posts/feed`: First check Redis cache `feed:{page}:{size}`; on cache miss, query PostgreSQL, assemble DTO, write back to Redis (TTL 5 minutes)
+- `POST /v1/posts/create`: Validate JWT, store in database → call AI service (`/v1/ai/sentiment`, `/v1/ai/questions`) → return PostDto with AI fields → update Redis cache (insert new post or clear corresponding pages)
+- `GET /v1/posts/user/{userId}`: Query all posts for user (sorted by time), return with emotion tags
+
+**Comment/Resonance Module**:
+- `POST /v1/comments/create`: Validate JWT, write to comment table, insert into PostgreSQL → trigger notification to post author
+- `POST /v1/resonances/create`: Validate JWT, write to resonance table, increment post `resonance_count` → trigger notification to post author → update Redis cache "hot posts" score or directly delete cache pages
+
+**Reporting/Moderation Module**:
+- `POST /v1/posts/{postId}/flag`: Validate JWT, update post `flagged = true` → write notification to admin
+- Admin calls `/v1/admin/posts?flagged=true`, `DELETE /v1/admin/posts/{postId}`
+
+**Notification Module (NotificationController)**:
+- All events (resonance, comments, reports) insert a row in database `notifications` table `{recipientId, type, message, timestamp}`
+- `GET /v1/notifications?userId=`: Pull unread messages
+- `POST /v1/notifications/mark-read`: Update `read=true`
+
+**Caching Strategy**:
+- **Redis Cache**: `feed:{page}:{size}`, TTL 5 minutes
+- **Trending Rankings**: Periodically or real-time update `resonance_count:{postId}`, can use ZSET (sorted sets)
+- **User Sessions**: For temporary storage of OTP verification codes or short-term session states
+- **Pub/Sub**: Broadcast messages to other services (like push servers) for notifications or log analysis
+
+**AI Integration**:
+- REST requests from backend to AI microservice using Spring RestTemplate/Feign
+- If AI service timeout (e.g., no response within 2 seconds), backend can still allow post creation success, leaving AI fields empty for later completion
+
+### 4. AI Microservice (FastAPI)
+
+**Role**: Machine learning model service running independently. Main functions: sentiment analysis, follow-up question generation, emotion classification and article summarization, empathy score calculation.
+
+**Endpoints**:
+- `POST /v1/ai/sentiment` → Input `{ text: "..." }`, return `{ sentiment_score, empathy_score }`
+- `POST /v1/ai/questions` → Input `{ text: "..." }`, return `["Question1", "Question2", ...]`
+- `POST /v1/ai/emotion` → Input `{ text: "..." }`, return `{ emotion: "sad" }`
+- `POST /v1/ai/summarize` → Input `{ text: "..." }`, return `{ summary: "..." }`
+
+**Runtime**:
+- **Local**: `uvicorn app:app --reload --port 8001`
+- **Production**: Docker containers with auto-scaling
+
+**Model Management**:
+- Using HuggingFace or self-trained models, loading different versions by scenario, supporting simple A/B testing
+
+### 5. Data Storage & Caching
+
+**PostgreSQL (Primary Database)**:
+- **Users Table**: `{ id: UUID, phone_hash/email_hash, registered_at, ... }`
+- **Posts Table**: `{ id: UUID, user_id, title, content, emotion_tag, ai_summary, empathy_score, resonance_count, flagged, created_at }`
+- **Comments Table**: `{ id, post_id, user_id, content, created_at }`
+- **Resonances Table**: `{ id, post_id, user_id, created_at }`
+- **AI Data Table**: Store sentiment analysis results and question lists for future statistical analysis
+- **Notifications Table**: `{ id, recipient_id, type, message, created_at, read }`
+- **Drafts Table** (optional): User's unpublished local saves
+- **Indexes & Full-Text Search**: GIN indexes on title/content for full-text search, indexes on high-frequency query fields (like `created_at`)
+
+**Redis (Cache Layer)**:
+- **Cache Post Lists**: `feed:{page}:{size}`, TTL 5 minutes
+- **Trending Rankings**: Periodically or real-time update `resonance_count:{postId}`, can use ZSET (sorted sets)
+- **User Sessions**: For temporary storage of OTP verification codes or short-term session states
+- **Pub/Sub**: Broadcast messages to other services (like push servers) for notifications or log analysis
+
+**Object Storage (S3/GCS)**:
+- Store user-uploaded avatars, cover images, and potential future rich text files
+- Backend only stores paths/URLs in PostgreSQL, actual large files stored in S3/R2/MinIO
+
+### 6. Containerization & Deployment (DevOps)
+
+**Local Development (Docker Compose)**:
+- One command to start locally: PostgreSQL, Redis, Backend, AI service, Admin panel
+- Developers can quickly debug and ensure environment consistency
+
+**Testing/Staging (Kubernetes Staging)**:
+- Package components as images: `youthmind-backend:latest`, `youthmind-ai:latest`, `youthmind-admin:latest`
+- Use Deployment + Service + Ingress for automated deployment on test cluster
+- Integrate CI/CD: Code push to main branch automatically triggers build, test, push images, Staging environment "auto" updates
+
+**Production (Kubernetes/Managed Containers)**:
+- Nearly identical to Staging configuration, but with production-grade resources and real domain names
+- Set up auto-scaling (HPA), automatically add replicas when CPU or request volume exceeds thresholds
+- TLS managed uniformly by Ingress Controller (like cert-manager + Let's Encrypt)
+
+**CI/CD (GitHub Actions)**:
+- **iOS**: macOS Runner automatically executes xcodebuild test and packaging
+- **Backend**: Ubuntu Runner executes `mvn test` → build Jar → create Docker image
+- **AI Service**: Ubuntu Runner executes `pytest` → create Docker image
+- **Admin**: Ubuntu Runner executes `npm test` → `npm build` → create Docker image
+- **Deployment Jobs**: After pushing images to container registry, trigger Kubernetes rolling updates
+
+**Monitoring & Alerts**:
+- Backend and AI services have built-in Prometheus metrics endpoints (`/actuator/prometheus`, `/metrics`)
+- Grafana dashboards display: API latency, error rates, AI inference time, database connections, Redis cache hit ratio
+- Alertmanager: When conditions like "Backend 5xx error rate > 1%" or "AI inference P95 > 500ms" are met, send urgent notifications to on-call team
+
+### 7. End-to-End Data Flow (Key Steps)
+
+**Anonymous User Opens App**:
+```
+User → GET /v1/posts/feed → Backend queries Redis cache → Returns post list to App → User sees feed
+```
+
+**User Registration and Login**:
+```
+App → POST /v1/auth/register + OTP → Backend verifies code, stores in database, generates JWT → App stores in Keychain
+```
+
+**User Creates Post**:
+```
+App "Create Post" interface fills title, content, selects emotion tags → POST /v1/posts/create (with JWT)
+
+Backend:
+1. Validate JWT, write to posts table (with user UUID, content, tags)
+2. Synchronously call AI: /v1/ai/sentiment + /v1/ai/questions → return sentiment scores, follow-up question list
+3. Write AI data table, update Redis cache corresponding pages
+4. Return complete PostDto to App (with AI analysis results)
+```
+
+**User Resonance (Like)**:
+```
+App clicks "Resonance" → POST /v1/resonances/create (with JWT + postId)
+
+Backend:
+1. Write to resonance table, resonance_count++
+2. Send notification to post author (write Notification table)
+3. Update Redis trending scores (or directly clear cache pages)
+4. Return latest resonance_count to App
+```
+
+**View Emotion Museum**:
+```
+App → GET /v1/posts/user/{userId} → Backend queries all user posts chronologically → Returns to App → Display in timeline/puzzle view with emotion tags and AI prompts
+```
+
+**Report and Admin Review**:
+```
+App clicks "Report" → POST /v1/posts/{postId}/flag → Backend updates post flagged=true → Write notification to admin
+Admin dashboard pulls GET /v1/admin/posts?flagged=true → Display review queue → Select delete DELETE /v1/admin/posts/{postId} → Backend deletes from database, clears cache
+```
+
+**Push Notifications**:
+```
+New resonance or comment → Backend writes Notification table
+If user online, App can pull notifications via polling or WebSocket/Push (APNs):
+GET /v1/notifications?userId={} → Returns unread message list
+App displays red dot, popup alerts, etc.
+```
+
+### Service Architecture Diagram
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   iOS App       │───▶│  Backend API    │───▶│  AI Services    │
 │   (SwiftUI)     │    │  (Spring Boot)  │    │  (FastAPI)      │
-│ Anonymous +     │    │ JWT Auth +      │    │ Sentiment +     │
-│ Registration    │    │ Rate Limiting   │    │ Questions       │
+│ • Anonymous     │    │ • JWT Auth      │    │ • Sentiment     │
+│ • Registration  │    │ • Rate Limiting │    │ • Questions     │
+│ • Posts/Feed    │    │ • Business Logic│    │ • Emotion Tags  │
+│ • Resonance     │    │ • Cache Strategy│    │ • Empathy Score │
+│ • Comments      │    │ • AI Integration│    │ • Model Pipeline│
+│ • Notifications │    │ • Database ORM  │    │ • A/B Testing   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          │                       ▼                       │
          │              ┌─────────────────┐              │
          │              │   PostgreSQL    │              │
-         │              │ Users + Posts + │              │
-         │              │   AI Metadata   │              │
+         │              │ • Users + Posts │              │
+         │              │ • Comments      │              │
+         │              │ • Resonances    │              │
+         │              │ • AI Metadata   │              │
+         │              │ • Notifications │              │
          │              └─────────────────┘              │
          │                       │                       │
          │                       ▼                       │
     ┌────▼──────┐       ┌─────────────────┐              │
     │ React     │       │  Redis Cache    │◀─────────────┘
-    │ Admin     │       │ Feed + Search + │
-    │ Dashboard │       │  Counters       │
+    │ Admin     │       │ • Feed Pages    │
+    │ Dashboard │       │ • Search Cache  │
+    │ • Flagged │       │ • Hot Counters  │
+    │ • Moderation │    │ • User Sessions │
+    │ • Statistics │    │ • Pub/Sub       │
     └───────────┘       └─────────────────┘
 ```
+
+### 8. Operations & Security Focus
+
+**Privacy Protection**:
+- User real identity only used for SMS/email verification, stored as hash values, posts always recorded with random anonymous IDs
+- All transmission via HTTPS, encrypted JWT tokens, database stores no plaintext email/phone
+- GDPR compliance with data deletion endpoints
+
+**Performance & Scaling**:
+- High concurrent reads (browsing) use Redis cache, writes update database and cache in parallel
+- Backend and AI services horizontally scalable, deployed on Kubernetes clusters with automatic load balancing
+- Continuous monitoring: Prometheus captures key metrics (latency, error rates, resource usage), Grafana real-time visualization
+- Pre-set alerts (error rates, Redis cache hit rate anomalies), timely operations notifications
+
+**Backup & Recovery**:
+- PostgreSQL daily full backup + incremental WAL async upload to object storage (S3)
+- Redis uses master-slave replication or managed clusters to ensure hot data persistence
+- Regular recovery drills ensure service restoration within 30 minutes in case of disasters
 
 ## 🚀 Quick Start
 
