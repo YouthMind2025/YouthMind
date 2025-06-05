@@ -111,26 +111,29 @@ Below is a comprehensive guide focusing on which technologies to use, how each p
 
 ### User Session & Identity
 
-1. **First Launch**: iOS app requests a new anonymous session from `POST /auth/session`
-2. **Backend Processing**: 
-   - Generates a UUID for the user
-   - Issues a short-lived JWT token
-3. **Client Storage**: Mobile app stores the JWT in iOS Keychain (handled by IdentityManager) for all subsequent calls
+1. **Anonymous Browsing**: New users can immediately view the feed and browse posts without any registration via `GET /posts/feed` (no authentication required)
+2. **Registration Required for Interaction**: To create posts, add comments, give resonances, or access personal features, users must register with email or phone via `POST /auth/register`
+3. **Anonymous Registration**: 
+   - Backend generates a UUID for the user and stores email/phone for authentication only
+   - No personally identifiable information is ever displayed or associated with posts
+   - User receives a JWT token for all subsequent authenticated interactions
+4. **Session Management**: iOS app stores the JWT in iOS Keychain for authenticated features while allowing anonymous browsing
 
 ### Creating a New Post
 
-1. **User Input**: User composes title, content, selects emotion tag, and optionally picks avatar/cover
-2. **API Call**: iOS calls `POST /posts/create` on backend, including JWT and post data
-3. **Backend Processing**:
-   - Validates JWT (Spring Security)
-   - Persists basic Post record to PostgreSQL
+1. **Authentication Check**: Ensure user is registered and has valid JWT token; redirect to registration if not authenticated
+2. **User Input**: User composes title, content, selects emotion tag, and optionally picks avatar/cover
+3. **API Call**: iOS calls `POST /posts/create` on backend, including JWT and post data
+4. **Backend Processing**:
+   - Validates JWT (Spring Security) and confirms user registration
+   - Persists basic Post record to PostgreSQL with anonymous user UUID (no PII exposure)
    - Calls AI microservice (`POST /ai/sentiment`, `POST /ai/questions`) to compute:
      - Sentiment score
      - Empathy score
      - Follow-up questions
    - Stores AI metadata in separate AI-data table
    - Sends back combined PostDto to iOS client
-4. **Cache Update**: Redis invalidates or updates cached feed pages so new post appears at top
+5. **Cache Update**: Redis invalidates or updates cached feed pages so new post appears at top
 
 ### Browsing the Feed
 
@@ -206,21 +209,25 @@ Use the following checklist to ensure every team member knows their responsibili
 
 **Architecture Implementation**:
 - [ ] Confirm that Combine-based view models are set up to call the correct endpoints:
-  - `FeedViewModel` → `GET /posts/feed`
-  - `PostViewModel` → `POST /posts/create`
-  - `NotificationViewModel` → `GET /notifications`
-  - `EmotionMuseumViewModel` → `GET /posts/user/{userId}`
+  - `FeedViewModel` → `GET /posts/feed` (anonymous access)
+  - `AuthViewModel` → `POST /auth/register` (email/phone registration)
+  - `PostViewModel` → `POST /posts/create` (authenticated)
+  - `NotificationViewModel` → `GET /notifications` (authenticated)
+  - `EmotionMuseumViewModel` → `GET /posts/user/{userId}` (authenticated)
 - [ ] Ensure CoreData stack is configured for local drafts (optional) and caching of read notifications
 - [ ] Implement `SessionManager` for JWT token management in iOS Keychain
 - [ ] Set up `APIClient` with proper error handling and retry logic
+- [ ] Create registration flow with email/phone input validation and OTP verification
 
 **Key Deliverables**:
-- Anonymous session creation and management
-- Post creation with emotion selection and AI integration
+- Anonymous feed browsing (no authentication required)
+- Email/phone registration flow with OTP verification
+- Anonymous session creation and JWT management
+- Post creation with emotion selection and AI integration (authenticated users only)
 - Feed browsing with infinite scroll and pull-to-refresh
-- Avatar creation and cover design tools
-- Emotion museum with timeline and puzzle views
-- Push notifications for resonances and comments
+- Avatar creation and cover design tools (authenticated users only)
+- Emotion museum with timeline and puzzle views (authenticated users only)
+- Push notifications for resonances and comments (authenticated users only)
 
 ---
 
@@ -234,27 +241,29 @@ Use the following checklist to ensure every team member knows their responsibili
 
 **Core Implementation**:
 - [ ] Implement the core controllers using DTOs for request/response:
-  - `AuthController` → Anonymous session management
-  - `PostController` → CRUD operations with AI integration
-  - `CommentController` → Comment creation and retrieval
-  - `ResonanceController` → Like/unlike functionality
-  - `NotificationController` → User notification management
+  - `AuthController` → Email/phone registration with OTP verification
+  - `PostController` → CRUD operations with AI integration (authenticated only)
+  - `CommentController` → Comment creation and retrieval (authenticated only)
+  - `ResonanceController` → Like/unlike functionality (authenticated only)
+  - `NotificationController` → User notification management (authenticated only)
   - `AdminController` → Content moderation endpoints
-- [ ] Configure Spring Security to allow anonymous session creation and JWT validation for all other endpoints
+- [ ] Configure Spring Security to allow anonymous access to feed browsing and require JWT validation for all interactive endpoints
 - [ ] Define JPA entities and repositories:
-  - `User`, `Post`, `Comment`, `Resonance`, `AIData`, `Notification`, `Draft`
+  - `User` (UUID, email/phone hash, registration timestamp), `Post`, `Comment`, `Resonance`, `AIData`, `Notification`, `Draft`
+- [ ] Implement OTP verification service with email/SMS integration (Twilio or AWS SNS)
 
 **Caching & Performance**:
-- [ ] Set up Redis caching for `/posts/feed` and `/search`, with a 5-minute TTL
+- [ ] Set up Redis caching for `/posts/feed` (anonymous access), with a 5-minute TTL
 - [ ] Implement cache invalidation strategies for new post creation
 - [ ] Configure connection pooling and query optimization
 - [ ] Add Spring Actuator health checks and metrics
 
 **Security Implementation**:
-- [ ] JWT token generation and validation
+- [ ] JWT token generation and validation for registered users
+- [ ] Email/phone verification with time-limited OTP codes
 - [ ] Role-based access control for admin endpoints
-- [ ] reCAPTCHA integration for post creation
-- [ ] Rate limiting and API security measures
+- [ ] Rate limiting for registration attempts and anonymous API calls
+- [ ] Hash storage of email/phone numbers for privacy protection
 
 ---
 
@@ -369,9 +378,11 @@ Use the following checklist to ensure every team member knows their responsibili
 - **Redis**: High-performance caching for feeds, search results, and real-time counters
 
 ### Authentication Strategy
-- **Anonymous JWT tokens**: UUID-based user sessions for privacy-first approach
-- **Admin JWT tokens**: Role-based access for moderator actions and dashboard access
-- **Token Management**: Short-lived access tokens with secure refresh rotation
+- **Anonymous Browsing**: Unrestricted access to view posts and browse feed without any registration
+- **Email/Phone Registration**: Required for all interactive features (posting, commenting, resonating, notifications)
+- **Anonymous Identity**: Email/phone used only for authentication - no PII displayed or linked to posts  
+- **JWT Tokens**: Secure authentication for registered users with role-based access for admin functions
+- **OTP Verification**: Time-limited verification codes for secure registration process
 
 ### Caching Implementation
 - **Redis Cache**: Feed pages and search results with intelligent TTL policies
