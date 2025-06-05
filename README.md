@@ -235,36 +235,128 @@ App displays red dot, popup alerts, etc.
 
 ### Service Architecture Diagram
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   iOS App       │───▶│  Backend API    │───▶│  AI Services    │
-│   (SwiftUI)     │    │  (Spring Boot)  │    │  (FastAPI)      │
-│ • Anonymous     │    │ • JWT Auth      │    │ • Sentiment     │
-│ • Registration  │    │ • Rate Limiting │    │ • Questions     │
-│ • Posts/Feed    │    │ • Business Logic│    │ • Emotion Tags  │
-│ • Resonance     │    │ • Cache Strategy│    │ • Empathy Score │
-│ • Comments      │    │ • AI Integration│    │ • Model Pipeline│
-│ • Notifications │    │ • Database ORM  │    │ • A/B Testing   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         │                       ▼                       │
-         │              ┌─────────────────┐              │
-         │              │   PostgreSQL    │              │
-         │              │ • Users + Posts │              │
-         │              │ • Comments      │              │
-         │              │ • Resonances    │              │
-         │              │ • AI Metadata   │              │
-         │              │ • Notifications │              │
-         │              └─────────────────┘              │
-         │                       │                       │
-         │                       ▼                       │
-    ┌────▼──────┐       ┌─────────────────┐              │
-    │ React     │       │  Redis Cache    │◀─────────────┘
-    │ Admin     │       │ • Feed Pages    │
-    │ Dashboard │       │ • Search Cache  │
-    │ • Flagged │       │ • Hot Counters  │
-    │ • Moderation │    │ • User Sessions │
-    │ • Statistics │    │ • Pub/Sub       │
-    └───────────┘       └─────────────────┘
+                                   🌐 INTERNET
+                                       │
+                              ┌────────┴────────┐
+                              │  Load Balancer  │
+                              │   (nginx/ALB)   │
+                              └────────┬────────┘
+                                       │
+                    ┌──────────────────┼──────────────────┐
+                    │                  │                  │
+                    ▼                  ▼                  ▼
+         ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+         │   iOS App       │ │  Admin Panel    │ │  Web Interface  │
+         │   (SwiftUI)     │ │    (React)      │ │   (Future)      │
+         │                 │ │                 │ │                 │
+         │ • Anonymous     │ │ • Admin Login   │ │ • Public View   │
+         │ • Registration  │ │ • Moderation    │ │ • Statistics    │
+         │ • Posts/Feed    │ │ • Statistics    │ │ • Reports       │
+         │ • Resonance     │ │ • User Mgmt     │ │                 │
+         │ • Comments      │ │ • Content Mgmt  │ │                 │
+         │ • Notifications │ │ • System Health │ │                 │
+         │ • Emotion Museum│ │                 │ │                 │
+         └─────────┬───────┘ └─────────┬───────┘ └─────────┬───────┘
+                   │                   │                   │
+                   └───────────────────┼───────────────────┘
+                                       │
+                            HTTPS/REST API (JWT Auth)
+                                       │
+                              ┌────────▼────────┐
+                              │  Backend API    │
+                              │ (Spring Boot)   │
+                              │                 │
+                              │ ┌─────────────┐ │
+                              │ │   Auth      │ │ ── JWT + OTP
+                              │ │ Controller  │ │
+                              │ └─────────────┘ │
+                              │ ┌─────────────┐ │
+                              │ │   Posts     │ │ ── CRUD + AI
+                              │ │ Controller  │ │
+                              │ └─────────────┘ │
+                              │ ┌─────────────┐ │
+                              │ │ Comments &  │ │ ── Interactions
+                              │ │ Resonances  │ │
+                              │ └─────────────┘ │
+                              │ ┌─────────────┐ │
+                              │ │Notifications│ │ ── Real-time
+                              │ │ Controller  │ │
+                              │ └─────────────┘ │
+                              │ ┌─────────────┐ │
+                              │ │   Admin     │ │ ── Moderation
+                              │ │ Controller  │ │
+                              │ └─────────────┘ │
+                              └────────┬────────┘
+                                       │
+                         ┌─────────────┼─────────────┐
+                         │             │             │
+                         ▼             ▼             ▼
+               ┌─────────────────┐ ┌──────────┐ ┌─────────────────┐
+               │  AI Services    │ │PostgreSQL│ │  Redis Cache    │
+               │   (FastAPI)     │ │ Database │ │    Cluster      │
+               │                 │ │          │ │                 │
+               │ ┌─────────────┐ │ │ Users    │ │ • Feed Cache    │
+               │ │ Sentiment   │ │ │ Posts    │ │ • Session Store │
+               │ │ Analysis    │ │ │ Comments │ │ • Hot Rankings  │
+               │ └─────────────┘ │ │ Resonance│ │ • Rate Limiting │
+               │ ┌─────────────┐ │ │ AI Data  │ │ • Pub/Sub       │
+               │ │ Question    │ │ │ Notifs   │ │ • Temp Storage  │
+               │ │Generation   │ │ │ Drafts   │ │                 │
+               │ └─────────────┘ │ │ Sessions │ │                 │
+               │ ┌─────────────┐ │ │          │ │ TTL Policies:   │
+               │ │ Emotion     │ │ │Indexes:  │ │ • feed:5min     │
+               │ │ Detection   │ │ │• GIN FTS │ │ • users:24h     │
+               │ └─────────────┘ │ │• created │ │ • hot:1h        │
+               │ ┌─────────────┐ │ │• user_id │ │                 │
+               │ │ Content     │ │ │• flagged │ │                 │
+               │ │Moderation   │ │ │          │ │                 │
+               │ └─────────────┘ │ │          │ │                 │
+               └─────────────────┘ └──────────┘ └─────────────────┘
+                         │                              │
+                         │                              │
+                    ┌────▼──────┐                ┌─────▼─────┐
+                    │Model Cache│                │ Message   │
+                    │& Artifacts│                │   Queue   │
+                    │           │                │(Future)   │
+                    │• HF Models│                │• Push     │
+                    │• Vectors  │                │• Email    │
+                    │• Pipelines│                │• SMS      │
+                    └───────────┘                └───────────┘
+
+                              ┌─────────────────┐
+                              │  Object Storage │
+                              │     (S3/GCS)    │
+                              │                 │
+                              │ • User Avatars  │
+                              │ • Cover Images  │
+                              │ • Backups       │
+                              │ • Static Assets │
+                              │ • Log Archives  │
+                              └─────────────────┘
+
+       ┌──────────────────────── MONITORING & OBSERVABILITY ────────────────────────┐
+       │                                                                             │
+       │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐   │
+       │  │ Prometheus  │  │  Grafana    │  │     ELK     │  │   Alert         │   │
+       │  │   Metrics   │  │ Dashboards  │  │    Stack    │  │   Manager       │   │
+       │  │             │  │             │  │             │  │                 │   │
+       │  │• API Latency│  │• System     │  │• App Logs   │  │• Error Rate >1% │   │
+       │  │• Error Rate │  │  Health     │  │• Access Log │  │• Latency >500ms │   │
+       │  │• Cache Hit  │  │• User       │  │• Error Log  │  │• DB Conn >80%   │   │
+       │  │• DB Perf    │  │  Analytics  │  │• Audit Log  │  │• Cache Miss >50%│   │
+       │  │• AI Metrics │  │• AI Model   │  │             │  │                 │   │
+       │  │             │  │  Performance│  │             │  │                 │   │
+       │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────┘   │
+       └──────────────────────────────────────────────────────────────────────────┘
+
+Data Flow Examples:
+┌─ Anonymous Browse ─┐    ┌─ User Post ─┐         ┌─ Admin Moderation ─┐
+│1. GET /posts/feed  │    │1. POST      │         │1. GET flagged      │
+│2. Redis check     │    │2. JWT verify│         │2. Review content   │
+│3. DB if cache miss│    │3. AI process│         │3. DELETE post      │
+│4. Cache result    │    │4. Store DB  │         │4. Clear cache      │
+│5. Return to app   │    │5. Update    │         │5. Audit log       │
+└───────────────────┘    └─────────────┘         └───────────────────┘
 ```
 
 ### 8. Operations & Security Focus
@@ -370,16 +462,13 @@ export YOUTHMIND_TWILIO_API_KEY=your_twilio_key
 - **Admin Dashboard**: Alex (React, TypeScript, Content Moderation)
 - **Project Manager**: Junayd (Coordination, Notion workspace management)
 
-### Meeting Structure
-- **📅 Daily Development Standups**: All teams except AI (if there are updates)
-- **🤖 AI Coordination**: Kevin, Andy, Junayd every 2-3 days
+### Coordination Framework
+- **📅 Daily Development Standups**: Development teams coordinate progress and blockers
+- **🤖 AI Coordination**: Kevin, Andy, Junayd sync every 2-3 days for AI integration
 - **📊 Task Management**: [YouthMind Notion Workspace](https://www.notion.so/2078796c838d80d39393cb8cfd5f963c?v=2078796c838d806ba152000c2de604d9)
-- **📧 Meeting Coordination**: [mohammad.junayd@proton.me](mailto:mohammad.junayd@proton.me?subject=Team%20Meeting%20Request)
 
-### Team Responsibilities
-- **Kevin**: AI models, strategic solutions across all teams (advisory role)
-- **Andy**: AI development, UI/UX guidance, app function questions
-- **Others**: Direct implementation of their respective components
+**📚 For detailed team roles and responsibilities**: See [Team Structure Documentation](./docs/TEAM_STRUCTURE.md)  
+**📋 For meeting protocols and communication flow**: See [Team Coordination Guide](./docs/TEAM_COORDINATION.md)
 
 ## 📚 Documentation
 
@@ -390,8 +479,8 @@ export YOUTHMIND_TWILIO_API_KEY=your_twilio_key
 - **[📡 API Reference](./docs/API_REFERENCE.md)** - Complete API endpoints and schemas
 - **[🚀 Deployment Guide](./docs/DEPLOYMENT.md)** - Production deployment and infrastructure
 
-### Production Operations
-- **Environment & Secrets Management**: Kubernetes secrets and GitHub Actions
+### Key Production Standards
+- **Environment Variables**: All services use standardized `YOUTHMIND_` prefix
 - **API Versioning**: `/v1/` prefixed endpoints with deprecation policy
 - **Rate Limiting**: Anonymous (100 req/5min) and authenticated (10 posts/hour) limits
 - **Monitoring**: Prometheus metrics, Grafana dashboards, ELK logging
@@ -413,58 +502,61 @@ export YOUTHMIND_TWILIO_API_KEY=your_twilio_key
 
 ## 🚀 API Overview
 
-### Public Endpoints (v1)
+### Core Endpoints (v1)
 ```
+# Public Access
 GET  /v1/posts/feed                 # Anonymous feed browsing
+
+# Authentication  
 POST /v1/auth/register             # Email/phone registration with OTP
-POST /v1/posts/create              # Create post (authenticated)
-GET  /v1/posts/user/{userId}       # Emotion museum (authenticated)
-POST /v1/comments/create           # Add comment (authenticated)
-POST /v1/resonances/create         # Add resonance (authenticated)
+
+# User Actions (JWT Required)
+POST /v1/posts/create              # Create post with AI analysis
+POST /v1/comments/create           # Add comment to post  
+POST /v1/resonances/create         # Express understanding/empathy
+GET  /v1/posts/user/{userId}       # Personal emotion museum
+
+# Admin Actions
+GET  /v1/admin/posts?flagged=true  # Moderation queue
+DELETE /v1/admin/posts/{postId}    # Remove violating content
 ```
 
-### Error Response Format
-```json
-{
-  "error": {
-    "code": "INVALID_AUTH",
-    "message": "JWT token is missing or invalid.",
-    "details": { "field": "authorizationHeader" }
-  }
-}
-```
+**📡 For complete API documentation with schemas**: See [API Reference](./docs/API_REFERENCE.md)
 
 ## 🤝 Contributing
 
-We welcome contributions from developers passionate about mental health technology. Please read our [Contributing Guidelines](./CONTRIBUTING.md) for development standards and safety considerations.
+We welcome contributions from developers passionate about mental health technology. Our development follows strict standards for safety, privacy, and quality.
 
-### Development Standards
-- **Mental Health Safety**: All AI outputs reviewed for appropriateness
-- **Privacy by Design**: No personal data collection beyond authentication
-- **Testing Requirements**: Unit, integration, and E2E test coverage
-- **Code Quality**: ESLint, SwiftLint, and SonarQube compliance
+### Key Principles
+- **Mental Health Safety**: All AI outputs reviewed for appropriateness and safety
+- **Privacy by Design**: No personal data collection beyond authentication requirements
+- **Quality Assurance**: Comprehensive testing and code review requirements
 - **Documentation**: Living documentation updated with each feature
 
 ### Getting Started
-1. Review the [Team Coordination](./docs/TEAM_COORDINATION.md) document
-2. Set up your local development environment
-3. Join the [Notion workspace](https://www.notion.so/2078796c838d80d39393cb8cfd5f963c?v=2078796c838d806ba152000c2de604d9) for task assignments
-4. Contact [Junayd](mailto:mohammad.junayd@proton.me) for team integration
+1. **Review Documentation**: Start with [Team Coordination](./docs/TEAM_COORDINATION.md) and [Technical Architecture](./docs/TECHNICAL_ARCHITECTURE.md)
+2. **Set up Local Environment**: Follow the Quick Start guide above
+3. **Join Team Workspace**: Access the [Notion workspace](https://www.notion.so/2078796c838d80d39393cb8cfd5f963c?v=2078796c838d806ba152000c2de604d9) for task assignments
+4. **Contact Project Manager**: Reach out to [Junayd](mailto:mohammad.junayd@proton.me) for team integration
+
+**📋 For detailed development workflows and standards**: See [Team Coordination Guide](./docs/TEAM_COORDINATION.md)
 
 ## 📊 Analytics & Monitoring
 
 ### Key Performance Indicators
 - **Feed API Performance**: P95 latency < 200ms
-- **AI Processing**: Sentiment analysis < 500ms
+- **AI Processing**: Sentiment analysis < 500ms  
 - **User Engagement**: Post creation and resonance rates
 - **Mental Health Impact**: Emotional wellness trend analysis
 
-### Production Checklist
-- ✅ Environment variables standardized with `YOUTHMIND_` prefix
-- ✅ Kubernetes secrets configured for sensitive data
-- ✅ Prometheus metrics and Grafana dashboards active
+### Production Infrastructure Status
+- ✅ Standardized environment variables with `YOUTHMIND_` prefix
+- ✅ Kubernetes secrets for sensitive data management
+- ✅ Prometheus metrics with Grafana dashboards
 - ✅ ELK stack for centralized logging and monitoring
-- ✅ Database backup and disaster recovery tested
+- ✅ Automated database backup and disaster recovery
+
+**🚀 For complete deployment procedures**: See [Deployment Guide](./docs/DEPLOYMENT.md)
 
 ## 📄 License
 
@@ -472,15 +564,17 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 
 ## 🆘 Support & Contact
 
-### Technical Support
-- **Issues**: Create an issue in this repository with detailed information
+### Project Communication
+- **Technical Issues**: Create an issue in this repository with detailed information
 - **Project Manager**: [mohammad.junayd@proton.me](mailto:mohammad.junayd@proton.me)
-- **Documentation**: Navigate between docs using cross-references in each file
+- **Team Coordination**: [Schedule a meeting](mailto:mohammad.junayd@proton.me?subject=Team%20Meeting%20Request)
 
-### Emergency Protocols
+### Emergency Response
 - **Production Issues**: Contact on-call rotation (< 15 minutes response)
 - **Security Concerns**: Immediate escalation to project manager
 - **Mental Health Content**: Follow content moderation and crisis intervention protocols
+
+**📋 For detailed contact protocols**: See [Team Coordination Guide](./docs/TEAM_COORDINATION.md)
 
 ---
 

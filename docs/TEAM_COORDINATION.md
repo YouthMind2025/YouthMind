@@ -2,6 +2,9 @@
 
 *A clear framework for team coordination, daily standups, and progress tracking to ensure smooth development workflow*
 
+**📋 For quick team overview**: See [README.md](../README.md#-team-structure--coordination)  
+**👥 For detailed role specifications**: See [Team Structure Guide](./TEAM_STRUCTURE.md)
+
 ## 📋 Quick Links & Resources
 
 - **📊 [YouthMind Notion Workspace](https://www.notion.so/2078796c838d80d39393cb8cfd5f963c?v=2078796c838d806ba152000c2de604d9)** - Task management and project tracking
