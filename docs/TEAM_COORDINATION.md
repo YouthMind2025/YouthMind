@@ -5,12 +5,11 @@
 ## 📋 Quick Links & Resources
 
 - **📊 [YouthMind Notion Workspace](https://www.notion.so/2078796c838d80d39393cb8cfd5f963c?v=2078796c838d806ba152000c2de604d9)** - Task management and project tracking
-- **📅 [Schedule a Team Meeting](mailto:junayd@youthmind.com?subject=Team%20Meeting%20Request)** - Contact Junayd for meeting coordination
+- **📅 [Schedule a Team Meeting](mailto:mohammad.junayd@proton.me?subject=Team%20Meeting%20Request)** - Contact Junayd for meeting coordination
 - **📚 Related Documentation:**
   - [Technical Architecture](./TECHNICAL_ARCHITECTURE.md) - System design and implementation guide
   - [Team Structure](./TEAM_STRUCTURE.md) - Detailed role assignments and responsibilities
   - [API Reference](./API_REFERENCE.md) - Complete API documentation
-  - [Development Workflow](./DEVELOPMENT_WORKFLOW.md) - Sprint planning and deliverables
   - [Deployment Guide](./DEPLOYMENT.md) - Production deployment procedures
 
 ---
