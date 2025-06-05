@@ -192,87 +192,203 @@ Below is a comprehensive guide focusing on which technologies to use, how each p
 
 ---
 
-## 4. Security & Authentication
+## 4. Team Responsibilities & Onboarding Checklist
 
-### JWT Authentication Flow
-- **Anonymous Sessions**: UUID-based user identification with JWT tokens
-- **Token Management**: Short-lived access tokens with refresh token rotation
-- **Role-Based Access**: Admin endpoints protected with role-based JWT claims
-- **API Security**: All endpoints secured with Spring Security filters
+Use the following checklist to ensure every team member knows their responsibilities and can start coding immediately:
 
-### Data Protection
-- **Encryption**: TLS/HTTPS for all API communications
-- **Data Anonymization**: No personally identifiable information stored
-- **Content Moderation**: AI-powered content filtering with human review
-- **Privacy by Design**: Minimal data collection and retention policies
+### Dawei / Dexter / Youssef (iOS Team)
 
----
+**Setup & Configuration**:
+- [ ] Verify that the UI designs (SwiftUI views) match the Figma/Sketch prototypes
+- [ ] Clone the `mobile/` folder, open `YouthMindApp.xcodeproj`
+- [ ] Update the `baseURL` constants to point to the local backend (`http://localhost:8080`)
+- [ ] Configure Firebase Crashlytics with `GoogleService-Info.plist`
 
-## 5. Performance & Scalability
+**Architecture Implementation**:
+- [ ] Confirm that Combine-based view models are set up to call the correct endpoints:
+  - `FeedViewModel` → `GET /posts/feed`
+  - `PostViewModel` → `POST /posts/create`
+  - `NotificationViewModel` → `GET /notifications`
+  - `EmotionMuseumViewModel` → `GET /posts/user/{userId}`
+- [ ] Ensure CoreData stack is configured for local drafts (optional) and caching of read notifications
+- [ ] Implement `SessionManager` for JWT token management in iOS Keychain
+- [ ] Set up `APIClient` with proper error handling and retry logic
 
-### Caching Strategy
-- **Redis Cache**: Feed pagination, search results, hot posts
-- **TTL Policy**: 5-10 minute cache expiration for dynamic content
-- **Cache Invalidation**: Smart invalidation on new post creation
-
-### Database Optimization
-- **Indexing**: Optimized indexes for common queries (user_id, created_at, emotion)
-- **Connection Pooling**: HikariCP for efficient database connections
-- **Query Optimization**: JPA query optimization and N+1 prevention
-
-### Horizontal Scaling
-- **Microservice Architecture**: Independent scaling of AI and backend services
-- **Load Balancing**: Kubernetes ingress with automatic load distribution
-- **Database Scaling**: Read replicas for query-heavy operations
+**Key Deliverables**:
+- Anonymous session creation and management
+- Post creation with emotion selection and AI integration
+- Feed browsing with infinite scroll and pull-to-refresh
+- Avatar creation and cover design tools
+- Emotion museum with timeline and puzzle views
+- Push notifications for resonances and comments
 
 ---
 
-## 6. Monitoring & Observability
+### Mustafo / Junayd / Ahmed / Harley (Backend Team)
 
-### Application Metrics
-- **Performance**: Response times, throughput, error rates
-- **Business Metrics**: Post creation rates, user engagement, sentiment trends
-- **AI Model Performance**: Prediction accuracy, processing latency
+**Environment Setup**:
+- [ ] Clone the `backend/` folder; set up a local PostgreSQL instance (or Docker Compose)
+- [ ] Update `application.yml` with local DB credentials, Redis host (`redis:6379`), and AI service URL (`http://localhost:8001`)
+- [ ] Run `mvn clean package` → `java -jar target/youthmind-backend.jar`
+- [ ] Confirm that the OpenAPI/Swagger UI is accessible at `http://localhost:8080/swagger-ui.html`
 
-### Health Checks
-- **Service Health**: Spring Actuator health endpoints
-- **Database**: Connection pool status and query performance
-- **External Dependencies**: AI service availability and response times
+**Core Implementation**:
+- [ ] Implement the core controllers using DTOs for request/response:
+  - `AuthController` → Anonymous session management
+  - `PostController` → CRUD operations with AI integration
+  - `CommentController` → Comment creation and retrieval
+  - `ResonanceController` → Like/unlike functionality
+  - `NotificationController` → User notification management
+  - `AdminController` → Content moderation endpoints
+- [ ] Configure Spring Security to allow anonymous session creation and JWT validation for all other endpoints
+- [ ] Define JPA entities and repositories:
+  - `User`, `Post`, `Comment`, `Resonance`, `AIData`, `Notification`, `Draft`
 
-### Alerting
-- **Error Thresholds**: Automated alerts for error rate spikes
-- **Performance Degradation**: Response time and resource utilization alerts
-- **Business Metrics**: Unusual patterns in user behavior or content
+**Caching & Performance**:
+- [ ] Set up Redis caching for `/posts/feed` and `/search`, with a 5-minute TTL
+- [ ] Implement cache invalidation strategies for new post creation
+- [ ] Configure connection pooling and query optimization
+- [ ] Add Spring Actuator health checks and metrics
+
+**Security Implementation**:
+- [ ] JWT token generation and validation
+- [ ] Role-based access control for admin endpoints
+- [ ] reCAPTCHA integration for post creation
+- [ ] Rate limiting and API security measures
 
 ---
 
-## 7. Development & Deployment
+### Andy / Kevin (AI Team)
 
-### Local Development
-```bash
-# Start all services with Docker Compose
-docker-compose up -d
+**Environment Setup**:
+- [ ] Clone the `ai/` folder; create a Python virtual environment
+- [ ] Install dependencies from `requirements.txt`
+- [ ] Verify that sentiment analysis, question generation, and emotion classification models are present under `ai/models/`
+- [ ] If models are missing, download or fine-tune the necessary HuggingFace checkpoints
 
-# Services available at:
-# - Backend API: http://localhost:8080
-# - AI Service: http://localhost:8001  
-# - Admin Dashboard: http://localhost:3000
-# - PostgreSQL: localhost:5432
-# - Redis: localhost:6379
-```
+**Service Implementation**:
+- [ ] Start the FastAPI service: `uvicorn app:app --reload --port 8001`
+- [ ] Manually test endpoints via curl or Postman:
+  - `POST http://localhost:8001/ai/sentiment` with `{ "text": "I feel sad today" }`
+  - `POST http://localhost:8001/ai/questions` with `{ "text": "I am stressed about exams" }`
+- [ ] Ensure returned JSON matches the expected schema:
+  - `{ "sentiment_score": 0.2, "empathy_score": 0.8 }`
+  - `{ "questions": ["What pressures do you feel?", "How can you manage stress?"] }`
 
-### CI/CD Pipeline
-1. **Code Commit**: Trigger on push to main branch
-2. **Build & Test**: Parallel builds for all services
-3. **Security Scanning**: Dependency and container security checks
-4. **Deploy to Staging**: Automated deployment to staging environment
-5. **Integration Tests**: End-to-end testing in staging
-6. **Production Deployment**: Manual approval gate for production
+**Model Integration**:
+- [ ] Implement real-time sentiment analysis using `cardiffnlp/twitter-roberta-base-sentiment-latest`
+- [ ] Create emotion classification pipeline with `j-hartmann/emotion-english-distilroberta-base`
+- [ ] Build rule-based question generation system with emotion-specific templates
+- [ ] Add empathy scoring algorithm based on emotion analysis
 
-### Environment Management
-- **Development**: Local Docker Compose setup
-- **Staging**: Kubernetes cluster with staging data
-- **Production**: Production Kubernetes with monitoring and backup
+**Deployment Preparation**:
+- [ ] Containerize the service with a Dockerfile for easy deployment
+- [ ] Add health check endpoints for monitoring
+- [ ] Implement error handling and fallback responses
+- [ ] Set up model versioning for A/B testing
+
+---
+
+### Alex (Admin Dashboard)
+
+**Project Setup**:
+- [ ] Clone the `admin/` folder; run `npm install` → `npm start`
+- [ ] Update the Axios base URL to `http://localhost:8080` (backend)
+- [ ] Ensure the "Flagged Posts" page fetches from `/admin/posts?flagged=true`
+
+**Authentication Implementation**:
+- [ ] Implement a simple login flow (MVP: accept a hard-coded admin credential) to obtain an admin JWT
+- [ ] Set up token storage in `localStorage` with automatic refresh
+- [ ] Add route protection to redirect to login if no token is present
+
+**Core Features**:
+- [ ] Create a basic dashboard that lists flagged posts and allows deletion via `DELETE /admin/posts/{postId}`
+- [ ] Implement real-time statistics display:
+  - Total posts count
+  - Flagged posts count
+  - Active users count
+  - Today's posts count
+- [ ] Add post flagging/unflagging functionality
+- [ ] Create responsive design with Tailwind CSS or Material-UI
+
+**UI Components**:
+- [ ] Admin login page with error handling
+- [ ] Post management interface with filtering options
+- [ ] Statistics dashboard with charts and metrics
+- [ ] Content moderation workflow
+- [ ] User management tools (future feature)
+
+---
+
+### DevOps / Infrastructure Team
+
+**Local Development Environment**:
+- [ ] In the top-level `infrastructure/docker-compose.yml`, verify services: `postgres`, `redis`, `backend`, `ai-service`, `admin-ui`
+- [ ] Run `docker-compose up --build` from the `infrastructure/` folder to spin up all services
+- [ ] Validate that all services are reachable:
+  - `http://localhost:5432` (PostgreSQL) is reachable
+  - `http://localhost:6379` (Redis) is up
+  - `http://localhost:8080` (Backend) is serving the API
+  - `http://localhost:8001` (AI) serves AI endpoints
+  - `http://localhost:3000` (Admin) loads the React dashboard
+
+**Production Infrastructure**:
+- [ ] Prepare Kubernetes manifests (under `infrastructure/k8s/`) for staging/production:
+  - `deployment-backend.yaml`, `service-backend.yaml`
+  - `deployment-ai.yaml`, `service-ai.yaml`
+  - `configmap.yaml` for environment variables
+  - `secret.yaml` for sensitive data (JWT secrets, DB passwords)
+- [ ] Set up an Ingress resource for domain routing:
+  - `youthmind.com` → Backend API
+  - `ai.youthmind.com` → AI Service
+  - `admin.youthmind.com` → Admin Dashboard
+- [ ] Configure TLS certificates with Let's Encrypt or cert-manager
+
+**CI/CD Pipeline**:
+- [ ] Create GitHub Actions workflows for each service:
+  - iOS: Build and test with Xcode
+  - Backend: Maven build, test, and Docker image creation
+  - AI: Python testing and Docker image creation
+  - Admin: npm build and deployment
+- [ ] Set up automated deployments to staging environment
+- [ ] Configure manual approval gates for production deployment
+
+**Monitoring & Logging**:
+- [ ] Deploy Prometheus and Grafana for metrics collection
+- [ ] Set up centralized logging with ELK stack (optional)
+- [ ] Configure alerting for service health and performance
+- [ ] Implement backup strategies for PostgreSQL
+
+---
+
+## 5. Putting It All Together
+
+### Data Flow Architecture
+- **iOS ⟷ Backend ⟷ AI Microservice**: Seamless communication between mobile app, API gateway, and ML services
+- **PostgreSQL**: Long-term storage for users, posts, comments, and metadata
+- **Redis**: High-performance caching for feeds, search results, and real-time counters
+
+### Authentication Strategy
+- **Anonymous JWT tokens**: UUID-based user sessions for privacy-first approach
+- **Admin JWT tokens**: Role-based access for moderator actions and dashboard access
+- **Token Management**: Short-lived access tokens with secure refresh rotation
+
+### Caching Implementation
+- **Redis Cache**: Feed pages and search results with intelligent TTL policies
+- **Real-time Counters**: Resonance counts, user engagement metrics
+- **Cache Invalidation**: Smart cache updates on new content creation
+
+### Deployment Strategy
+- **Development**: Docker Compose for consistent local environment across all teams
+- **Staging**: Kubernetes cluster with staging data for integration testing
+- **Production**: Managed container service with autoscaling, load balancing, and monitoring
+- **CI/CD**: GitHub Actions for automated testing, building, and deployment
+
+### Team Coordination
+- **Daily Standups**: Cross-team alignment on integration points and blockers
+- **API Contract**: OpenAPI specification as the source of truth for all integrations
+- **Testing Strategy**: Unit tests, integration tests, and end-to-end testing across all components
+- **Documentation**: Living documentation updated with each release cycle
 
 ---
 
