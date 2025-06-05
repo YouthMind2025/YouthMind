@@ -16,7 +16,7 @@
 
 ## 1. Team Meeting Structure
 
-### Daily Development Standups
+### Daily Development Standups (IF there is any update)
 
 **Participants**: All team members **EXCEPT** Kevin and Andy
 - **iOS Team**: Dawei, Dexter, Youssef
