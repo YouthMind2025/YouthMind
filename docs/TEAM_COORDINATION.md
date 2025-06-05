@@ -20,7 +20,7 @@
 
 **Participants**: All team members **EXCEPT** Kevin and Andy
 - **iOS Team**: Dawei, Dexter, Youssef
-- **Backend Team**: Mustafo, Ahmed, Harley
+- **Backend Team**: Mustafo, Ahmed, Harley，Junayd
 - **Admin Dashboard**: Alex
 - **Project Manager**: Junayd (facilitator)
 
