@@ -63,7 +63,7 @@ Our development team is organized into specialized squads with clear domains of 
 
 ### **Development Tools & Environment**
 - **IDE Options**: Both IntelliJ IDEA and VSCode are officially supported
-- **Communication**: Slack for real-time coordination, Notion for documentation
+- **Communication**: Google meet or zoom for real-time coordination, Notion for documentation
 - **Project Management**: GitHub Issues, Trello for task tracking
 - **Code Quality**: 70% test coverage requirement, peer code reviews
 
@@ -456,7 +456,7 @@ We are committed to providing a welcoming, inclusive environment for all contrib
 #### **Communication Channels**
 - **GitHub Issues**: For bug reports and feature requests
 - **GitHub Discussions**: For general questions and community chat
-- **Slack**: Real-time team communication and coordination
+- **Zoom or Google meet**: Real-time team communication and coordination
 - **Notion**: Project management and comprehensive documentation
 - **Email**: security@youthmind.dev for security-related concerns
 
@@ -468,32 +468,9 @@ We are committed to providing a welcoming, inclusive environment for all contrib
 
 ---
 
-## Recognition
-
-### **10. Contributor Recognition**
-
-We value all contributions to YouthMind! Contributors will be:
-
-- **Listed in CONTRIBUTORS.md** with their contributions
-- **Mentioned in release notes** for significant contributions
-- **Invited to contributor events** and community calls
-- **Offered priority consideration** for internship/job opportunities (when available)
-
-### **Types of Contributions We Celebrate**
-- Code contributions (features, bug fixes, improvements)
-- Documentation improvements
-- Mental health expertise and guidance
-- Security auditing and improvements
-- Testing and quality assurance
-- Community support and mentorship
-- Accessibility improvements
-- Internationalization support
-
----
-
 ## Legal Considerations
 
-### **11. Contribution Agreement**
+### **10. Contribution Agreement**
 
 By contributing to YouthMind, you agree that:
 
@@ -502,17 +479,6 @@ By contributing to YouthMind, you agree that:
 - You understand this is a mental health platform with special safety requirements
 - You will follow all applicable laws and regulations regarding mental health data
 
-### **12. Security Reporting**
-
-**Do not report security vulnerabilities through public GitHub issues.**
-
-Instead, please email security@youthmind.dev with:
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact assessment
-- Suggested fixes (if any)
-
-We will respond within 48 hours and work with you to address any security concerns.
 
 ---
 
