@@ -43,7 +43,7 @@ YouthMind is an open-source project focused on creating safe, anonymous spaces f
 
 Our development team is organized into specialized squads with clear domains of expertise:
 
-#### **Leadership & Architecture**
+#### **Architecture and project management**
 - **Kevin**: AI Service Architecture Lead - FastAPI services, AI strategy, technical leadership
 - **Junayd**: Project Manager & System Designer - Coordination, requirements, timeline management
 
@@ -146,8 +146,8 @@ YouthMind/
 4. **Read our guidelines**: Familiarize yourself with our coding standards and mental health considerations
 
 #### **Development Coordination**
-- **Morning Standups**: Daily 15-minute team sync at 9:00 AM
-- **Architecture Reviews**: Weekly technical discussions led by Kevin (AI Lead)
+- **Morning Standups**: if there is any update
+- **Architecture Reviews**: Weekly technical discussions led by Kevin
 - **Sprint Planning**: Coordinated feature development across iOS, Backend, and AI teams
 - **Cross-team Dependencies**: Clear protocols for iOS↔Backend and Backend↔AI integration
 
@@ -450,6 +450,7 @@ We are committed to providing a welcoming, inclusive environment for all contrib
 - Inappropriate mental health advice or discussion
 - Deliberate introduction of security vulnerabilities
 - Spamming or promotional activities
+- Leaking the app UI or architecture
 
 ### **9. Getting Help**
 
@@ -458,7 +459,6 @@ We are committed to providing a welcoming, inclusive environment for all contrib
 - **GitHub Discussions**: For general questions and community chat
 - **Zoom or Google meet**: Real-time team communication and coordination
 - **Notion**: Project management and comprehensive documentation
-- **Email**: security@youthmind.dev for security-related concerns
 
 #### **Documentation Resources**
 - [Team Structure & Roles](./docs/TEAM_STRUCTURE.md)
