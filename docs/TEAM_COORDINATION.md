@@ -16,33 +16,32 @@
 
 **Meeting Details**:
 - **Frequency**: Daily (time adjustable based on team availability)
-- **Duration**: 15-20 minutes maximum
+- **Duration**: Flexible
 - **Format**: Stand-up style (brief updates, not deep technical discussions)
 
 **Agenda Structure**:
-1. **Yesterday's Progress** (2-3 minutes per person)
+1. **Yesterday's Progress** 
    - What did you complete?
    - Any blockers encountered?
    
-2. **Today's Focus** (1-2 minutes per person)
+2. **Today's Focus** 
    - What are you working on today?
    - Expected deliverables?
    
-3. **Coordination & Dependencies** (5 minutes)
+3. **Coordination & Dependencies** 
    - Cross-team integration needs
    - API contract changes
    - Shared component updates
    
-4. **Issue Resolution** (5-10 minutes)
+4. **Issue Resolution**
    - Technical blockers requiring team input
    - Design decisions affecting multiple components
    - Timeline adjustments needed
 
 **Why Kevin and Andy are Excluded**:
 - Kevin and Andy focus exclusively on **AI/ML algorithms and models**
-- They **cannot provide answers** about app functions, UI implementation, or backend integration
+- They **cannot provide answers** about frontend or backend integration
 - Their work is primarily research and model development, separate from application development
-- Including them would not add value to daily app development coordination
 
 ---
 
@@ -56,22 +55,22 @@
 - **Purpose**: AI-specific coordination and integration planning
 
 **Agenda Structure**:
-1. **AI Development Progress** (15 minutes)
+1. **AI Development Progress** 
    - Model training status and performance metrics
    - Algorithm improvements and testing results
    - Technical challenges in AI pipeline
    
-2. **Integration Requirements** (15 minutes)
+2. **Integration Requirements**
    - API endpoint changes needed from AI service
    - New AI features ready for backend integration
    - Performance requirements and scaling considerations
    
-3. **Task Assignment & Priorities** (10 minutes)
+3. **Task Assignment & Priorities**
    - Next sprint AI deliverables
    - Research tasks vs. implementation tasks
    - Timeline alignment with app development milestones
 
-4. **Communication to Main Team** (5 minutes)
+4. **Communication to Main Team** 
    - What updates need to be shared with the development team?
    - Any changes affecting backend API integration?
 
@@ -184,7 +183,7 @@ graph TD
 - **Afternoon**: Development team standup with weekly goals review
 
 ### Tuesday-Thursday: Development & Daily Standups
-- **Daily**: 15-minute development team standup
+- **Daily**: development team standup
 - **As Needed**: AI team meetings (2-3 times per week)
 
 ### Friday: Sprint Review & Planning
@@ -223,7 +222,7 @@ graph TD
 ### Daily Development Standup
 ```
 📅 Time: [To be determined based on team availability]
-⏰ Duration: 15-20 minutes
+⏰ Duration: Flexible
 👥 Attendees: Dawei, Dexter, Youssef, Mustafo, Ahmed, Harley, Alex, Junayd
 
 Structure:
@@ -235,7 +234,7 @@ Structure:
 ### AI Coordination Meeting
 ```
 📅 Time: Every 2-3 days (flexible)
-⏰ Duration: 30-45 minutes  
+⏰ Duration: Subject to the updates  
 👥 Attendees: Junayd, Kevin, Andy
 
 Structure:
