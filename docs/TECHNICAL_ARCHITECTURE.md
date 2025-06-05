@@ -50,7 +50,7 @@ Below is a comprehensive guide focusing on which technologies to use, how each p
 
 **Technology**: Python 3.9+ with FastAPI (HuggingFace Transformers / PyTorch), containerized via Docker.
 
-**Team**: Andy (models/NLP), Kevin (service architecture & deployment).
+**Team**: Andy (models/NLP), Kevin (AI Lead).
 
 **Key Features**:
 - Real-time sentiment analysis
@@ -103,7 +103,7 @@ Below is a comprehensive guide focusing on which technologies to use, how each p
 
 **CI/CD (GitHub Actions)**: Automate builds/tests for mobile, backend, AI, and admin code; push Docker images; deploy to staging/production.
 
-**Team**: Junayd (pipeline coordination), Kevin (AI service deployments), Ahmed & Harley (database & infrastructure), Alex (admin deployment scripts).
+**Team**: Junayd (pipeline coordination), Ahmed & Harley (database & infrastructure), Alex (admin deployment scripts).
 
 ---
 
@@ -185,13 +185,13 @@ Below is a comprehensive guide focusing on which technologies to use, how each p
 |-----------|---------------------|----------------------|--------------|
 | **iOS Mobile App** | Swift 5.5+ / SwiftUI | Combine, CoreData, URLSession, Firebase Crashlytics | Dawei, Dexter, Youssef |
 | **Backend API** | Java 17+ / Spring Boot | Spring Security (JWT), Spring Data JPA (PostgreSQL), Spring Cache (Redis), OpenAPI/Swagger | Mustafo, Junayd, Ahmed, Harley |
-| **AI Microservice** | Python 3.9+ / FastAPI | HuggingFace Transformers, PyTorch (or TensorFlow), Uvicorn, Docker | Andy, Kevin |
+| **AI Microservice** | Python 3.9+ / FastAPI | HuggingFace Transformers, PyTorch (or TensorFlow), Uvicorn, Docker | Andy, Kevin (AI Lead) |
 | **Admin Dashboard** | React (JavaScript/TS) | React Router, Axios, Tailwind CSS (or Material-UI), Jest | Alex |
 | **Database** | PostgreSQL 14+ | Hibernate ORM (JPA), JSONB columns, Full-Text Search (GIN) | Ahmed |
 | **Caching** | Redis 7+ | Spring Cache abstraction, TTL-based feed & search cache, Pub/Sub | Harley |
-| **Containerization** | Docker & Kubernetes | Docker Compose (local), Kubernetes manifests & Ingress, Helm (optional) | Junayd, Kevin, Ahmed, Harley |
+| **Containerization** | Docker & Kubernetes | Docker Compose (local), Kubernetes manifests & Ingress, Helm (optional) | Junayd, Ahmed, Harley |
 | **CI/CD** | GitHub Actions | Maven (Java), pytest (Python), npm (React), xcodebuild (iOS) | Junayd |
-| **Monitoring & Logs** | Prometheus & Grafana | Spring Actuator `/actuator/prometheus`, FastAPI metrics, Grafana dashboards, ELK/EFK (optional) | Ahmed, Harley, Kevin |
+| **Monitoring & Logs** | Prometheus & Grafana | Spring Actuator `/actuator/prometheus`, FastAPI metrics, Grafana dashboards, ELK/EFK (optional) | Ahmed, Harley |
 
 ---
 
@@ -403,4 +403,418 @@ Use the following checklist to ensure every team member knows their responsibili
 
 ---
 
-*This architecture provides a scalable, maintainable foundation for YouthMind's anonymous youth mental health platform, with clear separation of concerns and team responsibilities.* 
+*This architecture provides a scalable, maintainable foundation for YouthMind's anonymous youth mental health platform, with clear separation of concerns and team responsibilities.*
+
+---
+
+## 6. Production-Ready Operations Guide
+
+### 6.1 Environment Configuration & Secrets Management
+
+#### Environment Variables
+All services use standardized environment variable naming with `YOUTHMIND_` prefix:
+
+**Database Configuration:**
+- `YOUTHMIND_DB_HOST` (default: localhost)
+- `YOUTHMIND_DB_PORT` (default: 5432)
+- `YOUTHMIND_DB_NAME` (default: youthmind)
+- `YOUTHMIND_DB_USER`
+- `YOUTHMIND_DB_PASSWORD`
+
+**Redis Configuration:**
+- `YOUTHMIND_REDIS_HOST` (default: localhost)
+- `YOUTHMIND_REDIS_PORT` (default: 6379)
+- `YOUTHMIND_REDIS_PASSWORD`
+
+**Service URLs:**
+- `YOUTHMIND_AI_SERVICE_URL` (default: http://localhost:8001)
+- `YOUTHMIND_BACKEND_URL` (default: http://localhost:8080)
+
+**Security:**
+- `YOUTHMIND_JWT_SECRET` (256-bit base64 encoded)
+- `YOUTHMIND_JWT_EXPIRATION` (default: 24h)
+
+**External Services:**
+- `YOUTHMIND_TWILIO_API_KEY` (for OTP SMS)
+- `YOUTHMIND_TWILIO_API_SECRET`
+- `YOUTHMIND_EMAIL_PROVIDER_KEY` (for OTP emails)
+
+#### Secrets Storage
+- **Kubernetes**: Store sensitive values in `Secret` resources, not `ConfigMap`
+- **GitHub Actions**: Add secrets under "Settings → Secrets and variables → Actions"
+- **Local Development**: Use `.env` files (git-ignored) with same variable names
+
+### 6.2 API Versioning & Deprecation Policy
+
+#### Versioning Path
+All public API routes prefixed with `/v1/`:
+- `GET /v1/posts/feed`
+- `POST /v1/auth/register`
+- `POST /v1/posts/create`
+- `GET /v1/notifications`
+
+#### Deprecation Workflow
+1. **Announcement**: 6-month notice for breaking changes
+2. **Header Warning**: Add `X-API-Deprecated-In: 2025-09-01` to responses
+3. **Migration Guide**: Document `/v2/` endpoint changes
+4. **Sunset Period**: 3-month overlap before `/v1/` removal
+
+### 6.3 Error Handling & Standard Response Schema
+
+#### Consistent Error Format
+```json
+{
+  "error": {
+    "code": "INVALID_AUTH",
+    "message": "JWT token is missing or invalid.",
+    "details": { "field": "authorizationHeader" }
+  }
+}
+```
+
+#### Standard Error Codes
+- `USER_NOT_FOUND` (404) - User ID does not exist
+- `INVALID_AUTH` (401) - JWT token missing/invalid
+- `POST_TOO_LONG` (400) - Post exceeds character limit
+- `RATE_LIMIT_EXCEEDED` (429) - Too many requests
+- `AI_SERVICE_UNAVAILABLE` (503) - AI service timeout
+- `OTP_EXPIRED` (400) - OTP code expired
+- `OTP_INVALID` (400) - OTP code incorrect
+- `EMAIL_ALREADY_REGISTERED` (409) - Email already in use
+- `CONTENT_FLAGGED` (451) - Content violates guidelines
+- `INTERNAL_ERROR` (500) - Unexpected server error
+
+### 6.4 Rate Limiting & Abuse Prevention
+
+#### Anonymous Browsing Limits
+- **Feed API**: 100 requests per 5 minutes per IP
+- **Implementation**: Redis-backed sliding window with Bucket4j
+
+#### Authenticated Rate Limits
+- **Post Creation**: 10 posts per hour per user
+- **Comments**: 30 comments per hour per user
+- **Resonances**: 100 resonances per hour per user
+- **OTP Requests**: 5 requests per 10 minutes per email/phone
+
+#### Abuse Detection
+```java
+// Example configuration
+@RateLimiter(name = "post-creation", fallbackMethod = "rateLimitFallback")
+public ResponseEntity<PostDto> createPost(@RequestBody CreatePostRequest request) {
+    // Implementation
+}
+```
+
+### 6.5 Logging Strategy & Centralized Aggregation
+
+#### Structured Logging
+JSON-formatted logs with standardized fields:
+```json
+{
+  "timestamp": "2024-03-15T10:30:45.123Z",
+  "level": "INFO",
+  "service": "youthmind-backend",
+  "requestId": "req-12345",
+  "userId": "user-67890",
+  "endpoint": "/v1/posts/create",
+  "duration": 150,
+  "message": "Post created successfully"
+}
+```
+
+#### Correlation IDs
+- Generate `X-Request-ID` for each HTTP request
+- Pass correlation ID through all service calls
+- Include in all log entries for request tracing
+
+#### Centralized Aggregation
+- **Production**: ELK stack (Elasticsearch, Logstash, Kibana)
+- **Retention**: Error logs 90 days, info logs 30 days
+- **Alerting**: Critical errors trigger immediate notifications
+
+### 6.6 Metrics & Monitoring
+
+#### Key Performance Indicators
+**API Performance:**
+- Feed API latency (P50, P95, P99)
+- Post creation throughput (requests/second)
+- Error rates (4xx/5xx percentages)
+
+**AI Service:**
+- Sentiment analysis inference time
+- Question generation latency
+- Model prediction accuracy
+
+**Infrastructure:**
+- Database connection pool utilization
+- Redis cache hit ratio
+- Memory and CPU usage per service
+
+#### Instrumenting Services
+**Backend (Spring Boot):**
+```java
+@RestController
+@Timed(name = "api.posts.timer")
+public class PostController {
+    @PostMapping("/v1/posts/create")
+    @Timed(name = "posts.create.timer")
+    public ResponseEntity<PostDto> createPost() {
+        // Implementation
+    }
+}
+```
+
+**AI Service (FastAPI):**
+```python
+from prometheus_client import Summary, start_http_server
+
+REQUEST_TIME = Summary('request_processing_seconds', 'Time spent processing request')
+
+@REQUEST_TIME.time()
+def analyze_sentiment(text: str):
+    // Implementation
+```
+
+#### Alerting Rules
+- Feed API 5xx rate > 1% for 5 minutes → Page on-call
+- AI inference P95 > 500ms → Warning notification
+- Redis memory usage > 80% → Auto-scale alert
+- Database connection pool > 90% → Critical alert
+
+### 6.7 Database Backup & Disaster Recovery
+
+#### Scheduled Backups
+- **Daily Logic Backups**: `pg_dump` to S3 bucket `youthmind-backups/`
+- **Point-in-Time Recovery**: WAL archiving every 15 minutes
+- **Retention**: 30 days for full backups, 7 days for WAL files
+
+#### Failover Strategy
+- **Managed DB**: Multi-AZ automatic failover (RDS/Azure Database)
+- **Self-Hosted**: Patroni clustering for PostgreSQL HA
+- **Testing**: Monthly disaster recovery drills from backup
+
+### 6.8 Front-End Resilience & Offline Considerations
+
+#### Offline Caching Strategy (iOS)
+- Cache last 3 feed pages in CoreData
+- Queue post creation when offline (sync when online)
+- Show cached content with "Offline Mode" indicator
+
+#### Graceful Degradation
+- AI service timeout (>2s): Show "AI analysis pending" state
+- Network errors: Retry with exponential backoff
+- API errors: Display user-friendly error messages
+
+#### Client Version Compatibility
+```swift
+// iOS version checking
+if clientVersion < minimumSupportedVersion {
+    return ErrorResponse(code: "CLIENT_OUTDATED", 
+                        message: "Please update to the latest version")
+}
+```
+
+### 6.9 Internationalization & Accessibility
+
+#### Localization Preparation
+**iOS:**
+```swift
+// Localizable.strings
+"post.create.title" = "Share Your Thoughts";
+"error.network" = "Connection error. Please try again.";
+```
+
+**React Admin:**
+```javascript
+// i18next configuration
+import i18n from 'i18next';
+i18n.t('admin.posts.flagged'); // "Flagged Posts"
+```
+
+#### Accessibility Standards
+- **iOS**: VoiceOver labels, Dynamic Type support
+- **Web**: WCAG AA compliance, keyboard navigation
+- **Color Contrast**: 4.5:1 minimum ratio for text
+
+### 6.10 Data Retention & GDPR Compliance
+
+#### User Data Policy
+- Store only SHA256 hashed email/phone numbers
+- No raw PII recovery possible from database
+- 90-day retention for inactive user authentication data
+
+#### GDPR "Right to Erasure"
+```http
+DELETE /v1/user/{userId}/data
+Authorization: Bearer {user_jwt}
+
+Response:
+{
+  "message": "All personal data deleted. Anonymous posts preserved.",
+  "deletedAt": "2024-03-15T10:30:45.123Z"
+}
+```
+
+#### Audit Logging
+```sql
+CREATE TABLE admin_actions (
+    id UUID PRIMARY KEY,
+    admin_id UUID NOT NULL,
+    action_type VARCHAR(50) NOT NULL,
+    target_post_id UUID,
+    reason TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 6.11 Testing Strategy
+
+#### End-to-End Testing
+**User Flow Tests:**
+1. New user registration with OTP verification
+2. Post creation → AI analysis → feed appearance
+3. Comment/resonance → push notification delivery
+4. Content flagging → admin moderation workflow
+
+**Testing Tools:**
+- **iOS**: XCTest UI automation
+- **Web Admin**: Cypress test suite
+- **API**: Postman/Newman integration tests
+
+#### Load Testing
+```bash
+# Example Gatling test scenario
+gatling.sh -s FeedBrowsingSimulation
+# Target: 1000 concurrent users, 95th percentile < 200ms
+```
+
+#### Security Testing
+- **OWASP ZAP**: Automated vulnerability scanning
+- **Manual Pentest**: Pre-production security review
+- **Dependencies**: Snyk integration in CI/CD
+
+### 6.12 Rollout & Feature Flagging
+
+#### Feature Toggles
+```java
+@Component
+public class FeatureFlags {
+    @Value("${features.emotion-museum:false}")
+    private boolean emotionMuseumEnabled;
+    
+    public boolean isEmotionMuseumEnabled() {
+        return emotionMuseumEnabled;
+    }
+}
+```
+
+#### Canary Releases
+```yaml
+# Kubernetes canary deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: youthmind-backend
+spec:
+  strategy:
+    canary:
+      steps:
+      - setWeight: 5
+      - pause: {duration: 10m}
+      - setWeight: 100
+```
+
+### 6.13 Analytics & A/B Testing
+
+#### User Analytics Events
+```swift
+// iOS Analytics
+Analytics.logEvent("post_created", parameters: [
+    "emotion_tag": emotionTag,
+    "has_avatar": hasCustomAvatar,
+    "character_count": postContent.count
+])
+```
+
+#### A/B Testing Framework
+- **Question Generation**: Template vs LLM-generated
+- **UI Variants**: Color schemes, button placements
+- **Measurement**: Engagement rates, retention metrics
+
+### 6.14 Post-Launch Support
+
+#### Error Reporting
+```swift
+// iOS crash reporting
+Crashlytics.crashlytics().record(error: error)
+Crashlytics.crashlytics().setUserID(userUUID)
+```
+
+#### SLA & On-Call Rotation
+- **Response Time**: Critical issues < 15 minutes
+- **Uptime Target**: 99.9% availability
+- **Escalation**: Primary → Secondary → Engineering Manager
+
+#### Maintenance Windows
+- **Schedule**: Sunday 02:00-04:00 UTC
+- **Communication**: In-app banner, status page
+- **Rollback Plan**: Automated revert on health check failure
+
+### 6.15 Documentation Standards
+
+#### Living Architecture Diagrams
+```mermaid
+graph TB
+    iOS[iOS App] --> Backend[Spring Boot API]
+    Backend --> AI[FastAPI AI Service]
+    Backend --> DB[(PostgreSQL)]
+    Backend --> Cache[(Redis)]
+    Admin[React Admin] --> Backend
+```
+
+#### API Documentation
+- **OpenAPI 3.0**: Auto-generated from code annotations
+- **Postman Collection**: Exported from OpenAPI spec
+- **SDK Generation**: TypeScript for admin, Swift for iOS
+
+#### Deployment Runbooks
+```bash
+# Production deployment checklist
+□ Run integration tests in staging
+□ Database migration dry-run
+□ Feature flags configured
+□ Monitoring alerts enabled
+□ Rollback plan verified
+```
+
+### Final Production Checklist
+
+#### ✅ Environment & Security
+- [ ] All environment variables documented and standardized
+- [ ] Kubernetes Secrets configured for production
+- [ ] Rate limiting implemented per endpoint
+- [ ] GDPR compliance endpoints functional
+
+#### ✅ Observability
+- [ ] Prometheus metrics exposed on all services
+- [ ] Grafana dashboards configured with alerts
+- [ ] Centralized logging aggregation operational
+- [ ] Correlation ID tracing implemented
+
+#### ✅ Reliability
+- [ ] Database backup and recovery tested
+- [ ] Circuit breakers configured for external services
+- [ ] Health check endpoints responding correctly
+- [ ] Load testing completed with performance targets met
+
+#### ✅ Development Workflow
+- [ ] End-to-end tests covering critical user journeys
+- [ ] Security scanning integrated in CI/CD
+- [ ] Feature flagging system operational
+- [ ] Documentation up-to-date and accessible
+
+#### ✅ Launch Readiness
+- [ ] Monitoring and alerting rules active
+- [ ] On-call rotation and runbooks prepared
+- [ ] Analytics and A/B testing framework ready
+- [ ] User feedback and error reporting channels established 
