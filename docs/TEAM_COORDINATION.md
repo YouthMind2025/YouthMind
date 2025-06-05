@@ -25,7 +25,7 @@
 - **Project Manager**: Junayd (facilitator)
 
 **Meeting Details**:
-- **Frequency**: Daily (time adjustable based on team availability)
+- **Frequency**: Daily (time adjustable based on team availability given there are updates)
 - **Duration**: Flexible
 - **Format**: Stand-up style (brief updates, not deep technical discussions)
 
