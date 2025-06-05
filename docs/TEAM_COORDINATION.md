@@ -2,6 +2,17 @@
 
 *A clear framework for team coordination, daily standups, and progress tracking to ensure smooth development workflow*
 
+## 📋 Quick Links & Resources
+
+- **📊 [YouthMind Notion Workspace](https://www.notion.so/2078796c838d80d39393cb8cfd5f963c?v=2078796c838d806ba152000c2de604d9)** - Task management and project tracking
+- **📅 [Schedule a Team Meeting](mailto:junayd@youthmind.com?subject=Team%20Meeting%20Request)** - Contact Junayd for meeting coordination
+- **📚 Related Documentation:**
+  - [Technical Architecture](./TECHNICAL_ARCHITECTURE.md) - System design and implementation guide
+  - [Team Structure](./TEAM_STRUCTURE.md) - Detailed role assignments and responsibilities
+  - [API Reference](./API_REFERENCE.md) - Complete API documentation
+  - [Development Workflow](./DEVELOPMENT_WORKFLOW.md) - Sprint planning and deliverables
+  - [Deployment Guide](./DEPLOYMENT.md) - Production deployment procedures
+
 ---
 
 ## 1. Team Meeting Structure
@@ -40,7 +51,7 @@
 
 **Why Kevin and Andy are Excluded**:
 - Kevin and Andy focus exclusively on **AI/ML algorithms and models**
-- They **cannot provide answers** about frontend or backend integration
+- They **cannot provide answers** （Kevin can propose possible solutions but not actual implementations) about frontend or backend integration
 - Their work is primarily research and model development, separate from application development
 
 ---
@@ -51,12 +62,12 @@
 
 **Meeting Details**:
 - **Frequency**: Every 2-3 days (flexible based on AI development progress)
-- **Duration**: 30-45 minutes
-- **Purpose**: AI-specific coordination and integration planning
+- **Duration**: Subject to the updates
+- **Purpose**: AI integration coordination and cross-team solution support
 
 **Agenda Structure**:
 1. **AI Development Progress** 
-   - Model training status and performance metrics
+   - Model training status and performance metrics (Kevin & Andy)
    - Algorithm improvements and testing results
    - Technical challenges in AI pipeline
    
@@ -65,14 +76,20 @@
    - New AI features ready for backend integration
    - Performance requirements and scaling considerations
    
-3. **Task Assignment & Priorities**
+3. **Cross-Team Support & Solutions**
+   - **Kevin**: Strategic solutions for technical blockers across all teams
+   - **Andy**: UI/UX guidance and app function clarifications
+   - Integration challenges between AI and frontend/backend
+   
+4. **Task Assignment & Priorities**
    - Next sprint AI deliverables
    - Research tasks vs. implementation tasks
    - Timeline alignment with app development milestones
 
-4. **Communication to Main Team** 
+5. **Communication to Main Team** 
    - What updates need to be shared with the development team?
    - Any changes affecting backend API integration?
+   - Solutions and guidance to relay to respective teams
 
 ---
 
@@ -137,24 +154,43 @@ Cross-team features requiring coordination
 **Level 3: AI Team Consultation**
 - Issues specifically related to AI integration or algorithm performance
 - Scheduled discussion in next AI coordination meeting
-### Knowledge Boundaries
+### Knowledge Boundaries & Expertise Areas
 
-**What Kevin and Andy CAN Help With**:
-- AI model performance and accuracy
+#### **Kevin (AI Lead) - Solution Advisory Role**
+**CAN Help With:**
+- AI model performance optimization and troubleshooting
 - Sentiment analysis algorithm improvements
-- Question generation logic and templates
+- Question generation logic and template design
 - AI service API design and optimization
-- Machine learning model deployment
-- Questions regarding the UI implementation and app functions
+- Machine learning model deployment strategies
+- **🔧 Providing solutions and guidance** when technical issues arise (any domain)
+- Strategic technical decision-making across all components
 
-**What Kevin CAN Help With**:
-(Questions or possible solutions but not actual implementation)
-- iOS UI implementation and SwiftUI issues
-- Backend API development and Spring Boot configuration
+**CANNOT Help With:**
+- **Direct implementation** of frontend or backend code
+- Hands-on SwiftUI, Spring Boot, or React development
+- Writing actual code for non-AI components
+
+#### **Andy (AI Developer) - UI/UX Integration Specialist**
+**CAN Help With:**
+- AI model development and integration
+- Real-time AI processing optimization
+- **📱 UI and app function questions** - Can respond to all interface-related queries
+- User experience considerations for AI features
+- Frontend-AI integration workflows
+- App functionality design and user flows
+
+**CANNOT Help With:**
+- **Direct implementation** of backend infrastructure
 - Database schema design and optimization
-- React admin dashboard development
-- General application architecture questions
-- User experience and design decisions
+- DevOps and deployment configurations
+
+#### **What Both Kevin and Andy CANNOT Help With:**
+- Direct hands-on implementation of frontend/backend code
+- Spring Boot configuration and backend development
+- Database schema design and optimization
+- React admin dashboard implementation
+- Infrastructure setup and DevOps tasks
 
 ### Daily Communication Flow
 
@@ -264,4 +300,25 @@ Structure:
 
 ---
 
-*This coordination structure ensures efficient daily development progress while maintaining clear boundaries between AI research/development and application implementation, with Junayd serving as the central coordinator and communication bridge between teams.* 
+## 📚 Additional Resources & Access
+
+### Notion Workspace Access
+Visit the [YouthMind Notion Workspace](https://www.notion.so/2078796c838d80d39393cb8cfd5f963c?v=2078796c838d806ba152000c2de604d9) for:
+- Real-time task tracking and progress updates
+- Sprint planning boards and deliverable timelines
+- Individual contribution metrics and team performance data
+- Meeting notes and decision records
+
+### Documentation Navigation
+This document is part of a comprehensive documentation suite. Use the links in the [Quick Links & Resources](#-quick-links--resources) section to navigate between:
+- Technical specifications and architecture details
+- Team structure and individual responsibilities  
+- API contracts and integration guidelines
+- Deployment procedures and operational guides
+
+### Meeting Coordination
+For scheduling coordination meetings or addressing urgent cross-team issues, contact Junayd at [junayd@youthmind.com](mailto:junayd@youthmind.com?subject=Team%20Meeting%20Request) with your availability and agenda items.
+
+---
+
+*This coordination structure ensures efficient daily development progress while maintaining clear boundaries between AI research/development and application implementation, with Kevin providing strategic solutions, Andy handling UI/UX guidance, and Junayd serving as the central coordinator and communication bridge between teams.* 
