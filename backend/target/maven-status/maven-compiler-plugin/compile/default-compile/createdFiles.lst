@@ -1,8 +1,0 @@
-ai\youthmind\service\UserService.class
-ai\youthmind\controller\WelcomeController.class
-ai\youthmind\config\SecurityConfig.class
-ai\youthmind\repository\UserRepository.class
-ai\youthmind\entity\User.class
-ai\youthmind\config\JwtConfig.class
-ai\youthmind\YouthmindBackendApplication.class
-ai\youthmind\controller\TestController.class
