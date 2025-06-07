@@ -8,3 +8,5 @@
 *.war
 .DS_Store
 Thumbs.db
+/backend/target
+target
