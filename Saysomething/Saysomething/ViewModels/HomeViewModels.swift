@@ -11,5 +11,7 @@ class HomeViewModel: ObservableObject {
     @Published var title: String = "Welcome to Home"
     @Published var isLoading: Bool = false
     
-    
+    var userID: String {
+        UserIdentityManager.shared.userID
+    }
 }
