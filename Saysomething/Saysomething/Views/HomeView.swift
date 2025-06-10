@@ -65,6 +65,11 @@ struct HomeView: View {
                     ProgressView("Loading...")
                         .padding()
                 }
+                // UUID label for testing
+                Text("UUID: \(viewModel.userID)")
+                    .font(.footnote)
+                    .foregroundColor(.gray)
+                    .padding(.top, 20)
             }.navigationTitle("Home Page")
         }
     }
