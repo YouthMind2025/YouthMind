@@ -66,7 +66,7 @@ struct HomeView: View {
                         .padding()
                 }
                 // UUID label for testing
-                Text("UUID: \(viewModel.userID)")
+                Text("UUID: \(UserIdentityManager.shared.userID)")
                     .font(.footnote)
                     .foregroundColor(.gray)
                     .padding(.top, 20)
