@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Sidebar from './scenes/global/Sidebar';
 import FlaggedPosts from './scenes/pages/FlaggedPosts';
 import SystemHealth from './scenes/pages/SystemHealth';
+import SystemMetrics from './scenes/pages/SystemMetrics';
 import './App.css';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
           <Routes>
             <Route path="/flagged-posts" element={<FlaggedPosts />} />
             <Route path="/system-health" element={<SystemHealth />} />
+            <Route path="/system-metrics" element={<SystemMetrics />} />
             <Route path="/" element={<FlaggedPosts />} />
           </Routes>
         </main>

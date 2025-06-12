@@ -1,11 +1,15 @@
 import React from 'react';
+import './SystemHealth.css';
 
 const SystemHealth: React.FC = () => {
   return (
     <div className="page-container">
-      <h1>System Health</h1>
-      {/* Add your system health content here */}
-      <p>testing testing for system health</p>
+      <div className="page-header">
+        <h1 className="page-title">System Health</h1>
+      </div>
+      <div className="page-content">
+        <p>testing testing for system health</p>
+      </div>
     </div>
   );
 };

@@ -20,6 +20,9 @@ const Sidebar: React.FC = () => {
           <Link to="/system-health" className="sidebar-link">
             System Health
           </Link>
+          <Link to="/system-metrics" className="sidebar-link">
+            System Metrics
+          </Link>
         </nav>
       </div>
     </div>
