@@ -30,7 +30,7 @@ export const flagedmockData = {
 export const systemmonitoringmockData = {
         "status": "healthy",
         "services": {
-          "database": "up",
+          "database": "down",
           "redis": "up",
           "ai_service": "up"
         },
