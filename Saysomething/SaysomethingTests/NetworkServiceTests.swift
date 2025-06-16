@@ -183,7 +183,6 @@ class TestableNetworkService: NetworkServiceProtocol {
     }
 
     func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<ApiResponse<T>, APIError> {
-        func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<ApiResponse<T>, APIError> {
         guard let url = URL(string: endpoint.baseURL + endpoint.path) else {
             return Fail(error: APIError.invalidURL)
                 .eraseToAnyPublisher()
@@ -222,6 +221,5 @@ class TestableNetworkService: NetworkServiceProtocol {
             }
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
-    }
     }
 } 
