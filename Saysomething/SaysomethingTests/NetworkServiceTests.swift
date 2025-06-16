@@ -67,7 +67,7 @@ class NetworkServiceTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Register request should succeed")
         
         // send request
-        networkService.request(endpoint)
+        networkService.request<RegisterResponse>(endpoint)
             .sink { completion in
                 switch completion {
                 case .finished:
@@ -135,7 +135,7 @@ class NetworkServiceTests: XCTestCase {
         
         let expectation = XCTestExpectation(description: "Request should fail with invalid status code")
         
-        networkService.request(endpoint)
+        networkService.request<RegisterResponse>(endpoint)
             .sink { completion in
                 switch completion {
                 case .finished:
