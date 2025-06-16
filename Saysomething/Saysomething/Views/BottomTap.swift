@@ -5,37 +5,41 @@
 import SwiftUI
 
 struct BottomTap: View {
-    @State var currentState = "home"
     
     var body: some View {
-        HStack{
-            Spacer()
-            Text("Home").onTapGesture {
-                currentState = "home"
-            }.foregroundColor(currentState=="home" ?.purple:.gray)
+        TabView {
+            HomePage()
+                .tabItem {
+                    Image(systemName: "house")
+                    Text("Home")
+                }
             
-            Spacer()
-            Text("You AI").onTapGesture {
-                currentState = "youAI"
-            }.foregroundColor(currentState=="youAI" ?.purple:.gray)
-                
-            Spacer()
-            Image(systemName: "plus.rectangle.fill").onTapGesture {
-                currentState = "addPost"
-            }.foregroundColor(currentState=="addPost" ?.purple:.gray)
+            YouAIView()
+                .tabItem {
+                    Image(systemName: "heart")
+                    Text("YouAI")
+                }
+                    
+            PostSomethingView()
+                .tabItem {
+                    Image(systemName: "plus.square")
+                    Text("Post")
+                }
             
-            Spacer()
-            Text("Message").onTapGesture {
-                currentState = "message"
-            }.foregroundColor(currentState=="message" ?.purple:.gray)
-            
-            Spacer()
-            Text("Me").onTapGesture {
-                currentState = "me"
-            }.foregroundColor(currentState=="me" ?.purple:.gray)
-            Spacer()
-            
-        }//HStack end
+            MessageView()
+                .tabItem {
+                    Image(systemName: "message")
+                    Text("Messages")
+                }
+                    
+                    
+            MeView()
+                .tabItem {
+                    Image(systemName: "person")
+                    Text("Me")
+                }
+            }
+            .accentColor(.purple)
     }
 }
 
