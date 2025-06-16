@@ -55,4 +55,9 @@ public class AuthController {
         return objectMapper.writeValueAsString(responseNode);
     }
 
+    @GetMapping("/test")
+    public String testAuth() {
+        return "Test Page";
+    }
+
 }
