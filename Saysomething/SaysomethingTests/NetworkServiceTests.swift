@@ -2,6 +2,17 @@ import XCTest
 import Combine
 @testable import Saysomething
 
+struct RegisterResponse: Codable {
+    let userId: String
+    let token: String
+    let expiresAt: String
+}
+
+struct RegisterRequest: Encodable {
+    let email: String
+    let otp: String
+}
+
 protocol NetworkSessionProtocol {
     func makeDataTaskPublisher(for request: URLRequest) -> AnyPublisher<(data: Data, response: URLResponse), URLError>
 }
@@ -98,7 +109,7 @@ class NetworkServiceTests: XCTestCase {
         
         let expectation = XCTestExpectation(description: "Request should fail with network error")
         
-        networkService.request(endpoint)
+        networkService.request<RegisterResponse>(endpoint)
             .sink { completion in
                 switch completion {
                 case .finished:
