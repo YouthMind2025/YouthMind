@@ -123,3 +123,8 @@ struct RegisterResponse: Codable {
     let expiresAt: String
 }
 
+struct RegisterRequest: Encodable {
+    let email: String
+    let otp: String
+}
+

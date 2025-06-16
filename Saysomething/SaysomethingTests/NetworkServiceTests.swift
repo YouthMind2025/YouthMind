@@ -2,15 +2,26 @@ import XCTest
 import Combine
 @testable import Saysomething
 
+protocol NetworkSessionProtocol {
+    func dataTaskPublisher(for request: URLRequest) -> AnyPublisher<(data: Data, response: URLResponse), URLError>
+}
+
+extension URLSession: NetworkSessionProtocol {
+    func dataTaskPublisher(for request: URLRequest) -> AnyPublisher<(data: Data, response: URLResponse), URLError> {
+        self.dataTaskPublisher(for: request)
+            .eraseToAnyPublisher()
+    }
+}
+
 class NetworkServiceTests: XCTestCase {
     private var cancellables = Set<AnyCancellable>()
-    private var mockSession: MockURLSession!
-    private var networkService: NetworkService!
+    private var mockSession: MockSession!
+    private var networkService: TestableNetworkService!
     
     override func setUp() {
         super.setUp()
-        mockSession = MockURLSession()
-        networkService = NetworkService(session: mockSession)
+        mockSession = MockSession()
+        networkService = TestableNetworkService(session: mockSession)
     }
     
     override func tearDown() {
@@ -146,42 +157,71 @@ class NetworkServiceTests: XCTestCase {
 }
 
 // Mock URLSession
-class MockURLSession: URLSession {
+class MockSession: NetworkSessionProtocol {
     var mockData: Data?
     var mockResponse: URLResponse?
-    var mockError: Error?
+    var mockError: URLError?
     
-    override func dataTaskPublisher(for request: URLRequest) -> URLSession.DataTaskPublisher {
-        return MockDataTaskPublisher(
-            request: request,
-            mockData: mockData,
-            mockResponse: mockResponse,
-            mockError: mockError
-        )
+    func dataTaskPublisher(for request: URLRequest) -> AnyPublisher<(data: Data, response: URLResponse), URLError> {
+        if let error = mockError {
+            return Fail(error: error).eraseToAnyPublisher()
+        }
+        if let data = mockData, let response = mockResponse {
+            return Just((data: data, response: response))
+                .setFailureType(to: URLError.self)
+                .eraseToAnyPublisher()
+        }
+        return Fail(error: URLError(.badServerResponse)).eraseToAnyPublisher()
     }
 }
 
-// Mock DataTaskPublisher
-struct MockDataTaskPublisher: Publisher {
-    typealias Output = (data: Data, response: URLResponse)
-    typealias Failure = Error
-    
-    let request: URLRequest
-    let mockData: Data?
-    let mockResponse: URLResponse?
-    let mockError: Error?
-    
-    func receive<S>(subscriber: S) where S : Subscriber, Failure == S.Failure, Output == S.Input {
-        if let error = mockError {
-            subscriber.receive(completion: .failure(error))
-            return
+class TestableNetworkService: NetworkServiceProtocol {
+    private let session: NetworkSessionProtocol
+
+    init(session: NetworkSessionProtocol) {
+        self.session = session
+    }
+
+    func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<ApiResponse<T>, APIError> {
+        func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<ApiResponse<T>, APIError> {
+        guard let url = URL(string: endpoint.baseURL + endpoint.path) else {
+            return Fail(error: APIError.invalidURL)
+                .eraseToAnyPublisher()
         }
-        
-        if let data = mockData, let response = mockResponse {
-            _ = subscriber.receive((data: data, response: response))
-            subscriber.receive(completion: .finished)
-        } else {
-            subscriber.receive(completion: .failure(APIError.invalidResponse))
-        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = endpoint.method
+        request.httpBody = endpoint.body
+        endpoint.headers?.forEach { request.addValue($1, forHTTPHeaderField: $0) }
+        request.timeoutInterval = endpoint.timeout
+
+        return session.dataTaskPublisher(for: request)
+            .tryMap { data, response in
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    throw APIError.invalidStatusCode(httpResponse.statusCode)
+                }
+                do {
+                    let decodedData = try JSONDecoder().decode(T.self, from: data)
+                    return ApiResponse<T>(
+                        data: decodedData,
+                        statusCode: httpResponse.statusCode,
+                        headers: httpResponse.allHeaderFields as? [String: String] ?? [:]
+                    )
+                } catch {
+                    throw APIError.decodingError(error)
+                }
+            }
+            .mapError { error in
+                if let urlError = error as? URLError, urlError.code == .timedOut {
+                    return APIError.timeout
+                }
+                return APIError.networkError(error)
+            }
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+    }
     }
 } 
