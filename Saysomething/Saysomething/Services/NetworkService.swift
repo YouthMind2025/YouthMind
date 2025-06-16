@@ -6,4 +6,114 @@
 //
 
 
-centralized API
+// Core function
+import Foundation
+import Combine
+
+// API Response and Error Handling
+enum APIError: Error {
+    case invalidURL
+    case networkError(Error)
+    case invalidResponse
+    case invalidStatusCode(Int)         // wrong status code
+    case decodingError(Error)           // json decode error
+    case timeout
+}
+
+
+struct ApiResponse<T: Decodable>: Decodable {
+    let data: T
+    let statusCode: Int
+    let headers: [String: String]
+}
+
+
+// Network Service Protocol
+protocol NetworkServiceProtocol {
+    func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<ApiResponse<T>, APIError>
+}
+
+// Endpoint Configuration
+struct Endpoint {
+    let baseURL: String
+    let path: String
+    let method: String
+    let headers: [String: String]?
+    let body: Data?
+    let timeout: TimeInterval
+    
+    init(baseURL: String = "https://api.example.com",
+            path: String,
+            method: String = "GET",
+            headers: [String: String]? = nil,
+            body: Data? = nil,
+            timeout: TimeInterval = 30.0) {
+        self.baseURL = baseURL
+        self.path = path
+        self.method = method
+        self.headers = headers
+        self.body = body
+        self.timeout = timeout
+    }
+}
+
+// Network Service Implementation
+class NetworkService: NetworkServiceProtocol {
+    private let session: URLSession
+    
+    // default value
+    init(session: URLSession = .shared) {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 30.0
+        configuration.timeoutIntervalForResource = 60.0
+        self.session = URLSession(configuration: configuration)
+    }
+    
+    // handle API request
+    func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<ApiResponse<T>, APIError> {
+        // url checking, if URL is not valid then return Fail
+        guard let url = URL(string: endpoint.baseURL + endpoint.path) else {
+            return Fail(error: APIError.invalidURL)
+                .eraseToAnyPublisher()
+        }
+        
+        // create request, and intial it with endpoint
+        var request = URLRequest(url: url)
+        request.httpMethod = endpoint.method
+        request.httpBody = endpoint.body
+        endpoint.headers?.forEach { request.addValue($1, forHTTPHeaderField: $0) }      // also handle no header situation
+        request.timeoutInterval = endpoint.timeout
+        
+        return session.dataTaskPublisher(for: request)
+            .tryMap { data, response in
+                // convert response to HTTPURLResponse
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+                // check status code is 2xx
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    throw APIError.invalidStatusCode(httpResponse.statusCode)
+                }
+                // check decode error
+                do {
+                    let decodedData = try JSONDecoder().decode(T.self, from: data)
+                    return ApiResponse<T>(
+                        data: decodedData,
+                        statusCode: httpResponse.statusCode,
+                        headers: httpResponse.allHeaderFields as? [String: String] ?? [:]
+                    )
+                } catch {
+                    throw APIError.decodingError(error)
+                }
+            } // covert error into APIError
+            .mapError { error in
+                if let urlError = error as? URLError, urlError.code == .timedOut {
+                    return APIError.timeout
+                }
+                return APIError.networkError(error)
+            }
+            .receive(on: DispatchQueue.main)    // on main
+            .eraseToAnyPublisher()
+    }
+}
+
