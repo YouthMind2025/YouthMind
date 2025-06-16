@@ -117,3 +117,9 @@ class NetworkService: NetworkServiceProtocol {
     }
 }
 
+struct RegisterResponse: Codable {
+    let userId: String
+    let token: String
+    let expiresAt: String
+}
+
