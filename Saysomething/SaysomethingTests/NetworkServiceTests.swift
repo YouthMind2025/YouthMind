@@ -50,7 +50,14 @@ class NetworkServiceTests: XCTestCase {
             expiresAt: "2024-12-31"
         )
         
-        let responseData = try! JSONEncoder().encode(expectedResponse)
+        // Create the wrapped API response
+        let apiResponse = ApiResponse(
+            data: expectedResponse,
+            statusCode: 200,
+            headers: ["Content-Type": "application/json"]
+        )
+        
+        let responseData = try! JSONEncoder().encode(apiResponse)
         let mockResponse = HTTPURLResponse(
             url: URL(string: "https://api.example.com")!,
             statusCode: 200,
@@ -86,7 +93,7 @@ class NetworkServiceTests: XCTestCase {
                 case .failure(let error):
                     XCTFail("request failed: \(error.localizedDescription)")
                 }
-            } receiveValue: { (response: ApiResponse<RegisterResponse>) in
+            } receiveValue: { response in
                 // verify response
                 XCTAssertEqual(response.data.userId, expectedResponse.userId)
                 XCTAssertEqual(response.data.token, expectedResponse.token)
@@ -214,12 +221,8 @@ class TestableNetworkService: NetworkServiceProtocol {
                     throw APIError.invalidStatusCode(httpResponse.statusCode)
                 }
                 do {
-                    let decodedData = try JSONDecoder().decode(T.self, from: data)
-                    return ApiResponse<T>(
-                        data: decodedData,
-                        statusCode: httpResponse.statusCode,
-                        headers: httpResponse.allHeaderFields as? [String: String] ?? [:]
-                    )
+                    let decodedResponse = try JSONDecoder().decode(ApiResponse<T>.self, from: data)
+                    return decodedResponse
                 } catch {
                     throw APIError.decodingError(error)
                 }

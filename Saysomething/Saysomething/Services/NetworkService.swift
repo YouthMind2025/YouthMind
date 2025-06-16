@@ -96,12 +96,8 @@ class NetworkService: NetworkServiceProtocol {
                 }
                 // check decode error
                 do {
-                    let decodedData = try JSONDecoder().decode(T.self, from: data)
-                    return ApiResponse<T>(
-                        data: decodedData,
-                        statusCode: httpResponse.statusCode,
-                        headers: httpResponse.allHeaderFields as? [String: String] ?? [:]
-                    )
+                    let decodedResponse = try JSONDecoder().decode(ApiResponse<T>.self, from: data)
+                    return decodedResponse
                 } catch {
                     throw APIError.decodingError(error)
                 }
