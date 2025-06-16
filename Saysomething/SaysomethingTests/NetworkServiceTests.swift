@@ -3,11 +3,11 @@ import Combine
 @testable import Saysomething
 
 protocol NetworkSessionProtocol {
-    func dataTaskPublisher(for request: URLRequest) -> AnyPublisher<(data: Data, response: URLResponse), URLError>
+    func makeDataTaskPublisher(for request: URLRequest) -> AnyPublisher<(data: Data, response: URLResponse), URLError>
 }
 
 extension URLSession: NetworkSessionProtocol {
-    func dataTaskPublisher(for request: URLRequest) -> AnyPublisher<(data: Data, response: URLResponse), URLError> {
+    func makeDataTaskPublisher(for request: URLRequest) -> AnyPublisher<(data: Data, response: URLResponse), URLError> {
         self.dataTaskPublisher(for: request)
             .eraseToAnyPublisher()
     }
@@ -162,7 +162,7 @@ class MockSession: NetworkSessionProtocol {
     var mockResponse: URLResponse?
     var mockError: URLError?
     
-    func dataTaskPublisher(for request: URLRequest) -> AnyPublisher<(data: Data, response: URLResponse), URLError> {
+    func makeDataTaskPublisher(for request: URLRequest) -> AnyPublisher<(data: Data, response: URLResponse), URLError> {
         if let error = mockError {
             return Fail(error: error).eraseToAnyPublisher()
         }
@@ -194,7 +194,7 @@ class TestableNetworkService: NetworkServiceProtocol {
         endpoint.headers?.forEach { request.addValue($1, forHTTPHeaderField: $0) }
         request.timeoutInterval = endpoint.timeout
 
-        return session.dataTaskPublisher(for: request)
+        return session.makeDataTaskPublisher(for: request)
             .tryMap { data, response in
                 guard let httpResponse = response as? HTTPURLResponse else {
                     throw APIError.invalidResponse
