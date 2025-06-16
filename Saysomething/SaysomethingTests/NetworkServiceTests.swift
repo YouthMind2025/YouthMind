@@ -8,7 +8,7 @@ struct RegisterResponse: Codable {
     let expiresAt: String
 }
 
-struct RegisterRequest: Encodable {
+struct RegisterRequest: Codable {
     let email: String
     let otp: String
 }
@@ -200,7 +200,7 @@ class TestableNetworkService: NetworkServiceProtocol {
         self.session = session
     }
 
-    func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<ApiResponse<T>, APIError> {
+    func request<T: Codable>(_ endpoint: Endpoint) -> AnyPublisher<ApiResponse<T>, APIError> {
         guard let url = URL(string: endpoint.baseURL + endpoint.path) else {
             return Fail(error: APIError.invalidURL)
                 .eraseToAnyPublisher()

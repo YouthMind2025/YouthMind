@@ -21,7 +21,7 @@ enum APIError: Error {
 }
 
 
-struct ApiResponse<T: Decodable>: Decodable {
+struct ApiResponse<T: Codable>: Codable {
     let data: T
     let statusCode: Int
     let headers: [String: String]
@@ -30,7 +30,7 @@ struct ApiResponse<T: Decodable>: Decodable {
 
 // Network Service Protocol
 protocol NetworkServiceProtocol {
-    func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<ApiResponse<T>, APIError>
+    func request<T: Codable>(_ endpoint: Endpoint) -> AnyPublisher<ApiResponse<T>, APIError>
 }
 
 // Endpoint Configuration
@@ -119,7 +119,7 @@ struct RegisterResponse: Codable {
     let expiresAt: String
 }
 
-struct RegisterRequest: Encodable {
+struct RegisterRequest: Codable {
     let email: String
     let otp: String
 }
