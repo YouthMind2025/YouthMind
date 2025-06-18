@@ -9,10 +9,15 @@ import SwiftUI
 
 @main
 struct SaysomethingApp: App {
+    @StateObject private var loginViewModel = LoginViewModel()
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            if loginViewModel.isLoggedIn {
+                HomeView()
+            } else {
+                LoginView()
+                    .environmentObject(loginViewModel)
+            }
         }
     }
-}
-
+} 
