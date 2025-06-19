@@ -84,6 +84,9 @@ You can customize the application using these environment variables:
 - `GET /swagger-ui.html` - Interactive API documentation
 - `GET /api-docs` - OpenAPI JSON specification
 
+### Authorization
+- `POST /v1/auth/register` - Register new user with email and otp, returns userID, JWT and expiration timestamp
+
 ## Project Structure
 
 ```
@@ -130,7 +133,7 @@ The application is configured with:
 ## Next Steps
 
 This is a foundation project. You can now add:
-- User registration and authentication endpoints
+- Authentication endpoints
 - Business logic for your specific use case
 - Additional entities and relationships
 - Custom security configurations
@@ -138,4 +141,4 @@ This is a foundation project. You can now add:
 
 ---
 
-**Status:** ✅ Foundation Complete - Ready for Development 
+**Status:** ✅ User registration Complete
