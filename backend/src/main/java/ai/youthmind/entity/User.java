@@ -16,7 +16,7 @@ import java.util.UUID;
 public class User {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     
     @Column(name = "email_hash", unique = true, nullable = false)
