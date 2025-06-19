@@ -6,3 +6,5 @@ ai\youthmind\entity\User.class
 ai\youthmind\config\JwtConfig.class
 ai\youthmind\YouthmindBackendApplication.class
 ai\youthmind\controller\TestController.class
+ai\youthmind\config\RedisConfig.class
+ai\youthmind\service\RedisService.class
