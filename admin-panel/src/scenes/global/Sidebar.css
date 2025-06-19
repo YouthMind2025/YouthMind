@@ -8,6 +8,8 @@
   left: 0;
   top: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-section {
@@ -33,6 +35,90 @@
 .sidebar-link:hover {
   background-color: #e9ecef;
   color: #0d6efd;
+}
+
+.sidebar-link.active {
+  background-color: #0d6efd;
+  color: white;
+}
+
+/* User Info Section */
+.user-info {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  margin-bottom: 1.5rem;
+}
+
+.user-details {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: #0d6efd;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-text {
+  font-weight: 600;
+  font-size: 1rem;
+  color: white;
+}
+
+.user-text {
+  flex: 1;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin: 0;
+  color: #212529;
+}
+
+.user-role {
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin: 0;
+}
+
+/* Logout Section */
+.logout-section {
+  margin-top: auto;
+  margin-bottom: 0;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.logout-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.logout-button:hover {
+  background-color: #c82333;
+}
+
+.logout-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #dc3545;
 }
 
 /* Responsive adjustments */
