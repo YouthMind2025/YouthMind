@@ -1,10 +1,20 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { jwtDecode } from 'jwt-decode';
 
 interface User {
   id: string;
   username: string;
   email: string;
   role: string;
+}
+
+interface JWTPayload {
+  sub: string; // user id
+  email: string;
+  username: string;
+  role: string;
+  exp: number; // expiration timestamp
+  iat: number; // issued at timestamp
 }
 
 interface AuthContextType {
@@ -40,20 +50,65 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  const checkAuthStatus = () => {
-    const token = localStorage.getItem('admin_token');
-    if (token) {
-      // You can add token validation here
-      // For now, we'll assume token exists means user is authenticated
-      setIsAuthenticated(true);
-      // You could decode JWT or fetch user info here
-      setUser({
-        id: '1',
-        username: 'admin',
-        email: 'admin@youthmind.com',
-        role: 'admin'
-      });
+  const validateToken = (token: string): boolean => {
+    try {
+      const decoded = jwtDecode<JWTPayload>(token);
+      const currentTime = Date.now() / 1000; // Convert to seconds
+      
+      // Check if token is expired
+      if (decoded.exp < currentTime) {
+        console.log('Token expired');
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Invalid token:', error);
+      return false;
     }
+  };
+
+  const decodeToken = (token: string): User | null => {
+    try {
+      const decoded = jwtDecode<JWTPayload>(token);
+      
+      return {
+        id: decoded.sub,
+        username: decoded.username,
+        email: decoded.email,
+        role: decoded.role
+      };
+    } catch (error) {
+      console.error('Failed to decode token:', error);
+      return null;
+    }
+  };
+
+  const checkAuthStatus = async () => {
+    const token = localStorage.getItem('admin_token');
+    
+    if (token) {
+      // Validate the token
+      if (validateToken(token)) {
+        // Token is valid, decode user info
+        const userData = decodeToken(token);
+        if (userData) {
+          setUser(userData);
+          setIsAuthenticated(true);
+        } else {
+          // Token is invalid, clear it
+          localStorage.removeItem('admin_token');
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      } else {
+        // Token is expired or invalid, clear it
+        localStorage.removeItem('admin_token');
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    }
+    
     setLoading(false);
   };
 
@@ -88,10 +143,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { token, user: userData } = response.data;
 
       if (token) {
-        localStorage.setItem('admin_token', token);
-        setUser(userData);
-        setIsAuthenticated(true);
-        return true;
+        // Validate the received token
+        if (validateToken(token)) {
+          localStorage.setItem('admin_token', token);
+          setUser(userData);
+          setIsAuthenticated(true);
+          return true;
+        } else {
+          console.error('Received invalid token from server');
+          return false;
+        }
       }
       return false;
     } catch (error) {
