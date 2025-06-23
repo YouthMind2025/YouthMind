@@ -38,4 +38,23 @@ api.interceptors.response.use(
   }
 );
 
+// Posts API methods (client-side pagination approach)
+export const postsApi = {
+  // Client-side pagination: fetch all posts
+  getPosts: () => api.get('/v1/admin/posts'), // Returns all posts as array
+  
+  // Server-side pagination (commented for future use):
+  // getPosts: (params: {
+  //   page?: number;
+  //   size?: number;
+  //   emotionTag?: string;
+  //   startDate?: string;
+  //   endDate?: string;
+  // }) => api.get('/v1/admin/posts', { params }),
+  
+  deletePost: (id: string) => api.delete(`/v1/admin/posts/${id}`),
+  
+  flagPost: (id: string) => api.post(`/v1/admin/posts/${id}/flag`),
+};
+
 export default api; 

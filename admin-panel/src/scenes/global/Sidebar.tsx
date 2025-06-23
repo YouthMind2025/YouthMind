@@ -31,6 +31,9 @@ const Sidebar: React.FC = () => {
       <div className="sidebar-section">
         <h2>Content Moderation</h2>
         <nav>
+          <Link to="/posts" className="sidebar-link">
+            All Posts
+          </Link>
           <Link to="/flagged-posts" className="sidebar-link">
             Flagged Posts
           </Link>
