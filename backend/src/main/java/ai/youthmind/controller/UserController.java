@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -63,8 +64,8 @@ public class UserController {
         @ApiResponse(responseCode = "404", description = "User not found")
     })
     public ResponseEntity<UserDto> getUserById(
-        @Parameter(description = "User ID", example = "1", required = true)
-        @PathVariable Long id
+        @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000", required = true)
+        @PathVariable UUID id
     ) {
         Optional<User> userOpt = userService.getUserById(id);
         
@@ -130,8 +131,8 @@ public class UserController {
         @ApiResponse(responseCode = "404", description = "User not found")
     })
     public ResponseEntity<Void> deleteUser(
-        @Parameter(description = "User ID to delete", example = "1", required = true)
-        @PathVariable Long id
+        @Parameter(description = "User ID to delete", example = "123e4567-e89b-12d3-a456-426614174000", required = true)
+        @PathVariable UUID id
     ) {
         if (!userService.getUserById(id).isPresent()) {
             return ResponseEntity.notFound().build();
