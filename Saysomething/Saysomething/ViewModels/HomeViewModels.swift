@@ -11,6 +11,10 @@ import Combine
 class HomeViewModel: ObservableObject {
     @Published var title: String = "Welcome to Home"
     @Published var isLoading: Bool = false
+    @Published var posts: [Post] = []
+    @Published var loginStatus: String = ""
+    @Published var errorMessage: String? = nil
+    private var cancellables = Set<AnyCancellable>()
     
     // test token data
     init() {
@@ -22,6 +26,45 @@ class HomeViewModel: ObservableObject {
         } else {
             print("[Keychain] No token found on launch.")
         }
+    }
+
+    func login(email: String, password: String) {
+        AuthAPI.login(email: email, password: password)
+            .sink(receiveCompletion: { completion in
+                switch completion {
+                case .failure(let error):
+                    if let sessionError = error as? SessionExpiredError, sessionError == .sessionExpired {
+                        self.errorMessage = "Session expired. Please log in again."
+                    } else {
+                        self.errorMessage = "Login failed: \(error)"
+                    }
+                case .finished:
+                    break
+                }
+            }, receiveValue: { response in
+                TokenManager.shared.saveToken(response.data.token)
+                self.loginStatus = "Login successful!"
+            })
+            .store(in: &cancellables)
+    }
+
+    func fetchPosts() {
+        PostAPI.fetchPosts()
+            .sink(receiveCompletion: { completion in
+                switch completion {
+                case .failure(let error):
+                    if let sessionError = error as? SessionExpiredError, sessionError == .sessionExpired {
+                        self.errorMessage = "Session expired. Please log in again."
+                    } else {
+                        self.errorMessage = "Failed to fetch posts: \(error)"
+                    }
+                case .finished:
+                    break
+                }
+            }, receiveValue: { response in
+                self.posts = response.data
+            })
+            .store(in: &cancellables)
     }
 }
 

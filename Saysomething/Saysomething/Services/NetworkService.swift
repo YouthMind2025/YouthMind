@@ -122,4 +122,32 @@ struct RegisterResponse: Codable {
 struct RegisterRequest: Codable {
     let email: String
     let otp: String
-} 
+}
+
+// Centralized error for session expiration
+enum SessionExpiredError: Error {
+    case sessionExpired
+}
+
+// Protocol for conditional JWT injection
+protocol JWTInjectable {
+    var shouldInjectJWT: Bool { get }
+}
+
+// Helper for error mapping
+extension APIError {
+    static func mapStatusCode(_ statusCode: Int) -> Error {
+        if statusCode == 401 {
+            return SessionExpiredError.sessionExpired
+        }
+        return APIError.invalidStatusCode(statusCode)
+    }
+}
+
+// Example usage for error mapping (non-breaking, for reference):
+// .mapError { error in
+//     if case APIError.invalidStatusCode(let code) = error, code == 401 {
+//         return SessionExpiredError.sessionExpired
+//     }
+//     return error
+// } 
