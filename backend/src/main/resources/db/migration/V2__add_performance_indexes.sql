@@ -19,7 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_posts_emotion_tag ON posts(emotion_tag);
 
 -- ADVANCED COMPOSITE INDEXES (Performance Bonuses)
 
--- 4. Add composite index for posts filtering by user and emotion (advanced optimization)
+-- 4. Add composite index for posts filtering by user and emotion (advanced optimization
 CREATE INDEX IF NOT EXISTS idx_posts_user_emotion ON posts(user_id, emotion_tag);
 
 -- 5. Add composite index for posts feed queries (user + created_at for timeline)
