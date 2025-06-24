@@ -1,5 +1,24 @@
--- EXPLAIN Plans for YouthMind Key Queries
--- Task 3: Query Performance Analysis
+-- EXPLAIN Plans for Task 3 Sample Queries
+-- Query Performance Analysis
+
+-- Sample query for users.email_hash index (login lookup)
+EXPLAIN (ANALYZE, BUFFERS) 
+SELECT u.id, u.email_hash, u.created_at 
+FROM users u 
+WHERE u.email_hash = 'sample_hash_12345';
+
+-- Sample query for posts.created_at index (feed sorting)
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT p.id, p.content, p.emotion_tag, p.created_at, p.user_id
+FROM posts p 
+ORDER BY p.created_at DESC
+LIMIT 20;
+
+-- Sample query for posts.emotion_tag index (filtering)
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT p.id, p.content, p.emotion_tag, p.created_at, p.user_id
+FROM posts p 
+WHERE p.emotion_tag = 'happy';
 
 -- =============================================================================
 -- 1. LOGIN LOOKUP QUERY ANALYSIS

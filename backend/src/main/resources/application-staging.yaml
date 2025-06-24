@@ -11,85 +11,34 @@ spring:
     password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
     
-    # HikariCP Connection Pool Configuration (Performance Optimized)
+    # HikariCP Connection Pool Configuration (Task 3 Requirement)
     hikari:
-      # Connection Pool Size (Task 3 Requirement)
-      minimum-idle: 10                    # Minimum connections in pool
-      maximum-pool-size: 30               # Maximum connections (tune based on load)
-      connection-timeout: 20000           # 20s timeout for getting connection
-      idle-timeout: 300000                # 5min idle timeout
-      max-lifetime: 1200000               # 20min connection lifetime
-      leak-detection-threshold: 60000     # 60s leak detection
+      minimum-idle: 10
+      maximum-pool-size: 30               # Task 3 Connection pool size tuning
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
       
-      # PostgreSQL Performance Properties (Task 3 Requirement)
+      # PostgreSQL Performance Properties (Task 3 Requirements)
       data-source-properties:
-        # PostgreSQL work_mem setting (per connection)
-        work_mem: '4MB'                   # Memory for sorts/joins per connection
-        
-        # Shared buffers equivalent (managed by connection properties)
-        shared_preload_libraries: 'pg_stat_statements'
-        
-        # Connection-level optimizations
-        default_statistics_target: '100'  # Better query planning
-        random_page_cost: '1.1'          # SSD optimization
-        effective_cache_size: '1GB'       # Available system cache
-        
-        # Performance monitoring
-        log_statement: 'mod'              # Log data-changing statements
-        log_min_duration_statement: '100' # Log slow queries (>100ms)
-        
-        # Additional PostgreSQL optimizations
-        maintenance_work_mem: '256MB'     # Memory for maintenance operations
-        checkpoint_completion_target: '0.7' # Checkpoint optimization
-        wal_buffers: '16MB'               # Write-ahead log buffers
-        effective_io_concurrency: '200'   # SSD concurrent I/O
+        work_mem: '4MB'                   # Task 3 work_mem tuning
+        shared_buffers: '256MB'           # Task 3 shared_buffers tuning
   
   jpa:
     hibernate:
-      ddl-auto: validate                  # Don't auto-create in staging
-    show-sql: false                       # Don't log SQL in staging
+      ddl-auto: validate
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: false
-        
-        # Hibernate Performance Optimizations
-        jdbc:
-          batch_size: 25                  # Batch inserts/updates
-          fetch_size: 50                  # JDBC fetch size
-        
-        # Query optimization
-        order_inserts: true               # Order inserts for batching
-        order_updates: true               # Order updates for batching
-        batch_versioned_data: true       # Batch versioned entity updates
-        
-        # Cache settings
-        cache:
-          use_second_level_cache: true    # Enable 2nd level cache
-          use_query_cache: true           # Enable query cache
-          region:
-            factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
-        
-        # Connection handling
-        connection:
-          provider_disables_autocommit: true # Performance optimization
   
-  # Redis Configuration (Optimized for Staging)
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-      timeout: 3000ms                     # Increased timeout for staging
-      lettuce:
-        pool:
-          max-active: 16                  # Increased for staging load
-          max-idle: 8
-          min-idle: 2
-          max-wait: 2000ms
-        cluster:
-          refresh:
-            adaptive: true                # Adaptive cluster refresh
+  # Flyway Configuration
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
 
 # JWT Configuration
 jwt:
@@ -97,42 +46,8 @@ jwt:
   expiration: ${JWT_EXPIRATION:86400000}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
-# Logging Configuration (Performance Monitoring)
+# Logging
 logging:
   level:
     org.springframework.security: WARN
-    ai.youthmind: INFO
-    org.hibernate.SQL: WARN            # Don't log SQL in staging
-    org.hibernate.type: WARN           # Don't log parameters
-    
-    # Performance monitoring
-    org.springframework.web: INFO
-    org.springframework.boot.autoconfigure: WARN
-  
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-
-# Actuator Configuration (Performance Monitoring)
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,metrics,info,prometheus
-  endpoint:
-    health:
-      show-details: when-authorized
-  metrics:
-    export:
-      prometheus:
-        enabled: true
-
-# Performance Monitoring Comments:
-# =====================================
-# 1. Connection Pool: 30 max connections optimized for staging load
-# 2. work_mem: 4MB per connection for sort/join operations
-# 3. Batch operations: Enabled for better throughput
-# 4. Cache: 2nd level cache and query cache enabled
-# 5. Monitoring: Actuator endpoints for performance tracking
-# 6. Redis: Optimized pool settings for session management
-# ===================================== 
+    ai.youthmind: INFO 
