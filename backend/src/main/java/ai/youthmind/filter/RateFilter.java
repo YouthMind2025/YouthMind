@@ -32,14 +32,14 @@ public class RateFilter extends OncePerRequestFilter {
             String key = "youthmind:rate:" + request.getRemoteAddr();
             Object count = redisService.getValue(key);
             if (count instanceof Integer countInt && countInt > 0) {
-                if (countInt < 5) {
+                if (countInt < 100) {
                     redisService.increment(key);
                 } else {
                     response.setStatus(429);
                     return;
                 }
             } else {
-                redisService.setValue(key, 1, 30, TimeUnit.SECONDS);
+                redisService.setValue(key, 1, 300, TimeUnit.SECONDS);
             }
         } else if (request.getMethod().equals("POST")) {
             String key = "youthmind:rate:" + auth.getPrincipal().toString();
