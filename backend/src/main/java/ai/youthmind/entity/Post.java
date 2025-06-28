@@ -32,6 +32,9 @@ public class Post {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     
+    @OneToOne(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private AIAnalysis aiAnalysis;
+    
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
