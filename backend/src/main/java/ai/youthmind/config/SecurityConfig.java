@@ -1,6 +1,7 @@
 package ai.youthmind.config;
 
 import ai.youthmind.filter.JWTFilter;
+import ai.youthmind.filter.RateFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +20,9 @@ public class SecurityConfig {
     @Autowired
     private JWTFilter jwtFilter;
 
+    @Autowired
+    private RateFilter rateFilter;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -35,7 +39,8 @@ public class SecurityConfig {
                 .requestMatchers("/v1/auth/register").permitAll()
                 .requestMatchers("/v1/posts/create").authenticated()
                 .anyRequest().authenticated())
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(rateFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
