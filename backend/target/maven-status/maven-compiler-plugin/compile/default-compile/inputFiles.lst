@@ -1,30 +1,16 @@
-<<<<<<< HEAD
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\config\OpenApiConfig.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\repository\PostRepository.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\YouthmindBackendApplication.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\controller\UserController.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\dto\UserDto.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\service\RedisService.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\controller\TestController.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\entity\Post.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\dto\RegisterRequest.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\controller\PostController.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\config\JwtConfig.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\controller\AuthController.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\service\UserService.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\dto\AuthResponse.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\config\RedisConfig.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\config\SecurityConfig.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\dto\LoginRequest.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\dto\PostCreateResponse.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\dto\PostCreateRequest.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\filter\JWTFilter.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\service\PostService.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\service\JWTService.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\entity\User.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\controller\WelcomeController.java
-C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\repository\UserRepository.java
-=======
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/entity/Post.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/listener/PostCreatedMessageListener.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/listener/AiProcessedMessageListener.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/service/UserService.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/dto/LoginRequest.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/dto/PostCreateRequest.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/controller/TestController.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/repository/UserRepository.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/service/PostService.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/config/SecurityConfig.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/config/JwtConfig.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/config/RedisConfig.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/dto/UserDto.java
 /home/harll/YouthMind/backend/src/main/java/ai/youthmind/entity/User.java
 /home/harll/YouthMind/backend/src/main/java/ai/youthmind/controller/UserController.java
 /home/harll/YouthMind/backend/src/main/java/ai/youthmind/filter/JWTFilter.java
@@ -32,17 +18,11 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\j
 /home/harll/YouthMind/backend/src/main/java/ai/youthmind/service/RedisService.java
 /home/harll/YouthMind/backend/src/main/java/ai/youthmind/YouthmindBackendApplication.java
 /home/harll/YouthMind/backend/src/main/java/ai/youthmind/controller/WelcomeController.java
-/home/harll/YouthMind/backend/src/main/java/ai/youthmind/service/UserService.java
-/home/harll/YouthMind/backend/src/main/java/ai/youthmind/dto/LoginRequest.java
-/home/harll/YouthMind/backend/src/main/java/ai/youthmind/controller/TestController.java
-/home/harll/YouthMind/backend/src/main/java/ai/youthmind/repository/UserRepository.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/controller/PostController.java
 /home/harll/YouthMind/backend/src/main/java/ai/youthmind/controller/AuthController.java
-/home/harll/YouthMind/backend/src/main/java/ai/youthmind/config/SecurityConfig.java
-/home/harll/YouthMind/backend/src/main/java/ai/youthmind/config/JwtConfig.java
-/home/harll/YouthMind/backend/src/main/java/ai/youthmind/config/RedisConfig.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/repository/PostRepository.java
+/home/harll/YouthMind/backend/src/main/java/ai/youthmind/dto/PostCreateResponse.java
 /home/harll/YouthMind/backend/src/main/java/ai/youthmind/dto/AuthResponse.java
 /home/harll/YouthMind/backend/src/main/java/ai/youthmind/config/OpenApiConfig.java
 /home/harll/YouthMind/backend/src/main/java/ai/youthmind/service/JWTService.java
 /home/harll/YouthMind/backend/src/main/java/ai/youthmind/filter/RateFilter.java
-/home/harll/YouthMind/backend/src/main/java/ai/youthmind/dto/UserDto.java
->>>>>>> backend-harley
