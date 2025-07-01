@@ -21,7 +21,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, recaptchaToken: string) => Promise<boolean>;
   logout: () => void;
   checkAuthStatus: () => void;
 }
@@ -112,7 +112,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(false);
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string, recaptchaToken: string): Promise<boolean> => {
     try {
       setLoading(true);
       
@@ -137,7 +137,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       const response = await api.post('/v1/admin/login', {
         email,
-        password
+        password,
+        recaptchaToken
       });
 
       const { token, user: userData } = response.data;

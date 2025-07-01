@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { useAuth } from '../../contexts/AuthContext';
+import { useRecaptcha } from '../../hooks/useRecaptcha';
+import { RECAPTCHA_CONFIG } from '../../config/recaptcha';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaError, setRecaptchaError] = useState('');
 
   const { login } = useAuth();
+  const { recaptchaRef, executeRecaptcha } = useRecaptcha();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -18,10 +23,23 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setRecaptchaError('');
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
+      // Execute reCAPTCHA verification
+      console.log('Executing reCAPTCHA...');
+      const recaptchaToken = await executeRecaptcha();
+      console.log('reCAPTCHA result:', recaptchaToken ? 'Success' : 'Failed');
+      
+      if (!recaptchaToken) {
+        setRecaptchaError('reCAPTCHA verification failed. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Pass recaptcha token to login function
+      const success = await login(email, password, recaptchaToken);
       if (success) {
         navigate(from, { replace: true });
       } else {
@@ -88,6 +106,12 @@ const Login: React.FC = () => {
             </div>
           )}
 
+          {recaptchaError && (
+            <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-md">
+              {recaptchaError}
+            </div>
+          )}
+
           <div>
             <button
               type="submit"
@@ -108,6 +132,14 @@ const Login: React.FC = () => {
             </button>
           </div>
         </form>
+
+        {/* Invisible reCAPTCHA */}
+        <ReCAPTCHA
+          ref={recaptchaRef}
+          sitekey={RECAPTCHA_CONFIG.siteKey}
+          size="invisible"
+          badge={RECAPTCHA_CONFIG.badge}
+        />
       </div>
     </div>
   );
