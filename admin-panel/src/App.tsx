@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './scenes/global/ProtectedRoute';
 import Sidebar from './scenes/global/Sidebar';
@@ -7,6 +8,7 @@ import FlaggedPosts from './scenes/pages/FlaggedPosts';
 import Posts from './scenes/pages/Posts';
 import SystemHealth from './scenes/pages/SystemHealth';
 import Login from './scenes/pages/Login';
+import { RECAPTCHA_CONFIG } from './config/recaptcha';
 import './App.css';
 
 function App() {
@@ -37,6 +39,13 @@ function App() {
             }
           />
         </Routes>
+        
+        {/* Global reCAPTCHA for sensitive actions */}
+        <ReCAPTCHA
+          sitekey={RECAPTCHA_CONFIG.siteKey}
+          size="invisible"
+          badge={RECAPTCHA_CONFIG.badge}
+        />
       </Router>
     </AuthProvider>
   );
