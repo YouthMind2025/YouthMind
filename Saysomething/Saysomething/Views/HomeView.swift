@@ -12,65 +12,71 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing:20) {
-                Text(viewModel.title)
-                    .font(.largeTitle)
-                    .padding()
-                
-                NavigationLink {
-                    DetailView(content: "Resonance")
-                } label: {
-                Text("Resonance")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+            ZStack {
+                // Background gradient
+                LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.2), Color.purple.opacity(0.2)]), startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .ignoresSafeArea()
+                VStack(spacing: 28) {
+                    // App Title
+                    Text(viewModel.title)
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                        .padding(.top, 16)
+                        .shadow(radius: 2)
+                    
+                    // Navigation Buttons as Cards
+                    ForEach(["Resonance", "Saved", "Shared", "Interactions"], id: \.") { label in
+                        NavigationLink {
+                            DetailView(content: label)
+                        } label: {
+                            HStack {
+                                Image(systemName: iconName(for: label))
+                                    .font(.title2)
+                                    .foregroundColor(.white)
+                                Text(label)
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding(.leading, 4)
+                                Spacer()
+                            }
+                            .padding()
+                            .background(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.purple]), startPoint: .leading, endPoint: .trailing))
+                            .cornerRadius(16)
+                            .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 4)
+                        }
+                        .padding(.horizontal, 8)
+                    }
+                    
+                    if viewModel.isLoading {
+                        ProgressView("Loading...")
+                            .padding()
+                    }
+                    
+                    // UUID label for testing
+                    HStack {
+                        Image(systemName: "person.crop.circle")
+                            .foregroundColor(.gray)
+                        Text("User UUID: \(UserIdentityManager.shared.userID)")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
                 }
-                
-                NavigationLink {
-                    DetailView(content: "Saved")
-                } label: {
-                Text("Saved")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                }
-                
-                NavigationLink {
-                    DetailView(content: "Shared")
-                } label: {
-                Text("Shared")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                }
-                
-                NavigationLink {
-                    DetailView(content: "Interactions")
-                } label: {
-                Text("Interactions")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                }
-                
-                if viewModel.isLoading {
-                    ProgressView("Loading...")
-                        .padding()
-                }
-                // UUID label for testing
-                Text("UUID: \(UserIdentityManager.shared.userID)")
-                    .font(.footnote)
-                    .foregroundColor(.gray)
-                    .padding(.top, 20)
-            }.navigationTitle("Home Page")
+                .padding(.vertical, 16)
+            }
+            .navigationTitle("Home Page")
+        }
+    }
+    
+    // Helper for icons
+    private func iconName(for label: String) -> String {
+        switch label {
+        case "Resonance": return "waveform.path.ecg"
+        case "Saved": return "bookmark.fill"
+        case "Shared": return "square.and.arrow.up"
+        case "Interactions": return "bubble.left.and.bubble.right.fill"
+        default: return "circle"
         }
     }
 }
@@ -79,23 +85,28 @@ struct DetailView: View {
     let content: String
     
     var body: some View {
-        VStack {
-            // Content
-            Text("detail：\(content)")
-                .font(.title)
-                .padding()
-            
-            // DESCRIPTION
-            Text("This is \(content) page")
-                .foregroundColor(.secondary)
-            
-            Spacer()
+        ZStack {
+            LinearGradient(gradient: Gradient(colors: [Color.purple.opacity(0.1), Color.blue.opacity(0.1)]), startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+            VStack(spacing: 18) {
+                // Content
+                Text("detail：\(content)")
+                    .font(.title)
+                    .fontWeight(.semibold)
+                    .padding(.top, 24)
+                
+                // DESCRIPTION
+                Text("This is \(content) page")
+                    .foregroundColor(.secondary)
+                    .font(.body)
+                Spacer()
+            }
+            .padding()
         }
         .navigationTitle("detail")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
-
 
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
