@@ -1,3 +1,4 @@
+//Mz was here :)
 //Views/HomePage.swift
 //Implement basic structure of the HomePage
 // Including topBar, feed and bottomtap UI.
