@@ -2,6 +2,7 @@ package ai.youthmind.controller;
 
 import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.dto.PostCreateResponse;
+import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
 import ai.youthmind.service.PostService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -28,27 +30,4 @@ public class PostController {
     @Autowired
     private PostService postService;
 
-    @PostMapping("/create")
-    @Operation(
-        summary = "Create a new post",
-        description = "Create a new post with content, emotion tag, and optional AI metadata"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Post created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request data"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
-    })
-    public ResponseEntity<PostCreateResponse> createPost(@Valid @RequestBody PostCreateRequest request) {
-        // Extract user ID from JWT token
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UUID userId = (UUID) authentication.getPrincipal();
-        
-        // Create the post
-        Post savedPost = postService.createPost(userId, request);
-        
-        // Build response
-        PostCreateResponse response = new PostCreateResponse(savedPost.getId(), savedPost.getCreatedAt());
-        
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
 } 

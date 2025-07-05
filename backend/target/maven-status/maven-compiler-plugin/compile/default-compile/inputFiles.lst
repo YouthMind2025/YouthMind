@@ -1,6 +1,7 @@
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\config\OpenApiConfig.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\repository\PostRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\YouthmindBackendApplication.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\service\AIService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\controller\UserController.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\dto\UserDto.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\service\RedisService.java
@@ -9,6 +10,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\j
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\dto\RegisterRequest.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\controller\PostController.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\config\JwtConfig.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\entity\AIAnalysis.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\controller\AuthController.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\service\UserService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\dto\AuthResponse.java
@@ -19,7 +21,10 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\j
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\dto\PostCreateRequest.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\filter\JWTFilter.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\service\PostService.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\repository\AIAnalysisRepository.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\config\AsyncConfig.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\service\JWTService.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\entity\JsonbListConverter.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\entity\User.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\controller\WelcomeController.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind-repo\backend\src\main\java\ai\youthmind\repository\UserRepository.java
