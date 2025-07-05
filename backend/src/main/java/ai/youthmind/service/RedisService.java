@@ -27,4 +27,9 @@ public class RedisService {
     public Boolean deleteValue(String key) {
         return redisTemplate.delete(key);
     }
+
+    public Long increment(String key) {
+        return redisTemplate.opsForValue().increment(key);
+    }
+
 } 
