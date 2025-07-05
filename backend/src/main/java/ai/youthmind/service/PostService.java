@@ -1,5 +1,6 @@
 package ai.youthmind.service;
 
+import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
 import ai.youthmind.repository.AIAnalysisRepository;
@@ -61,5 +62,15 @@ public class PostService {
         }
         
         return aiAnalysisRepository.save(analysis);
+    }
+
+    public Post createPost(UUID userId, PostCreateRequest request) {
+        Post post = new Post();
+        post.setUserId(userId);
+        post.setContent(request.getContent());
+        post.setEmotionTag(request.getEmotionTag());
+        post.setAiMetadata(request.getAiMetadata());
+        
+        return postRepository.save(post);
     }
 } 

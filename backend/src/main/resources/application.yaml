@@ -47,6 +47,30 @@ jwt:
   expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days in milliseconds
 
+# OpenAPI/Swagger Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  info:
+    title: YouthMind Backend API
+    description: Backend API for YouthMind - A mental health support platform for youth
+    version: 1.0.0
+    contact:
+      name: YouthMind Team
+      email: team@youthmind.ai
+    license:
+      name: MIT License
+      url: https://opensource.org/licenses/MIT
+  servers:
+    - url: http://localhost:8080
+      description: Development server
+    - url: https://api.youthmind.ai
+      description: Production server
+
 # Logging
 logging:
   level:
