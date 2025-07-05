@@ -4,6 +4,7 @@ import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
 import ai.youthmind.repository.AIAnalysisRepository;
 import ai.youthmind.repository.PostRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import java.util.UUID;
 
 @Service
 @Transactional
+@Slf4j
 public class PostService {
     
     @Autowired

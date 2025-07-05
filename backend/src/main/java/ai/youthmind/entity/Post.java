@@ -4,8 +4,11 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -16,24 +19,25 @@ import java.util.UUID;
 public class Post {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
-    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
     
     @Column(name = "emotion_tag", length = 100)
     private String emotionTag;
     
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "ai_metadata", columnDefinition = "TEXT")
+    private Map<String, Object> aiMetadata;
     
-    @OneToOne(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private AIAnalysis aiAnalysis;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
     
     @PrePersist
     protected void onCreate() {

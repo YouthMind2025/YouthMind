@@ -19,14 +19,33 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     
-    @Column(name = "email_hash", unique = true, nullable = false)
-    private String emailHash;
+    @Column(name = "email", unique = true, nullable = false)
+    private String email;
+    
+    @Column(name = "password", nullable = false)
+    private String password;
+    
+    @Column(name = "first_name")
+    private String firstName;
+    
+    @Column(name = "last_name")
+    private String lastName;
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+    
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        createdAt = now;
+        updatedAt = now;
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 } 
