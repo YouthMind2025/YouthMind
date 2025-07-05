@@ -18,5 +18,4 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     List<Post> findByEmotionTag(String emotionTag);
     
     List<Post> findByUserAndEmotionTag(User user, String emotionTag);
-    
 } 
