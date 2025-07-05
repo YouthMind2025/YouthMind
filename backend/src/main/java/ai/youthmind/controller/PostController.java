@@ -30,4 +30,52 @@ public class PostController {
     @Autowired
     private PostService postService;
 
+    @GetMapping("/{postId}/ai-analysis")
+    @Operation(
+        summary = "Get AI analysis for a post",
+        description = "Returns placeholder AI analysis data with sentiment score, empathy score, and generated questions count"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "AI analysis retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Post not found"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<AIAnalysisResponse> getAIAnalysis(@PathVariable UUID postId) {
+        // Placeholder data as requested
+        int sentimentScore = 2;
+        int empathyScore = 1;
+        int generatedQuestions = 4;
+        
+        // Create response with placeholder data
+        AIAnalysisResponse response = new AIAnalysisResponse(sentimentScore, empathyScore, generatedQuestions);
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Response class for AI analysis placeholder data
+     */
+    public static class AIAnalysisResponse {
+        private int sentimentScore;
+        private int empathyScore;
+        private int generatedQuestions;
+        
+        public AIAnalysisResponse() {}
+        
+        public AIAnalysisResponse(int sentimentScore, int empathyScore, int generatedQuestions) {
+            this.sentimentScore = sentimentScore;
+            this.empathyScore = empathyScore;
+            this.generatedQuestions = generatedQuestions;
+        }
+        
+        // Getters and setters
+        public int getSentimentScore() { return sentimentScore; }
+        public void setSentimentScore(int sentimentScore) { this.sentimentScore = sentimentScore; }
+        
+        public int getEmpathyScore() { return empathyScore; }
+        public void setEmpathyScore(int empathyScore) { this.empathyScore = empathyScore; }
+        
+        public int getGeneratedQuestions() { return generatedQuestions; }
+        public void setGeneratedQuestions(int generatedQuestions) { this.generatedQuestions = generatedQuestions; }
+    }
 } 
