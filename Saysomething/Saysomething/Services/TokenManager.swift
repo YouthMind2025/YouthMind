@@ -59,6 +59,7 @@ class TokenManager {
         let status = SecItemDelete(query as CFDictionary)
         return status == errSecSuccess
     }
+
     
     // Validate token expiration using expiresAt (ISO8601 string)
     func isTokenExpired(expiresAt: String) -> Bool {
@@ -67,3 +68,6 @@ class TokenManager {
         return Date() >= expiryDate
     }
 } 
+
+}
+ frontend-together

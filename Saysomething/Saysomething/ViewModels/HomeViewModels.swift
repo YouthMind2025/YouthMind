@@ -26,6 +26,7 @@ class HomeViewModel: ObservableObject {
         } else {
             print("[Keychain] No token found on launch.")
         }
+
     }
 
     func login(email: String, password: String) {
@@ -65,6 +66,7 @@ class HomeViewModel: ObservableObject {
                 self.posts = response.data
             })
             .store(in: &cancellables)
+frontend-together
     }
 }
 
