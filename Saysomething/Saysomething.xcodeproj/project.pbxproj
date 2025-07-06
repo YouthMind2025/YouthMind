@@ -6,8 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		0D7BF8E42E002B68009EA844 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0D1DFE762DF321BB00DBD94C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0D1DFE7D2DF321BB00DBD94C;
+			remoteInfo = Saysomething;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		0D1DFE7E2DF321BB00DBD94C /* Saysomething.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Saysomething.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0D7BF8E02E002B68009EA844 /* SaysomethingTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SaysomethingTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +27,22 @@
 			path = Saysomething;
 			sourceTree = "<group>";
 		};
+		0D7BF8E12E002B68009EA844 /* SaysomethingTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SaysomethingTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		0D1DFE7B2DF321BB00DBD94C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0D7BF8DD2E002B68009EA844 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				0D1DFE802DF321BB00DBD94C /* Saysomething */,
+				0D7BF8E12E002B68009EA844 /* SaysomethingTests */,
 				0D1DFE7F2DF321BB00DBD94C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				0D1DFE7E2DF321BB00DBD94C /* Saysomething.app */,
+				0D7BF8E02E002B68009EA844 /* SaysomethingTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +95,29 @@
 			productReference = 0D1DFE7E2DF321BB00DBD94C /* Saysomething.app */;
 			productType = "com.apple.product-type.application";
 		};
+		0D7BF8DF2E002B68009EA844 /* SaysomethingTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0D7BF8E82E002B68009EA844 /* Build configuration list for PBXNativeTarget "SaysomethingTests" */;
+			buildPhases = (
+				0D7BF8DC2E002B68009EA844 /* Sources */,
+				0D7BF8DD2E002B68009EA844 /* Frameworks */,
+				0D7BF8DE2E002B68009EA844 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0D7BF8E52E002B68009EA844 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				0D7BF8E12E002B68009EA844 /* SaysomethingTests */,
+			);
+			name = SaysomethingTests;
+			packageProductDependencies = (
+			);
+			productName = SaysomethingTests;
+			productReference = 0D7BF8E02E002B68009EA844 /* SaysomethingTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,6 +130,10 @@
 				TargetAttributes = {
 					0D1DFE7D2DF321BB00DBD94C = {
 						CreatedOnToolsVersion = 16.2;
+					};
+					0D7BF8DF2E002B68009EA844 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = 0D1DFE7D2DF321BB00DBD94C;
 					};
 				};
 			};
@@ -100,12 +152,20 @@
 			projectRoot = "";
 			targets = (
 				0D1DFE7D2DF321BB00DBD94C /* Saysomething */,
+				0D7BF8DF2E002B68009EA844 /* SaysomethingTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		0D1DFE7C2DF321BB00DBD94C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0D7BF8DE2E002B68009EA844 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +182,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0D7BF8DC2E002B68009EA844 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0D7BF8E52E002B68009EA844 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0D1DFE7D2DF321BB00DBD94C /* Saysomething */;
+			targetProxy = 0D7BF8E42E002B68009EA844 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0D1DFE8A2DF321C600DBD94C /* Debug */ = {
@@ -300,6 +375,40 @@
 			};
 			name = Release;
 		};
+		0D7BF8E62E002B68009EA844 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = YouthMind.SaysomethingTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Saysomething.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Saysomething";
+			};
+			name = Debug;
+		};
+		0D7BF8E72E002B68009EA844 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = YouthMind.SaysomethingTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Saysomething.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Saysomething";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -317,6 +426,15 @@
 			buildConfigurations = (
 				0D1DFE8D2DF321C600DBD94C /* Debug */,
 				0D1DFE8E2DF321C600DBD94C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0D7BF8E82E002B68009EA844 /* Build configuration list for PBXNativeTarget "SaysomethingTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0D7BF8E62E002B68009EA844 /* Debug */,
+				0D7BF8E72E002B68009EA844 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
