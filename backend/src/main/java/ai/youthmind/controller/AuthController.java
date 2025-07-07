@@ -66,14 +66,14 @@ public class AuthController {
         
         try {
             // Create new user
-            User user = new User();
+        User user = new User();
             user.setEmail(request.getEmail());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setFirstName(request.getFirstName());
             user.setLastName(request.getLastName());
             
-            User savedUser = userService.saveUser(user);
-            
+        User savedUser = userService.saveUser(user);
+
             // Generate JWT token
             Pair<String, Timestamp> tokenPair = jwtService.generateToken(savedUser.getEmail());
             

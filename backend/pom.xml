@@ -102,6 +102,13 @@
             <version>2.3.0</version>
         </dependency>
 
+        <!-- Embedded Redis for development -->
+        <dependency>
+            <groupId>com.github.kstyrc</groupId>
+            <artifactId>embedded-redis</artifactId>
+            <version>0.6</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

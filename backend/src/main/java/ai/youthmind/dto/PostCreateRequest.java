@@ -6,8 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.NotBlank;
-import java.util.Map;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,6 +19,31 @@ public class PostCreateRequest {
     @Schema(description = "Emotion tag for the post", example = "stress")
     private String emotionTag;
     
-    @Schema(description = "Optional AI metadata", example = "{\"sentiment\": \"negative\", \"confidence\": 0.85}")
-    private Map<String, Object> aiMetadata;
+    @Schema(description = "Optional AI metadata as JSON string", example = "{\"sentiment\": \"negative\", \"confidence\": 0.85}")
+    private String aiMetadata;
+    
+    // Explicit getters and setters
+    public String getContent() {
+        return content;
+    }
+    
+    public void setContent(String content) {
+        this.content = content;
+    }
+    
+    public String getEmotionTag() {
+        return emotionTag;
+    }
+    
+    public void setEmotionTag(String emotionTag) {
+        this.emotionTag = emotionTag;
+    }
+    
+    public String getAiMetadata() {
+        return aiMetadata;
+    }
+    
+    public void setAiMetadata(String aiMetadata) {
+        this.aiMetadata = aiMetadata;
+    }
 } 

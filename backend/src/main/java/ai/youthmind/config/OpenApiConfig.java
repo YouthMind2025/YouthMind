@@ -44,7 +44,7 @@ public class OpenApiConfig {
                                 .name("MIT License")
                                 .url("https://opensource.org/licenses/MIT")))
                 .servers(List.of(
-                        new Server().url("http://localhost:8080").description("Development server"),
+                        new Server().url("http://localhost:8081").description("Development server"),
                         new Server().url("https://api.youthmind.ai").description("Production server")
                 ))
                 .components(new Components()
