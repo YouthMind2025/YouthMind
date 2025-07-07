@@ -2,8 +2,11 @@ package ai.youthmind.service;
 
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
+import ai.youthmind.dto.PostCreateRequest;
+import ai.youthmind.entity.User;
 import ai.youthmind.repository.AIAnalysisRepository;
 import ai.youthmind.repository.PostRepository;
+import ai.youthmind.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,22 @@ public class PostService {
     
     @Autowired
     private AIAnalysisRepository aiAnalysisRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    public Post createPost(UUID userId, PostCreateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        Post post = new Post();
+        post.setUser(user);
+        post.setContent(request.getContent());
+        post.setEmotionTag(request.getEmotionTag());
+        post.setAiMetadata(request.getAiMetadata());
+
+        return postRepository.save(post);
+    }
     
     /**
      * Update or insert AI analysis result for a post

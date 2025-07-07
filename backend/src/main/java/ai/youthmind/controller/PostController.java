@@ -30,6 +30,27 @@ public class PostController {
     @Autowired
     private PostService postService;
 
+    @PostMapping("/create")
+    @Operation(
+            summary = "Create a new post",
+            description = "Creates a new post for the currently authenticated user based on their JWT identity."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Post created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request body"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<PostCreateResponse> createPost(@Valid @RequestBody PostCreateRequest createRequest) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID userId = (UUID) authentication.getPrincipal();
+
+        Post createdPost = postService.createPost(userId, createRequest);
+
+        PostCreateResponse response = new PostCreateResponse(createdPost.getId(), createdPost.getCreatedAt());
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
     @GetMapping("/{postId}/ai-analysis")
     @Operation(
         summary = "Get AI analysis for a post",
