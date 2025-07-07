@@ -39,7 +39,7 @@ public class AIAnalysis {
     @Column(name = "empathy_score", precision = 3, scale = 2)
     private BigDecimal empathyScore;
     
-    @Column(name = "generated_questions", columnDefinition = "jsonb")
+    @Column(name = "generated_questions", columnDefinition = "json")
     @Convert(converter = JsonbListConverter.class)
     private List<String> generatedQuestions;
     

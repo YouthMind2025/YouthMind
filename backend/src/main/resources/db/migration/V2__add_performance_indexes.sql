@@ -3,11 +3,11 @@
 
 -- REQUIRED INDIVIDUAL INDEXES (Task 3 Requirements)
 
--- 1. Add index for users.email_hash (login lookup optimization)
+-- 1. Add index for users.email (login lookup optimization)
 -- This index will dramatically improve performance for:
--- - findByEmailHash(String emailHash) 
--- - existsByEmailHash(String emailHash)
-CREATE INDEX IF NOT EXISTS idx_users_email_hash ON users(email_hash);
+-- - findByEmail(String email) 
+-- - existsByEmail(String email)
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
 -- 2. Add index for posts.created_at (feed sorting optimization)
 -- This index will optimize feed timeline queries with ORDER BY created_at DESC
@@ -27,7 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_posts_user_created_at ON posts(user_id, created_a
 
 -- Performance analysis summary:
 -- These indexes will optimize:
--- 1. Login queries: O(1) vs O(n) lookup on email_hash
+-- 1. Login queries: O(1) vs O(n) lookup on email
 -- 2. Feed sorting: Fast ORDER BY created_at DESC operations
 -- 3. Emotion filtering: Fast WHERE emotion_tag = 'value' queries
 -- 4. User timeline: Fast sorting by created_at with user filter  
