@@ -6,6 +6,7 @@ ai\youthmind\controller\PostController.class
 ai\youthmind\controller\AuthController.class
 ai\youthmind\config\RedisConfig.class
 ai\youthmind\controller\UserController.class
+ai\youthmind\config\EmbeddedRedisConfig.class
 ai\youthmind\entity\User.class
 ai\youthmind\config\JwtConfig.class
 ai\youthmind\dto\LoginRequest.class

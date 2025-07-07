@@ -4,11 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -31,9 +27,8 @@ public class Post {
     @Column(name = "emotion_tag", length = 100)
     private String emotionTag;
     
-    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "ai_metadata", columnDefinition = "TEXT") 
-    private Map<String, Object> aiMetadata;
+    private String aiMetadata;
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -76,11 +71,11 @@ public class Post {
         this.emotionTag = emotionTag;
     }
     
-    public Map<String, Object> getAiMetadata() {
+    public String getAiMetadata() {
         return aiMetadata;
     }
     
-    public void setAiMetadata(Map<String, Object> aiMetadata) {
+    public void setAiMetadata(String aiMetadata) {
         this.aiMetadata = aiMetadata;
     }
     

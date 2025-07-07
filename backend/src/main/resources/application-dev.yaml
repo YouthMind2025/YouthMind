@@ -25,7 +25,7 @@ spring:
   flyway:
     enabled: true
   
-  # Redis configuration (disabled for dev)
+  # Redis configuration
   data:
     redis:
       host: localhost
