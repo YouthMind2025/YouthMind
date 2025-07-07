@@ -35,11 +35,60 @@ public class Post {
     @Column(name = "ai_metadata", columnDefinition = "TEXT") 
     private Map<String, Object> aiMetadata;
     
-        @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+    
+    // Explicit getters and setters to ensure they work
+    public UUID getId() {
+        return id;
+    }
+    
+    public void setId(UUID id) {
+        this.id = id;
+    }
+    
+    public UUID getUserId() {
+        return userId;
+    }
+    
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
+    
+    public String getContent() {
+        return content;
+    }
+    
+    public void setContent(String content) {
+        this.content = content;
+    }
+    
+    public String getEmotionTag() {
+        return emotionTag;
+    }
+    
+    public void setEmotionTag(String emotionTag) {
+        this.emotionTag = emotionTag;
+    }
+    
+    public Map<String, Object> getAiMetadata() {
+        return aiMetadata;
+    }
+    
+    public void setAiMetadata(Map<String, Object> aiMetadata) {
+        this.aiMetadata = aiMetadata;
+    }
+    
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 } 

@@ -3,7 +3,7 @@ CREATE TABLE ai_analysis (
     post_id UUID PRIMARY KEY,
     sentiment_score DECIMAL(3,2),
     empathy_score DECIMAL(3,2),
-    generated_questions JSONB,
+    generated_questions JSON,
     processing_time_ms INTEGER,
     CONSTRAINT fk_ai_analysis_post_id FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
 );

@@ -28,11 +28,14 @@ public class PostRepositoryTest {
     public void testSaveAndFindPost() {
         // Given
         User user = new User();
-        user.setEmailHash("test_user_hash");
+        user.setEmail("test@example.com");
+        user.setPassword("password123");
+        user.setFirstName("Test");
+        user.setLastName("User");
         User savedUser = userRepository.save(user);
         
         Post post = new Post();
-        post.setUser(savedUser);
+        post.setUserId(savedUser.getId());
         post.setContent("This is a test post content");
         post.setEmotionTag("happy");
         
@@ -44,28 +47,31 @@ public class PostRepositoryTest {
         assertThat(savedPost.getId()).isNotNull();
         assertThat(savedPost.getContent()).isEqualTo("This is a test post content");
         assertThat(savedPost.getEmotionTag()).isEqualTo("happy");
-        assertThat(savedPost.getUser()).isNotNull();
-        assertThat(savedPost.getUser().getEmailHash()).isEqualTo("test_user_hash");
+        assertThat(savedPost.getUserId()).isNotNull();
+        assertThat(savedPost.getUserId()).isEqualTo(savedUser.getId());
         assertThat(savedPost.getCreatedAt()).isNotNull();
         assertThat(savedPost.getCreatedAt()).isBefore(LocalDateTime.now().plusSeconds(1));
         assertThat(savedPost.getCreatedAt()).isAfter(LocalDateTime.now().minusSeconds(10));
     }
     
     @Test
-    public void testFindByUser() {
+    public void testFindByUserId() {
         // Given
         User user = new User();
-        user.setEmailHash("find_user_hash");
+        user.setEmail("finduser@example.com");
+        user.setPassword("password456");
+        user.setFirstName("Find");
+        user.setLastName("User");
         User savedUser = userRepository.save(user);
         
         Post post1 = new Post();
-        post1.setUser(savedUser);
+        post1.setUserId(savedUser.getId());
         post1.setContent("First post");
         post1.setEmotionTag("excited");
         postRepository.save(post1);
         
         Post post2 = new Post();
-        post2.setUser(savedUser);
+        post2.setUserId(savedUser.getId());
         post2.setContent("Second post");
         post2.setEmotionTag("calm");
         postRepository.save(post2);
@@ -73,7 +79,7 @@ public class PostRepositoryTest {
         entityManager.flush();
         
         // When
-        List<Post> posts = postRepository.findByUser(savedUser);
+        List<Post> posts = postRepository.findByUserId(savedUser.getId());
         
         // Then
         assertThat(posts).hasSize(2);
@@ -84,23 +90,26 @@ public class PostRepositoryTest {
     public void testFindByEmotionTag() {
         // Given
         User user = new User();
-        user.setEmailHash("emotion_user_hash");
+        user.setEmail("emotion@example.com");
+        user.setPassword("password789");
+        user.setFirstName("Emotion");
+        user.setLastName("User");
         User savedUser = userRepository.save(user);
         
         Post post1 = new Post();
-        post1.setUser(savedUser);
+        post1.setUserId(savedUser.getId());
         post1.setContent("Happy post");
         post1.setEmotionTag("happy");
         postRepository.save(post1);
         
         Post post2 = new Post();
-        post2.setUser(savedUser);
+        post2.setUserId(savedUser.getId());
         post2.setContent("Another happy post");
         post2.setEmotionTag("happy");
         postRepository.save(post2);
         
         Post post3 = new Post();
-        post3.setUser(savedUser);
+        post3.setUserId(savedUser.getId());
         post3.setContent("Sad post");
         post3.setEmotionTag("sad");
         postRepository.save(post3);
@@ -116,15 +125,18 @@ public class PostRepositoryTest {
     }
     
     @Test
-    public void testRelationshipIsSavedCorrectly() {
+    public void testUserIdIsSavedCorrectly() {
         // Given
         User user = new User();
-        user.setEmailHash("relationship_test_hash");
+        user.setEmail("relationship@example.com");
+        user.setPassword("passwordrel");
+        user.setFirstName("Relationship");
+        user.setLastName("Test");
         User savedUser = userRepository.save(user);
         
         Post post = new Post();
-        post.setUser(savedUser);
-        post.setContent("Testing relationship");
+        post.setUserId(savedUser.getId());
+        post.setContent("Testing user ID relationship");
         post.setEmotionTag("neutral");
         
         // When
@@ -132,24 +144,26 @@ public class PostRepositoryTest {
         entityManager.flush();
         entityManager.clear();  // Clear the persistence context
         
-        // Then - fetch from database to verify relationship
+        // Then - fetch from database to verify userId is saved correctly
         Post fetchedPost = postRepository.findById(savedPost.getId()).orElse(null);
         assertThat(fetchedPost).isNotNull();
-        assertThat(fetchedPost.getUser()).isNotNull();
-        assertThat(fetchedPost.getUser().getId()).isEqualTo(savedUser.getId());
-        assertThat(fetchedPost.getUser().getEmailHash()).isEqualTo("relationship_test_hash");
+        assertThat(fetchedPost.getUserId()).isNotNull();
+        assertThat(fetchedPost.getUserId()).isEqualTo(savedUser.getId());
     }
     
     @Test
     public void testTimestampIsAutomaticallySet() {
         // Given
         User user = new User();
-        user.setEmailHash("timestamp_post_hash");
+        user.setEmail("timestamp@example.com");
+        user.setPassword("passwordtime");
+        user.setFirstName("Timestamp");
+        user.setLastName("Post");
         User savedUser = userRepository.save(user);
         
         LocalDateTime beforeSave = LocalDateTime.now();
         Post post = new Post();
-        post.setUser(savedUser);
+        post.setUserId(savedUser.getId());
         post.setContent("Timestamp test post");
         
         // When

@@ -1,6 +1,6 @@
 -- Create users table
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     first_name VARCHAR(255),
@@ -11,10 +11,11 @@ CREATE TABLE users (
 
 -- Create posts table
 CREATE TABLE posts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
     user_id UUID NOT NULL,
     content TEXT NOT NULL,
     emotion_tag VARCHAR(100),
+    ai_metadata TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_posts_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
