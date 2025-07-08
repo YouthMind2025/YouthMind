@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8081
 
 spring:
   application:
@@ -14,29 +14,24 @@ spring:
   h2:
     console:
       enabled: true
-      path: /h2-console
   
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
-        format_sql: true
+  flyway:
+    enabled: true
   
-  # Redis configuration (disabled for dev)
-  # data:
-  #   redis:
-  #     host: ${REDIS_HOST:localhost}
-  #     port: ${REDIS_PORT:6379}  
-  #     password: ${REDIS_PASSWORD:}
-  #     timeout: 2000ms
-  #     lettuce:
-  #       pool:
-  #         max-active: 8
-  #         max-idle: 8
-  #         min-idle: 0
+  # Redis configuration
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      connect-timeout: 2000ms
 
 # JWT Configuration
 jwt:
@@ -47,5 +42,6 @@ jwt:
 # Logging
 logging:
   level:
+    ai.youthmind: DEBUG
     org.springframework.security: DEBUG
-    ai.youthmind: DEBUG 
+    org.hibernate.SQL: DEBUG 

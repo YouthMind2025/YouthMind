@@ -1,7 +1,6 @@
 package ai.youthmind.repository;
 
 import ai.youthmind.entity.Post;
-import ai.youthmind.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,12 +10,11 @@ import java.util.UUID;
 @Repository
 public interface PostRepository extends JpaRepository<Post, UUID> {
     
-    List<Post> findByUser(User user);
+    List<Post> findByUserId(UUID userId);
     
-    List<Post> findByUserOrderByCreatedAtDesc(User user);
+    List<Post> findByUserIdOrderByCreatedAtDesc(UUID userId);
     
     List<Post> findByEmotionTag(String emotionTag);
     
-    List<Post> findByUserAndEmotionTag(User user, String emotionTag);
-    
+    List<Post> findByUserIdAndEmotionTag(UUID userId, String emotionTag);
 } 

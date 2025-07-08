@@ -24,7 +24,10 @@ public class UserRepositoryTest {
     public void testSaveAndFindUser() {
         // Given
         User user = new User();
-        user.setEmailHash("test_hash_123");
+        user.setEmail("test@example.com");
+        user.setPassword("password123");
+        user.setFirstName("Test");
+        user.setLastName("User");
         
         // When
         User savedUser = userRepository.save(user);
@@ -32,40 +35,50 @@ public class UserRepositoryTest {
         
         // Then
         assertThat(savedUser.getId()).isNotNull();
-        assertThat(savedUser.getEmailHash()).isEqualTo("test_hash_123");
+        assertThat(savedUser.getEmail()).isEqualTo("test@example.com");
+        assertThat(savedUser.getFirstName()).isEqualTo("Test");
+        assertThat(savedUser.getLastName()).isEqualTo("User");
         assertThat(savedUser.getCreatedAt()).isNotNull();
+        assertThat(savedUser.getUpdatedAt()).isNotNull();
         assertThat(savedUser.getCreatedAt()).isBefore(LocalDateTime.now().plusSeconds(1));
         assertThat(savedUser.getCreatedAt()).isAfter(LocalDateTime.now().minusSeconds(10));
     }
     
     @Test
-    public void testFindByEmailHash() {
+    public void testFindByEmail() {
         // Given
         User user = new User();
-        user.setEmailHash("unique_hash_456");
+        user.setEmail("unique@example.com");
+        user.setPassword("password456");
+        user.setFirstName("Unique");
+        user.setLastName("User");
         userRepository.save(user);
         entityManager.flush();
         
         // When
-        Optional<User> foundUser = userRepository.findByEmailHash("unique_hash_456");
+        Optional<User> foundUser = userRepository.findByEmail("unique@example.com");
         
         // Then
         assertThat(foundUser).isPresent();
-        assertThat(foundUser.get().getEmailHash()).isEqualTo("unique_hash_456");
+        assertThat(foundUser.get().getEmail()).isEqualTo("unique@example.com");
+        assertThat(foundUser.get().getFirstName()).isEqualTo("Unique");
         assertThat(foundUser.get().getCreatedAt()).isNotNull();
     }
     
     @Test
-    public void testExistsByEmailHash() {
+    public void testExistsByEmail() {
         // Given
         User user = new User();
-        user.setEmailHash("existing_hash_789");
+        user.setEmail("existing@example.com");
+        user.setPassword("password789");
+        user.setFirstName("Existing");
+        user.setLastName("User");
         userRepository.save(user);
         entityManager.flush();
         
         // When & Then
-        assertThat(userRepository.existsByEmailHash("existing_hash_789")).isTrue();
-        assertThat(userRepository.existsByEmailHash("non_existing_hash")).isFalse();
+        assertThat(userRepository.existsByEmail("existing@example.com")).isTrue();
+        assertThat(userRepository.existsByEmail("nonexisting@example.com")).isFalse();
     }
     
     @Test
@@ -73,7 +86,10 @@ public class UserRepositoryTest {
         // Given
         LocalDateTime beforeSave = LocalDateTime.now();
         User user = new User();
-        user.setEmailHash("timestamp_test_hash");
+        user.setEmail("timestamp@example.com");
+        user.setPassword("passwordtime");
+        user.setFirstName("Timestamp");
+        user.setLastName("Test");
         
         // When
         User savedUser = userRepository.save(user);
@@ -82,7 +98,10 @@ public class UserRepositoryTest {
         
         // Then
         assertThat(savedUser.getCreatedAt()).isNotNull();
+        assertThat(savedUser.getUpdatedAt()).isNotNull();
         assertThat(savedUser.getCreatedAt()).isAfterOrEqualTo(beforeSave);
         assertThat(savedUser.getCreatedAt()).isBeforeOrEqualTo(afterSave);
+        assertThat(savedUser.getUpdatedAt()).isAfterOrEqualTo(beforeSave);
+        assertThat(savedUser.getUpdatedAt()).isBeforeOrEqualTo(afterSave);
     }
 } 
