@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -16,18 +15,20 @@ import java.util.UUID;
 public class Post {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
     
-    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
     
     @Column(name = "emotion_tag", length = 100)
     private String emotionTag;
+    
+    @Column(name = "ai_metadata", columnDefinition = "TEXT") 
+    private String aiMetadata;
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -35,5 +36,54 @@ public class Post {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+    
+    // Explicit getters and setters to ensure they work
+    public UUID getId() {
+        return id;
+    }
+    
+    public void setId(UUID id) {
+        this.id = id;
+    }
+    
+    public UUID getUserId() {
+        return userId;
+    }
+    
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
+    
+    public String getContent() {
+        return content;
+    }
+    
+    public void setContent(String content) {
+        this.content = content;
+    }
+    
+    public String getEmotionTag() {
+        return emotionTag;
+    }
+    
+    public void setEmotionTag(String emotionTag) {
+        this.emotionTag = emotionTag;
+    }
+    
+    public String getAiMetadata() {
+        return aiMetadata;
+    }
+    
+    public void setAiMetadata(String aiMetadata) {
+        this.aiMetadata = aiMetadata;
+    }
+    
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 } 
