@@ -3,16 +3,16 @@ import { jwtDecode } from 'jwt-decode';
 
 interface User {
   id: string;
-  username: string;
   email: string;
-  role: string;
+  firstName: string;
+  lastName: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface JWTPayload {
   sub: string; // user id
   email: string;
-  username: string;
-  role: string;
   exp: number; // expiration timestamp
   iat: number; // issued at timestamp
 }
@@ -74,9 +74,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       return {
         id: decoded.sub,
-        username: decoded.username,
         email: decoded.email,
-        role: decoded.role
+        firstName: 'Admin',
+        lastName: 'User'
       };
     } catch (error) {
       console.error('Failed to decode token:', error);
@@ -116,47 +116,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       
-      // DEVELOPER OPTION - Easy to remove: Allow admin/admin login
+      // Mock authentication for admin panel
+      // In a real system, this would call a proper login API endpoint
+      
+      // Admin credentials check
       if (email === 'admin@youthmind.com' && password === 'admin') {
-        const mockToken = 'dev-token-' + Date.now();
+        const mockToken = 'mock-admin-token-' + Date.now();
         const mockUser = {
           id: '1',
-          username: 'admin',
           email: 'admin@youthmind.com',
-          role: 'admin'
+          firstName: 'Admin',
+          lastName: 'User'
         };
         localStorage.setItem('admin_token', mockToken);
         setUser(mockUser);
         setIsAuthenticated(true);
         return true;
       }
-      // END DEVELOPER OPTION
       
-      // Import api here to avoid circular dependency
-      const { default: api } = await import('../services/api');
-      
-      const response = await api.post('/v1/admin/login', {
-        email,
-        password,
-        recaptchaToken
-      });
-
-      const { token, user: userData } = response.data;
-
-      if (token) {
-        // Validate the received token
-        if (validateToken(token)) {
-          localStorage.setItem('admin_token', token);
-          setUser(userData);
-          setIsAuthenticated(true);
-          return true;
-        } else {
-          console.error('Received invalid token from server');
-          return false;
-        }
+      // Test user credentials (for demo purposes)
+      if (email === 'test@youthmind.com' && password === 'test123') {
+        const mockToken = 'mock-test-token-' + Date.now();
+        const mockUser = {
+          id: '2',
+          email: 'test@youthmind.com',
+          firstName: 'Test',
+          lastName: 'Admin'
+        };
+        localStorage.setItem('admin_token', mockToken);
+        setUser(mockUser);
+        setIsAuthenticated(true);
+        return true;
       }
+      
+      // Invalid credentials
+      console.log('Invalid credentials provided');
       return false;
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error('Login failed:', error);
       return false;
     } finally {

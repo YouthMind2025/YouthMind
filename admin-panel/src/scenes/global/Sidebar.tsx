@@ -10,6 +10,25 @@ const Sidebar: React.FC = () => {
     logout();
   };
 
+  // Helper to get user display name
+  const getUserDisplayName = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return user?.email?.split('@')[0] || 'Admin';
+  };
+
+  // Helper to get user initials for avatar
+  const getUserInitials = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return 'A';
+  };
+
   return (
     <div className="sidebar">
       {/* User Info Section */}
@@ -17,12 +36,17 @@ const Sidebar: React.FC = () => {
         <div className="user-details">
           <div className="user-avatar">
             <span className="avatar-text">
-              {user?.username?.charAt(0).toUpperCase() || 'A'}
+              {getUserInitials()}
             </span>
           </div>
           <div className="user-text">
-            <p className="user-name">{user?.username || 'Admin'}</p>
-            <p className="user-role">{user?.role || 'Administrator'}</p>
+            <p className="user-name">{getUserDisplayName()}</p>
+            <p className="user-role">Administrator</p>
+            {user?.email && (
+              <p className="user-email" style={{ fontSize: '0.75rem', color: '#666', marginTop: '4px' }}>
+                {user.email}
+              </p>
+            )}
           </div>
         </div>
       </div>
