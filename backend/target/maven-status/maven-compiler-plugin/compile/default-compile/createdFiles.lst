@@ -1,5 +1,6 @@
 ai\youthmind\entity\AIAnalysis.class
 ai\youthmind\controller\WelcomeController.class
+ai\youthmind\controller\DocsController.class
 ai\youthmind\repository\UserRepository.class
 ai\youthmind\service\PostService.class
 ai\youthmind\controller\PostController.class

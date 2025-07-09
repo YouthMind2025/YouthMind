@@ -62,6 +62,13 @@ const Login: React.FC = () => {
           <p className="mt-2 text-center text-sm text-gray-600">
             Sign in to access the admin dashboard
           </p>
+          <div className="mt-4 p-4 bg-blue-50 rounded-md">
+            <p className="text-sm text-blue-800 font-medium">Demo Credentials:</p>
+            <p className="text-xs text-blue-700 mt-1">
+              Admin: admin@youthmind.com / admin<br/>
+              Test: test@youthmind.com / test123
+            </p>
+          </div>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

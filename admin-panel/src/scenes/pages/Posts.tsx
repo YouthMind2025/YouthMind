@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import PostsTable from '../components/PostsTable';
 import PostsFilters from '../components/PostsFilters';
+import { usersApi, postsApi } from '../../services/api';
 import { mockpostdata } from '../../data/mockData';
 import './Posts.css';
 
+// Updated interface to match backend Post entity
 interface Post {
   id: string;
-  user: {
-    id: string;
-    emailHash: string;
-  };
+  userId: string;
   content: string;
   emotionTag: string;
+  aiMetadata?: string;
   createdAt: string;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
 }
 
 interface Filters {
@@ -34,19 +40,36 @@ const Posts: React.FC = () => {
 
   const postsPerPage = 10;
 
-  // Fetch all posts once (client-side pagination approach)
+  // Fetch all posts - since backend doesn't have GET posts endpoint, 
+  // we'll use mock data for now but structure it to match backend format
   useEffect(() => {
     const fetchPosts = async () => {
       setLoading(true);
       try {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // For now, use mock data. Later this will be replaced with actual API call
+        // Note: postsApi.getPosts() is commented out until backend implements the endpoint
+        // When backend is ready, uncomment the API call below:
         // const response = await postsApi.getPosts();
-        // setPosts(response.data); // response.data is the array of posts
+        // setPosts(response.data);
         
-        setPosts(mockpostdata.posts);
+        // For now, use formatted mock data that matches backend structure
+        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+        
+        const formattedMockData = mockpostdata.posts.map(post => ({
+          id: post.id,
+          userId: post.user.id,
+          content: post.content,
+          emotionTag: post.emotionTag,
+          aiMetadata: undefined,
+          createdAt: post.createdAt,
+          user: {
+            id: post.user.id,
+            email: `user${post.user.id}@example.com`,
+            firstName: 'User',
+            lastName: post.user.id
+          }
+        }));
+        
+        setPosts(formattedMockData);
       } catch (error) {
         console.error('Error fetching posts:', error);
       } finally {
