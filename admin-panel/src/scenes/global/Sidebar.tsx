@@ -73,6 +73,15 @@ const Sidebar: React.FC = () => {
         </nav>
       </div>
 
+      <div className="sidebar-section">
+        <h2>Developer Tools</h2>
+        <nav>
+          <Link to="/jwt-decoder" className="sidebar-link">
+            JWT Decoder
+          </Link>
+        </nav>
+      </div>
+
       {/* Logout Section */}
       <div className="sidebar-section logout-section">
         <button
