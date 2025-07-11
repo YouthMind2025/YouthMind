@@ -7,6 +7,7 @@ import Sidebar from './scenes/global/Sidebar';
 import FlaggedPosts from './scenes/pages/FlaggedPosts';
 import Posts from './scenes/pages/Posts';
 import SystemHealth from './scenes/pages/SystemHealth';
+import JWTDecoder from './scenes/pages/JWTDecoder';
 import Login from './scenes/pages/Login';
 import { RECAPTCHA_CONFIG } from './config/recaptcha';
 import './App.css';
@@ -31,6 +32,7 @@ function App() {
                       <Route path="/posts" element={<Posts />} />
                       <Route path="/flagged-posts" element={<FlaggedPosts />} />
                       <Route path="/system-health" element={<SystemHealth />} />
+                      <Route path="/jwt-decoder" element={<JWTDecoder />} />
                       <Route path="/" element={<FlaggedPosts />} />
                     </Routes>
                   </main>
