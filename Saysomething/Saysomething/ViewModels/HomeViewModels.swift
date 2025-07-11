@@ -15,7 +15,11 @@ class HomeViewModel: ObservableObject {
     @Published var loginStatus: String = ""
     @Published var errorMessage: String? = nil
     @Published var successMessage: String? = nil
+    @Published var showRetryAlert = false
+    @Published var retryAction: (() -> Void)?
+    
     private var cancellables = Set<AnyCancellable>()
+    private let networkMonitor = NetworkMonitor.shared
     
     init() {
         // Check token status on launch
@@ -24,9 +28,23 @@ class HomeViewModel: ObservableObject {
         } else {
             print("[Keychain] No token found on launch.")
         }
+        
+        // Monitor network status
+        networkMonitor.$isConnected
+            .sink { [weak self] isConnected in
+                if !isConnected {
+                    self?.handleNoInternetConnection()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     func login(email: String, password: String) {
+        guard networkMonitor.isConnected else {
+            errorMessage = "No internet connection - please check your network"
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
         successMessage = nil
@@ -36,11 +54,9 @@ class HomeViewModel: ObservableObject {
                 self?.isLoading = false
                 switch completion {
                 case .failure(let error):
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.errorDescription
-                    } else {
-                        self?.errorMessage = "Login failed: \(error.localizedDescription)"
-                    }
+                    self?.handleAPIError(error, retryAction: {
+                        self?.login(email: email, password: password)
+                    })
                 case .finished:
                     break
                 }
@@ -57,6 +73,11 @@ class HomeViewModel: ObservableObject {
     }
 
     func fetchPosts() {
+        guard networkMonitor.isConnected else {
+            errorMessage = "No internet connection - please check your network"
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
         
@@ -65,11 +86,9 @@ class HomeViewModel: ObservableObject {
                 self?.isLoading = false
                 switch completion {
                 case .failure(let error):
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.errorDescription
-                    } else {
-                        self?.errorMessage = "Failed to fetch posts: \(error.localizedDescription)"
-                    }
+                    self?.handleAPIError(error, retryAction: {
+                        self?.fetchPosts()
+                    })
                 case .finished:
                     break
                 }
@@ -80,6 +99,11 @@ class HomeViewModel: ObservableObject {
     }
     
     func createPost(title: String, content: String) {
+        guard networkMonitor.isConnected else {
+            errorMessage = "No internet connection - please check your network"
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
         successMessage = nil
@@ -89,11 +113,9 @@ class HomeViewModel: ObservableObject {
                 self?.isLoading = false
                 switch completion {
                 case .failure(let error):
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.errorDescription
-                    } else {
-                        self?.errorMessage = "Failed to create post: \(error.localizedDescription)"
-                    }
+                    self?.handleAPIError(error, retryAction: {
+                        self?.createPost(title: title, content: content)
+                    })
                 case .finished:
                     break
                 }
@@ -119,10 +141,18 @@ class LoginViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var successMessage: String? = nil
     @Published var isLoggedIn: Bool = false
+    @Published var showRetryAlert = false
+    @Published var retryAction: (() -> Void)?
     
     private var cancellables = Set<AnyCancellable>()
+    private let networkMonitor = NetworkMonitor.shared
     
     func register() {
+        guard networkMonitor.isConnected else {
+            errorMessage = "No internet connection - please check your network"
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
         successMessage = nil
@@ -132,11 +162,9 @@ class LoginViewModel: ObservableObject {
                 self?.isLoading = false
                 switch completion {
                 case .failure(let error):
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.errorDescription
-                    } else {
-                        self?.errorMessage = "Registration failed: \(error.localizedDescription)"
-                    }
+                    self?.handleAPIError(error, retryAction: {
+                        self?.register()
+                    })
                 case .finished:
                     break
                 }
@@ -169,5 +197,33 @@ class LoginViewModel: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: dateString)
+    }
+    
+    // MARK: - Error Handling
+    
+    private func handleAPIError(_ error: Error, retryAction: @escaping () -> Void) {
+        if let apiError = error as? APIError {
+            if apiError.isRetryable {
+                // Show retry alert for retryable errors
+                self.retryAction = retryAction
+                self.showRetryAlert = true
+                self.errorMessage = "\(apiError.errorDescription ?? "Network error") - Tap to retry"
+            } else {
+                // Show immediate error for non-retryable errors
+                self.errorMessage = apiError.errorDescription
+            }
+        } else {
+            self.errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
+        }
+    }
+    
+    private func handleNoInternetConnection() {
+        errorMessage = "No internet connection - please check your network"
+    }
+    
+    func retryLastAction() {
+        retryAction?()
+        showRetryAlert = false
+        retryAction = nil
     }
 } 

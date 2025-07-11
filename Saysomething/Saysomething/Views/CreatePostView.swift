@@ -106,6 +106,28 @@ struct CreatePostView: View {
                 content = ""
             }
         }
+        .overlay(
+            // Retry alert
+            Group {
+                if viewModel.showRetryAlert {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            viewModel.showRetryAlert = false
+                        }
+                    
+                    RetryAlertView(
+                        message: viewModel.errorMessage ?? "Network error",
+                        retryAction: {
+                            viewModel.retryLastAction()
+                        },
+                        dismissAction: {
+                            viewModel.showRetryAlert = false
+                        }
+                    )
+                }
+            }
+        )
         .alert(isSuccess ? "Success" : "Error", isPresented: $showAlert) {
             Button("OK") {
                 showAlert = false
