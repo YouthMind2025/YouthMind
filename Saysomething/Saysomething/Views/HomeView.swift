@@ -67,6 +67,27 @@ struct HomeView: View {
                     }
                     .padding(.horizontal, 8)
                     
+                    // AI Chat navigation card
+                    NavigationLink {
+                        EnhancedChatView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "brain.head.profile")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                            Text("AI 心理健康助手")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(.leading, 4)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(LinearGradient(gradient: Gradient(colors: [Color.green, Color.teal]), startPoint: .leading, endPoint: .trailing))
+                        .cornerRadius(16)
+                        .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 4)
+                    }
+                    .padding(.horizontal, 8)
+                    
                     if viewModel.isLoading {
                         ProgressView("Loading...")
                             .padding()
