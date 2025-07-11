@@ -77,8 +77,17 @@ struct LoginView: View {
                     .padding(.horizontal)
                     .transition(.move(edge: .top))
             }
+            if let success = viewModel.successMessage {
+                Text(success)
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(Color.green)
+                    .cornerRadius(8)
+                    .padding(.horizontal)
+                    .transition(.move(edge: .top))
+            }
             if viewModel.isLoggedIn {
-                Text("Logged in successfully!")
+                Text("Login successful!")
                     .foregroundColor(.white)
                     .padding()
                     .background(Color.green)

@@ -11,13 +11,53 @@ import Foundation
 import Combine
 
 // API Response and Error Handling
-enum APIError: Error {
+enum APIError: Error, LocalizedError {
     case invalidURL
     case networkError(Error)
     case invalidResponse
     case invalidStatusCode(Int)         // wrong status code
     case decodingError(Error)           // json decode error
     case timeout
+    case unauthorized
+    case forbidden
+    case notFound
+    case serverError
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "Invalid URL"
+        case .networkError(let error):
+            return "Network error: \(error.localizedDescription)"
+        case .invalidResponse:
+            return "Invalid response"
+        case .invalidStatusCode(let code):
+            switch code {
+            case 401:
+                return "Unauthorized, please login again"
+            case 403:
+                return "Forbidden"
+            case 404:
+                return "Resource not found"
+            case 500...599:
+                return "Server error"
+            default:
+                return "Request failed (status code: \(code))"
+            }
+        case .decodingError(let error):
+            return "Data parsing error: \(error.localizedDescription)"
+        case .timeout:
+            return "Request timeout"
+        case .unauthorized:
+            return "Unauthorized, please login again"
+        case .forbidden:
+            return "Forbidden"
+        case .notFound:
+            return "Resource not found"
+        case .serverError:
+            return "Server error"
+        }
+    }
 }
 
 
@@ -90,10 +130,26 @@ class NetworkService: NetworkServiceProtocol {
                 guard let httpResponse = response as? HTTPURLResponse else {
                     throw APIError.invalidResponse
                 }
-                // check status code is 2xx
-                guard (200...299).contains(httpResponse.statusCode) else {
+                
+                // Handle different status codes
+                switch httpResponse.statusCode {
+                case 200...299:
+                    // Success status codes, continue processing
+                    break
+                case 401:
+                    // Automatically handle token errors
+                    TokenManager.shared.handleTokenError()
+                    throw APIError.unauthorized
+                case 403:
+                    throw APIError.forbidden
+                case 404:
+                    throw APIError.notFound
+                case 500...599:
+                    throw APIError.serverError
+                default:
                     throw APIError.invalidStatusCode(httpResponse.statusCode)
                 }
+                
                 // check decode error
                 do {
                     let decodedResponse = try JSONDecoder().decode(ApiResponse<T>.self, from: data)

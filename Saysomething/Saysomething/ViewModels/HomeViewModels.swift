@@ -14,59 +14,99 @@ class HomeViewModel: ObservableObject {
     @Published var posts: [Post] = []
     @Published var loginStatus: String = ""
     @Published var errorMessage: String? = nil
+    @Published var successMessage: String? = nil
     private var cancellables = Set<AnyCancellable>()
     
-    // test token data
     init() {
-        // mock login and save token
-        let _ = TokenManager.shared.saveToken("mock_jwt_token_123456")
-        // get token on launch
+        // Check token status on launch
         if let token = TokenManager.shared.getToken() {
             print("[Keychain] Token on launch: \(token)")
         } else {
             print("[Keychain] No token found on launch.")
         }
-
     }
 
     func login(email: String, password: String) {
+        isLoading = true
+        errorMessage = nil
+        successMessage = nil
+        
         AuthAPI.login(email: email, password: password)
-            .sink(receiveCompletion: { completion in
+            .sink(receiveCompletion: { [weak self] completion in
+                self?.isLoading = false
                 switch completion {
                 case .failure(let error):
-                    if let sessionError = error as? SessionExpiredError, sessionError == .sessionExpired {
-                        self.errorMessage = "Session expired. Please log in again."
+                    if let apiError = error as? APIError {
+                        self?.errorMessage = apiError.errorDescription
                     } else {
-                        self.errorMessage = "Login failed: \(error)"
+                        self?.errorMessage = "Login failed: \(error.localizedDescription)"
                     }
                 case .finished:
                     break
                 }
-            }, receiveValue: { response in
+            }, receiveValue: { [weak self] response in
                 TokenManager.shared.saveToken(response.data.token)
-                self.loginStatus = "Login successful!"
+                self?.loginStatus = "Login successful!"
+                self?.successMessage = "Login successful!"
+                // Clear success message
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self?.successMessage = nil
+                }
             })
             .store(in: &cancellables)
     }
 
     func fetchPosts() {
+        isLoading = true
+        errorMessage = nil
+        
         PostAPI.fetchPosts()
-            .sink(receiveCompletion: { completion in
+            .sink(receiveCompletion: { [weak self] completion in
+                self?.isLoading = false
                 switch completion {
                 case .failure(let error):
-                    if let sessionError = error as? SessionExpiredError, sessionError == .sessionExpired {
-                        self.errorMessage = "Session expired. Please log in again."
+                    if let apiError = error as? APIError {
+                        self?.errorMessage = apiError.errorDescription
                     } else {
-                        self.errorMessage = "Failed to fetch posts: \(error)"
+                        self?.errorMessage = "Failed to fetch posts: \(error.localizedDescription)"
                     }
                 case .finished:
                     break
                 }
-            }, receiveValue: { response in
-                self.posts = response.data
+            }, receiveValue: { [weak self] response in
+                self?.posts = response.data
             })
             .store(in: &cancellables)
-frontend-together
+    }
+    
+    func createPost(title: String, content: String) {
+        isLoading = true
+        errorMessage = nil
+        successMessage = nil
+        
+        PostAPI.createPost(title: title, content: content)
+            .sink(receiveCompletion: { [weak self] completion in
+                self?.isLoading = false
+                switch completion {
+                case .failure(let error):
+                    if let apiError = error as? APIError {
+                        self?.errorMessage = apiError.errorDescription
+                    } else {
+                        self?.errorMessage = "Failed to create post: \(error.localizedDescription)"
+                    }
+                case .finished:
+                    break
+                }
+            }, receiveValue: { [weak self] response in
+                self?.successMessage = "Post created successfully!"
+                // Refresh posts list
+                self?.fetchPosts()
+                // Clear success message
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self?.successMessage = nil
+                }
+            })
+            .store(in: &cancellables)
     }
 }
 
@@ -77,40 +117,51 @@ class LoginViewModel: ObservableObject {
     @Published var otp: String = ""
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
+    @Published var successMessage: String? = nil
     @Published var isLoggedIn: Bool = false
     
-    var registerService: LoginService = LoginService.shared
     private var cancellables = Set<AnyCancellable>()
     
     func register() {
         isLoading = true
         errorMessage = nil
-        registerService.register(email: email, otp: otp)
+        successMessage = nil
+        
+        AuthAPI.register(email: email, otp: otp)
             .sink { [weak self] completion in
                 self?.isLoading = false
-                if case let .failure(error) = completion {
-                    self?.errorMessage = "Registration failed: \(error)"
+                switch completion {
+                case .failure(let error):
+                    if let apiError = error as? APIError {
+                        self?.errorMessage = apiError.errorDescription
+                    } else {
+                        self?.errorMessage = "Registration failed: \(error.localizedDescription)"
+                    }
+                case .finished:
+                    break
                 }
             } receiveValue: { [weak self] response in
                 // Save JWT token
-                let saved = TokenManager.shared.saveToken(response.token)
-                // Validate expiration
-                if let expiresAt = self?.parseDate(response.expiresAt), expiresAt > Date() {
+                let saved = TokenManager.shared.saveToken(response.data.token)
+                // Validate expiration time
+                if let expiresAt = self?.parseDate(response.data.expiresAt), expiresAt > Date() {
                     self?.isLoggedIn = saved
+                    self?.successMessage = "Registration successful!"
                     self?.errorMessage = nil
-                    // Optionally clear success after a delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    // Delay clearing success message
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self?.successMessage = nil
                         self?.isLoggedIn = false
                     }
                 } else {
-                    self?.errorMessage = "Token expired or invalid."
+                    self?.errorMessage = "Token expired or invalid"
                 }
             }
             .store(in: &cancellables)
     }
     
     private func parseDate(_ dateString: String) -> Date? {
-        // Try ISO8601 first, fallback to yyyy-MM-dd
+        // Try ISO8601 format first, fallback to yyyy-MM-dd
         let isoFormatter = ISO8601DateFormatter()
         if let date = isoFormatter.date(from: dateString) {
             return date
