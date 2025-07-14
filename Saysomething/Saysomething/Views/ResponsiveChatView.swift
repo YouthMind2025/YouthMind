@@ -11,7 +11,9 @@ import SwiftUI
 struct ResponsiveChatView: View {
     @StateObject private var viewModel = ChatViewModel()
     @FocusState private var isInputFocused: Bool
+    // for horizontal device
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    // for vertical device
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     
     var body: some View {
@@ -37,11 +39,11 @@ struct ResponsiveChatView: View {
                     }
                 }
             }
-            .navigationTitle("AI 助手")
+            .navigationTitle("AI helper")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("清空") {
+                    Button("clear") {
                         viewModel.messages.removeAll()
                         viewModel.loadMockData()
                     }
@@ -89,7 +91,7 @@ struct ResponsiveChatView: View {
             
             HStack(spacing: adaptiveInputSpacing) {
                 // Text input
-                TextField("输入消息...", text: $viewModel.inputText, axis: .vertical)
+                TextField("input message...", text: $viewModel.inputText, axis: .vertical)
                     .textFieldStyle(PlainTextFieldStyle())
                     .padding(.horizontal, adaptiveInputPadding)
                     .padding(.vertical, 12)

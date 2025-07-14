@@ -18,6 +18,7 @@ struct AuthAPI {
             headers: headers,
             body: body
         )
+        // send request to server by NetworkService
         return NetworkService().request(endpoint)
     }
     
@@ -43,12 +44,16 @@ struct AuthAPI {
     }
 }
 
+
+// data structure
+// login response
 struct LoginResponse: Codable {
     let token: String
     let userId: String
     let expiresAt: String?
 }
 
+// register response
 struct RegisterResponse: Codable {
     let userId: String
     let token: String
@@ -56,6 +61,7 @@ struct RegisterResponse: Codable {
     let message: String?
 }
 
+// register request
 struct RegisterRequest: Codable {
     let email: String
     let otp: String

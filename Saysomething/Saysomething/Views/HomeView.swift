@@ -75,7 +75,7 @@ struct HomeView: View {
                             Image(systemName: "brain.head.profile")
                                 .font(.title2)
                                 .foregroundColor(.white)
-                            Text("AI 心理健康助手")
+                            Text("AI helper")
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .padding(.leading, 4)
@@ -173,7 +173,7 @@ struct DetailView: View {
                 .ignoresSafeArea()
             VStack(spacing: 18) {
                 // Content
-                Text("detail：\(content)")
+                Text("detail: \(content)")
                     .font(.title)
                     .fontWeight(.semibold)
                     .padding(.top, 24)

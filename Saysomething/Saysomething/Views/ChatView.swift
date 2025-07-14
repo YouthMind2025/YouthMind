@@ -14,6 +14,7 @@ struct ChatBubble: View {
     var body: some View {
         HStack {
             if message.sender.isFromUser {
+                // user message to right
                 Spacer(minLength: 60)
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(message.text)
@@ -30,12 +31,14 @@ struct ChatBubble: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
                     
+                    // time of message
                     Text(formatTime(message.timestamp))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                         .padding(.trailing, 4)
                 }
             } else {
+                // ai message to left
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .top, spacing: 8) {
                         // AI Avatar
@@ -157,6 +160,7 @@ struct ChatView: View {
                             }
                             .padding(.vertical, 8)
                         }
+                        // scroll to bottom when new message is added
                         .onChange(of: viewModel.messages.count) { _ in
                             if let lastMessage = viewModel.messages.last {
                                 withAnimation(.easeOut(duration: 0.3)) {
@@ -238,20 +242,12 @@ struct ChatView: View {
             .navigationTitle("AI Assistant")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // clear chat
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Clear") {
                         viewModel.clearChat()
                     }
                     .foregroundColor(.blue)
-                }
-                
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Export") {
-                        let chatExport = viewModel.exportChat()
-                        // Here you could implement sharing functionality
-                        print("Chat exported: \(chatExport)")
-                    }
-                    .foregroundColor(.green)
                 }
             }
         }

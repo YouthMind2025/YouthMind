@@ -8,11 +8,12 @@
 import SwiftUI
 
 // MARK: - Enhanced Chat View
+// this part of code is for chat view, as I can not view the layout, so the UI might not looks good.
+// after debugging I can view and change the UI to what we want
 struct EnhancedChatView: View {
     @StateObject private var viewModel = ChatViewModel()
     @FocusState private var isInputFocused: Bool
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @State private var showingExportSheet = false
     
     var body: some View {
         NavigationStack {
@@ -43,32 +44,15 @@ struct EnhancedChatView: View {
                     }
                 }
             }
-            .navigationTitle("AI 心理健康助手")
+            .navigationTitle("AI helper")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("清空") {
+                    Button("clear") {
                         viewModel.clearChat()
                     }
                     .foregroundColor(.blue)
                 }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button("导出聊天记录") {
-                            showingExportSheet = true
-                        }
-                        Button("分享") {
-                            shareChat()
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .foregroundColor(.blue)
-                    }
-                }
-            }
-            .sheet(isPresented: $showingExportSheet) {
-                ExportSheet(chatText: viewModel.exportChat())
             }
         }
     }
@@ -107,7 +91,7 @@ struct EnhancedChatView: View {
     private var suggestionsArea: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("建议")
+                Text("suggestions")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Spacer()
@@ -145,7 +129,7 @@ struct EnhancedChatView: View {
             
             HStack(spacing: 12) {
                 // Text input
-                TextField("输入消息...", text: $viewModel.inputText, axis: .vertical)
+                TextField("input message...", text: $viewModel.inputText, axis: .vertical)
                     .textFieldStyle(PlainTextFieldStyle())
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
@@ -198,16 +182,6 @@ struct EnhancedChatView: View {
         }
     }
     
-    // MARK: - Utility Methods
-    private func shareChat() {
-        let chatText = viewModel.exportChat()
-        let activityVC = UIActivityViewController(activityItems: [chatText], applicationActivities: nil)
-        
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            window.rootViewController?.present(activityVC, animated: true)
-        }
-    }
 }
 
 // MARK: - Enhanced Chat Bubble
@@ -341,30 +315,6 @@ struct EnhancedLoadingIndicator: View {
     }
 }
 
-// MARK: - Export Sheet
-struct ExportSheet: View {
-    let chatText: String
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                Text(chatText)
-                    .padding()
-                    .textSelection(.enabled)
-            }
-            .navigationTitle("聊天记录")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
 
 // MARK: - Preview
 struct EnhancedChatView_Previews: PreviewProvider {

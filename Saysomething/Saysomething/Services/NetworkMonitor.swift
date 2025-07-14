@@ -2,6 +2,8 @@ import Foundation
 import Network
 import Combine
 
+// NetworkMonitor is a singleton class that observes the device's network connectivity status.
+// It uses Apple's Network framework to monitor changes and publishes updates for SwiftUI or Combine subscribers.
 class NetworkMonitor: ObservableObject {
     static let shared = NetworkMonitor()
     
@@ -15,12 +17,14 @@ class NetworkMonitor: ObservableObject {
         startMonitoring()
     }
     
+    // different type of network connection
     enum ConnectionType {
         case wifi
         case cellular
         case ethernet
         case unknown
         
+        // description of network connection
         var description: String {
             switch self {
             case .wifi:
@@ -35,14 +39,15 @@ class NetworkMonitor: ObservableObject {
         }
     }
     
-
-    
+    // deinit to stop monitoring
     deinit {
         stopMonitoring()
     }
     
+    // start monitoring
     func startMonitoring() {
         monitor.pathUpdateHandler = { [weak self] path in
+            // update UI on main thread
             DispatchQueue.main.async {
                 self?.isConnected = path.status == .satisfied
                 self?.updateConnectionType(path)
@@ -51,10 +56,12 @@ class NetworkMonitor: ObservableObject {
         monitor.start(queue: queue)
     }
     
+    // stop monitoring
     func stopMonitoring() {
         monitor.cancel()
     }
     
+    // update connection type
     private func updateConnectionType(_ path: NWPath) {
         if path.usesInterfaceType(.wifi) {
             connectionType = .wifi
@@ -67,12 +74,14 @@ class NetworkMonitor: ObservableObject {
         }
     }
     
+    // simulate no internet
     func simulateNoInternet() {
         DispatchQueue.main.async {
             self.isConnected = false
         }
     }
     
+    // simulate internet restored
     func simulateInternetRestored() {
         DispatchQueue.main.async {
             self.isConnected = true

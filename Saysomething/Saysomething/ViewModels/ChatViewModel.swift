@@ -9,18 +9,26 @@ import SwiftUI
 import Combine
 
 // MARK: - Dynamic Chat View Model
+// This class manages the chat functionality, including message handling, AI response generation, and UI updates.
 class ChatViewModel: ObservableObject {
+    // messages: the list of messages in the chat
     @Published var messages: [Message] = []
+    // inputText: the text input by the user
     @Published var inputText: String = ""
+    // isLoading: true if the chat is loading, false otherwise
     @Published var isLoading: Bool = false
+    // suggestions: the list of suggestions for the user
     @Published var suggestions: [String] = []
+    // showSuggestions: true if the suggestions are shown, false otherwise
     @Published var showSuggestions: Bool = false
+    // connectionStatus: the status of the connection
     @Published var connectionStatus: ConnectionStatus = .connected
     
     private var cancellables = Set<AnyCancellable>()
     private var messagePublisher = PassthroughSubject<Message, Never>()
     private var responseTimer: Timer?
     
+    // different type of connection status
     enum ConnectionStatus {
         case connected
         case connecting
@@ -101,11 +109,13 @@ class ChatViewModel: ObservableObject {
         simulateAIResponse(to: userInput)
     }
     
+    // send suggestion as message
     func sendSuggestion(_ suggestion: String) {
         inputText = suggestion
         sendMessage()
     }
     
+    // simulate AI response
     private func simulateAIResponse(to userInput: String) {
         isLoading = true
         connectionStatus = .connecting
@@ -126,6 +136,7 @@ class ChatViewModel: ObservableObject {
         }
     }
     
+    // based on user input, continue the conversation
     private func continueConversationLoop(userInput: String) {
         // Simulate follow-up questions or suggestions
         let lowercasedInput = userInput.lowercased()
@@ -196,6 +207,7 @@ class ChatViewModel: ObservableObject {
         }
     }
     
+    // send system message
     private func sendPeriodicReminder() {
         guard !messages.isEmpty else { return }
         
@@ -274,6 +286,7 @@ class ChatViewModel: ObservableObject {
         loadMockData()
     }
     
+    // export chat as string
     func exportChat() -> String {
         return messages.map { message in
             let sender = message.sender.displayName
@@ -282,6 +295,7 @@ class ChatViewModel: ObservableObject {
         }.joined(separator: "\n\n")
     }
     
+    // format time
     private func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
