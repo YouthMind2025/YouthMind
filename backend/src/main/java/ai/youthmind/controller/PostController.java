@@ -4,6 +4,7 @@ import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.dto.PostCreateResponse;
 import ai.youthmind.entity.Post;
 import ai.youthmind.service.PostService;
+import ai.youthmind.service.RedisService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -28,6 +29,9 @@ public class PostController {
     @Autowired
     private PostService postService;
 
+    @Autowired
+    private RedisService redisService;
+
     @PostMapping("/create")
     @Operation(
         summary = "Create a new post",
@@ -48,6 +52,8 @@ public class PostController {
         
         // Build response
         PostCreateResponse response = new PostCreateResponse(savedPost.getId(), savedPost.getCreatedAt());
+
+        redisService.publishPostCreated("Post " + response.getPostId() + " created");
         
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

@@ -12,6 +12,12 @@ public class RedisService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Autowired
+    private String postCreatedChannel;
+
+    @Autowired
+    private String aiProcessedChannel;
+
     public void setValue(String key, Object value) {
         redisTemplate.opsForValue().set(key, value);
     }
@@ -30,6 +36,14 @@ public class RedisService {
 
     public Long increment(String key) {
         return redisTemplate.opsForValue().increment(key);
+    }
+
+    public void publishPostCreated(Object message) {
+        redisTemplate.convertAndSend(postCreatedChannel, message);
+    }
+
+    public void publishAiProcessed(Object message) {
+        redisTemplate.convertAndSend(aiProcessedChannel, message);
     }
 
 } 
