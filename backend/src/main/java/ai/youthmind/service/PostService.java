@@ -1,11 +1,17 @@
 package ai.youthmind.service;
 
 import ai.youthmind.dto.PostCreateRequest;
+import ai.youthmind.dto.PostDto;
+import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
 import ai.youthmind.repository.AIAnalysisRepository;
 import ai.youthmind.repository.PostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +19,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -23,6 +30,9 @@ public class PostService {
     
     @Autowired
     private AIAnalysisRepository aiAnalysisRepository;
+    
+    @Autowired
+    private RedisService redisService;
     
     /**
      * Update or insert AI analysis result for a post
@@ -71,6 +81,96 @@ public class PostService {
         post.setEmotionTag(request.getEmotionTag());
         post.setAiMetadata(request.getAiMetadata());
         
-        return postRepository.save(post);
+        Post savedPost = postRepository.save(post);
+        
+        // Invalidate feed cache after creating a post
+        redisService.invalidateFeedCache();
+        
+        return savedPost;
+    }
+    
+    /**
+     * Get paginated feed of posts
+     */
+    public FeedResponse getFeed(int page, int size, String sortBy, UUID currentUserId) {
+        // Check cache first
+        String cacheKey = String.format("feed:latest:%d:%d:%s", page, size, sortBy);
+        FeedResponse cachedFeed = redisService.getCachedFeed(cacheKey);
+        if (cachedFeed != null) {
+            return cachedFeed;
+        }
+        
+        // Create pageable with sorting
+        Sort sort = getSortFromString(sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        
+        // Get posts from database
+        Page<Post> postPage = postRepository.findAll(pageable);
+        
+        // Convert to DTOs
+        List<PostDto> postDtos = postPage.getContent().stream()
+            .map(post -> convertToPostDto(post, currentUserId))
+            .collect(Collectors.toList());
+        
+        // Build response
+        FeedResponse response = new FeedResponse();
+        response.setPosts(postDtos);
+        response.setCurrentPage(postPage.getNumber());
+        response.setTotalPages(postPage.getTotalPages());
+        response.setTotalElements(postPage.getTotalElements());
+        response.setPageSize(postPage.getSize());
+        response.setHasNext(postPage.hasNext());
+        response.setFirst(postPage.isFirst());
+        response.setLast(postPage.isLast());
+        
+        // Cache the response
+        redisService.cacheFeed(cacheKey, response);
+        
+        return response;
+    }
+    
+    /**
+     * Get posts by emotion tag
+     */
+    public List<PostDto> getPostsByEmotionTag(String emotionTag, UUID currentUserId) {
+        List<Post> posts = postRepository.findByEmotionTag(emotionTag);
+        return posts.stream()
+            .map(post -> convertToPostDto(post, currentUserId))
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Get posts by user
+     */
+    public List<PostDto> getPostsByUser(UUID userId, UUID currentUserId) {
+        List<Post> posts = postRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        return posts.stream()
+            .map(post -> convertToPostDto(post, currentUserId))
+            .collect(Collectors.toList());
+    }
+    
+    private PostDto convertToPostDto(Post post, UUID currentUserId) {
+        PostDto dto = new PostDto();
+        dto.setId(post.getId());
+        dto.setContent(post.getContent());
+        dto.setEmotionTag(post.getEmotionTag());
+        dto.setAiMetadata(post.getAiMetadata());
+        dto.setCreatedAt(post.getCreatedAt());
+        dto.setAnonymousUserId("user_" + post.getUserId().toString().substring(0, 8));
+        
+        // TODO: Implement understanding count and user reaction tracking
+        dto.setUnderstandingCount(0);
+        dto.setHasUserUnderstood(false);
+        
+        return dto;
+    }
+    
+    private Sort getSortFromString(String sortBy) {
+        return switch (sortBy) {
+            case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt");
+            case "oldest" -> Sort.by(Sort.Direction.ASC, "createdAt");
+            case "popular" -> Sort.by(Sort.Direction.DESC, "createdAt"); // TODO: Implement popularity sorting
+            default -> Sort.by(Sort.Direction.DESC, "createdAt");
+        };
     }
 } 
