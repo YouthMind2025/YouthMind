@@ -66,7 +66,7 @@ class HomeViewModel: ObservableObject {
                 self.posts = response.data
             })
             .store(in: &cancellables)
-frontend-together
+//frontend-together
     }
 }
 

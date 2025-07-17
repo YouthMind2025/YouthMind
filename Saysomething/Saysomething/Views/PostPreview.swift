@@ -1,68 +1,76 @@
-//This is the post that shown on the home page.
-//This version is currently just a basic preview structure of each post
-//Not yet connect with Post.swift
+// Views/PostPreview.swift
+//Compact preview card for posts in the feed
+//Visually distinguishes posts by emotion type
+//Displays key engagement metrics
 
 
 import SwiftUI
 
 struct PostPreview: View {
-    var resonance: Int
-    var view: Int
-    var title: String
-    var preImg: String
+    let post: Post
+    @ObservedObject var viewModel: FeedViewModel
+    
+    // Helper property to get emotion color from DesignConstants
+    private var emotionColor: Color {
+        switch post.emotion {
+        case .angry: return DesignConstants.ColorPalette.angry
+        case .sad: return DesignConstants.ColorPalette.sad
+        case .happy: return DesignConstants.ColorPalette.happy
+        case .conflicted: return DesignConstants.ColorPalette.conflicted
+        case .surprised: return DesignConstants.ColorPalette.suprised
+        case .fear: return DesignConstants.ColorPalette.fear
+        }
+    }
 
     var body: some View {
         VStack {
-            HStack {
-                Image(systemName: "heart")
-                Text("\(resonance) Resonance")
-                VStack {
+            HStack(alignment: .center) {
+                // Heart + Resonance in capsule
+                HStack(spacing: 4) {
+                    Image(systemName: "heart")
+                        .imageScale(.small)
+                    
+                    Text("\(post.resonance) Resonance")
+                        .font(.system(size: 12)) // Smaller font size
+                        .minimumScaleFactor(0.7) // Allows text to shrink if needed
+                }
+                .padding(.horizontal, 6) // Reduced padding
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .stroke(Color.gray, lineWidth: 1)
+                )
+                .lineLimit(1) // Force single line
+                
+                
+                VStack(alignment: .leading) {
                     Image(systemName: "eye")
-                    Text("\(resonance)")
+                    Text("\(post.view)")
                 }
             }
+            
             Spacer()
-            Text(title)
-                .font(.title)
-                .fontWeight(.semibold)
-            Image(preImg) // Preview image
+            
+            Text(post.title)
+                .font(.system(.title2, weight: .bold))
+                .padding(.horizontal)
+            
+            Image(post.preImg)
                 .resizable()
-                .frame(width: 150, height: 150)
-
+                .scaledToFit()
+                .frame(height: 150)
+                .padding()
+            
             Spacer()
         }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(10)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(emotionColor, lineWidth: 6)
+        )
+        .cornerRadius(12)
+        .padding(.horizontal, 8)
     }
 }
-
-
-//Use in future when connect with Post.swift
-//struct PostPreview: View {
-//    let post: Post
-//
-//    var body: some View {
-//        VStack {
-//            HStack(alignment: .center){
-//                Image(systemName: "heart")
-//                Text("\(post.resonance) Resonance")
-//                VStack {
-//                    Image(systemName: "eye")
-//                    Text("\(post.view)")  // Fixed: Convert Int to String
-//                }
-//            }
-//            Text(post.title)
-//            Image(post.preImg) // Preview image
-//                .resizable()
-//                .frame(width: 150, height: 150)
-//
-//            Spacer()
-//        }
-//        .padding()
-//        .background(Color.gray.opacity(0.1))
-//        .cornerRadius(10)  // Fixed: Corrected spelling from 'cornerRadius'
-//    }
-//}
-
 
