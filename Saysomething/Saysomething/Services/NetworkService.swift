@@ -9,6 +9,7 @@
 // Core function
 import Foundation
 import Combine
+import FirebaseCrashlytics
 
 // API Response and Error Handling
 enum APIError: Error, LocalizedError {
@@ -131,8 +132,12 @@ class NetworkService: NetworkServiceProtocol {
     
     // handle API request with retry mechanism
     func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<ApiResponse<T>, APIError> {
+        // Log the API request
+        Crashlytics.crashlytics().log("API Request: \(endpoint.method) \(endpoint.path)")
+        
         // url checking, if URL is not valid then return Fail
         guard let url = URL(string: endpoint.baseURL + endpoint.path) else {
+            Crashlytics.crashlytics().log("Invalid URL: \(endpoint.baseURL + endpoint.path)")
             return Fail(error: APIError.invalidURL)
                 .eraseToAnyPublisher()
         }
@@ -222,6 +227,21 @@ class NetworkService: NetworkServiceProtocol {
                 return false
             }
             .catch { error -> AnyPublisher<ApiResponse<T>, APIError> in
+                // Log the error to Crashlytics
+                if let apiError = error as? APIError {
+                    Crashlytics.crashlytics().record(error: apiError, userInfo: [
+                        "endpoint": endpoint.path,
+                        "method": endpoint.method,
+                        "baseURL": endpoint.baseURL
+                    ])
+                } else {
+                    Crashlytics.crashlytics().record(error: error, userInfo: [
+                        "endpoint": endpoint.path,
+                        "method": endpoint.method,
+                        "baseURL": endpoint.baseURL
+                    ])
+                }
+                
                 // Handle final failure with user-friendly error
                 if let apiError = error as? APIError {
                     return Fail(error: apiError).eraseToAnyPublisher()
