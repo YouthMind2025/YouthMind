@@ -44,6 +44,16 @@ public class WelcomeController {
                     </div>
                     
                     <div class="endpoint">
+                        <strong>Health Monitoring (DevOps):</strong><br>
+                        <a href="/actuator/health" target="_blank">🏥 System Health</a><br>
+                        <a href="/actuator/health/redis" target="_blank">📡 Redis Health</a><br>
+                        <a href="/actuator/health/database" target="_blank">🗄️ Database Health</a><br>
+                        <a href="/actuator/info" target="_blank">ℹ️ Application Info</a><br>
+                        <a href="/actuator/metrics" target="_blank">📊 Metrics</a><br>
+                        <a href="/actuator/prometheus" target="_blank">📈 Prometheus Metrics</a>
+                    </div>
+                    
+                    <div class="endpoint">
                         <strong>Development Tools:</strong><br>
                         <a href="/h2-console" target="_blank">🗄️ H2 Database Console</a> (Dev Mode)
                     </div>
