@@ -1,4 +1,4 @@
-//HomePage.swift
+//Views/HomePage.swift
 //Implement basic structure of the HomePage
 // Including topBar, feed and bottomtap UI.
 
@@ -6,56 +6,74 @@
 import SwiftUI
 
 struct HomePage: View {
-    @State var currentHome = 0
+    @StateObject var viewModel = FeedViewModel()
     
     var body: some View {
-        VStack{
-            
-            NavigationStack{
-                ScrollView{
-                    HStack{
-                        Spacer()
-                        VStack{
-                            //dummy data
-                            PostPreview( resonance: 138, view:200, title: "KDB Left Cold",preImg: "character1")
-                            PostPreview( resonance: 138, view:200, title: "KDB Left Cold",preImg: "character1")
-                            PostPreview( resonance: 138, view:200, title: "KDB Left Cold",preImg: "character1")
-                            PostPreview( resonance: 138, view:200, title: "KDB Left Cold",preImg: "character1")
-                        }//end of VStack1 in HStack
-                        
-                        VStack{
-                            //dummy data
-                            PostPreview( resonance: 138, view:200, title: "KDB Left Cold",preImg: "character1")
-                            PostPreview( resonance: 138, view:200, title: "KDB Left Cold",preImg: "character1")
-                            PostPreview( resonance: 138, view:200, title: "KDB Left Cold",preImg: "character1")
-                        }//end of VStack2 in HStack
-                        Spacer()
-                    }//end of HStack
-                }//nav. stack end
-                .navigationTitle(Text("Discovery"))
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    // First leading item
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Image(systemName: "gearshape.fill")
-                    }
-                    
-                    // Second leading item - will appear to the right of the first one
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Image(systemName: "magnifyingglass") // Same icon just for example
-                    }//toolbar
-                }//toolbar end
-            } //scrolll view end
-            
-            
-            BottomTap()
-        }//Vstack end
+        ZStack {
+            // Loading State
+            if viewModel.isLoading {
+                ProgressView()
+                    .scaleEffect(2)
+            }
+            // Error State
+            else if let error = viewModel.error {
+                ErrorView(error: error, retryAction: {
+                    Task { await viewModel.fetchPosts() }
+                })
+            }
+            // Empty State
+            else if viewModel.posts.isEmpty {
+                EmptyStateView()
+            }
+            // Content State
+            else {
+                FeedView()
+            }
+        }
+        .task {
+            await viewModel.fetchPosts()
+        }
     }
 }
 
-#Preview {
+
+// Displays error message with retry button
+struct ErrorView: View {
+    let error: Error
+    let retryAction: () -> Void
+    
+    var body: some View {
+        VStack {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.largeTitle)
+            Text("Failed to load posts")
+            Button("Retry", action: retryAction)
+        }
+    }
+}
+
+// Shows empty state placeholder
+struct EmptyStateView: View {
+    var body: some View {
+        VStack {
+            Image(systemName: "photo.on.rectangle")
+                .font(.largeTitle)
+            Text("No posts yet")
+        }
+        .foregroundColor(.secondary)
+    }
+}
+
+#Preview("HomePage only") {
     HomePage()
 }
+
+#Preview("HomePage with Tabs") {
+    BottomTap()
+}
+
+
+
 
 
 
