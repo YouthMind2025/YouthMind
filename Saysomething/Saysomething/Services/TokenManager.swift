@@ -67,7 +67,25 @@ class TokenManager {
         guard let expiryDate = formatter.date(from: expiresAt) else { return true }
         return Date() >= expiryDate
     }
-} 
-
+    
+    // Check if token exists and is valid
+    func isTokenValid() -> Bool {
+        guard let token = getToken(), !token.isEmpty else {
+            return false
+        }
+        return true
+    }
+    
+    // Clear token (for logout or token errors)
+    func clearToken() {
+        _ = deleteToken()
+    }
+    
+    // Handle token errors
+    func handleTokenError() {
+        clearToken()
+        // Can add notifications or other handling logic here
+        print("[TokenManager] Token error detected, cleared token")
+    }
 }
  frontend-together

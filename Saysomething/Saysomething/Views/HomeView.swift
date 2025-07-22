@@ -67,6 +67,69 @@ struct HomeView: View {
                     }
                     .padding(.horizontal, 8)
                     
+                    // AI Chat navigation card
+                    NavigationLink {
+                        EnhancedChatView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "brain.head.profile")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                            Text("AI helper")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(.leading, 4)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(LinearGradient(gradient: Gradient(colors: [Color.green, Color.teal]), startPoint: .leading, endPoint: .trailing))
+                        .cornerRadius(16)
+                        .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 4)
+                    }
+                    .padding(.horizontal, 8)
+                    
+                    // Create Post navigation card
+                    NavigationLink {
+                        CreatePostView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                            Text("Create Post")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(.leading, 4)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(LinearGradient(gradient: Gradient(colors: [Color.orange, Color.red]), startPoint: .leading, endPoint: .trailing))
+                        .cornerRadius(16)
+                        .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 4)
+                    }
+                    .padding(.horizontal, 8)
+                    
+                    // API Test navigation card
+                    NavigationLink {
+                        APITestView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "network")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                            Text("API Test")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(.leading, 4)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(LinearGradient(gradient: Gradient(colors: [Color.purple, Color.indigo]), startPoint: .leading, endPoint: .trailing))
+                        .cornerRadius(16)
+                        .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 4)
+                    }
+                    .padding(.horizontal, 8)
+                    
                     if viewModel.isLoading {
                         ProgressView("Loading...")
                             .padding()
@@ -110,7 +173,7 @@ struct DetailView: View {
                 .ignoresSafeArea()
             VStack(spacing: 18) {
                 // Content
-                Text("detail：\(content)")
+                Text("detail: \(content)")
                     .font(.title)
                     .fontWeight(.semibold)
                     .padding(.top, 24)
