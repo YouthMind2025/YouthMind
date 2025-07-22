@@ -37,4 +37,37 @@ public class UserService {
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
     }
+    
+    public User createUser(String email, String otp) {
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword(otp); // Simplified, should encrypt in production
+        return userRepository.save(user);
+    }
+    
+    public User authenticateUser(String email, String password) {
+        Optional<User> user = userRepository.findByEmail(email);
+        if (user.isPresent() && user.get().getPassword().equals(password)) {
+            return user.get();
+        }
+        throw new RuntimeException("Invalid credentials");
+    }
+    
+    public String generateToken(User user) {
+        // Simplified, should use proper JWT library
+        return "jwt_token_" + user.getId() + "_" + System.currentTimeMillis();
+    }
+    
+    public User getDefaultUser() {
+        // Get or create default user
+        Optional<User> defaultUser = userRepository.findByEmail("default@example.com");
+        if (defaultUser.isPresent()) {
+            return defaultUser.get();
+        }
+        
+        User user = new User();
+        user.setEmail("default@example.com");
+        user.setPassword("default");
+        return userRepository.save(user);
+    }
 } 

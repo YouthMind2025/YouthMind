@@ -9,15 +9,74 @@
 // Core function
 import Foundation
 import Combine
+import FirebaseCrashlytics
 
 // API Response and Error Handling
-enum APIError: Error {
+enum APIError: Error, LocalizedError {
     case invalidURL
     case networkError(Error)
     case invalidResponse
     case invalidStatusCode(Int)         // wrong status code
     case decodingError(Error)           // json decode error
     case timeout
+    case unauthorized
+    case forbidden
+    case notFound
+    case serverError
+    case noInternetConnection
+    case connectionFailed
+    case connectionLost
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "Invalid URL"
+        case .networkError(let error):
+            return "Network error: \(error.localizedDescription)"
+        case .invalidResponse:
+            return "Invalid response"
+        case .invalidStatusCode(let code):
+            switch code {
+            case 401:
+                return "Unauthorized, please login again"
+            case 403:
+                return "Forbidden"
+            case 404:
+                return "Resource not found"
+            case 500...599:
+                return "Server error"
+            default:
+                return "Request failed (status code: \(code))"
+            }
+        case .decodingError(let error):
+            return "Data parsing error: \(error.localizedDescription)"
+        case .timeout:
+            return "Request timeout - please check your connection"
+        case .unauthorized:
+            return "Unauthorized, please login again"
+        case .forbidden:
+            return "Forbidden"
+        case .notFound:
+            return "Resource not found"
+        case .serverError:
+            return "Server error"
+        case .noInternetConnection:
+            return "No internet connection - please check your network"
+        case .connectionFailed:
+            return "Connection failed - please try again"
+        case .connectionLost:
+            return "Connection lost - please check your network"
+        }
+    }
+    
+    var isRetryable: Bool {
+        switch self {
+        case .timeout, .networkError, .noInternetConnection, .connectionFailed, .connectionLost:
+            return true
+        case .invalidURL, .invalidResponse, .invalidStatusCode, .decodingError, .unauthorized, .forbidden, .notFound, .serverError:
+            return false
+        }
+    }
 }
 
 
@@ -60,6 +119,8 @@ struct Endpoint {
 // Network Service Implementation
 class NetworkService: NetworkServiceProtocol {
     private let session: URLSession
+    private let maxRetries = 3
+    private let retryDelay: TimeInterval = 2.0
     
     // default value
     init(session: URLSession = .shared) {
@@ -69,10 +130,14 @@ class NetworkService: NetworkServiceProtocol {
         self.session = URLSession(configuration: configuration)
     }
     
-    // handle API request
+    // handle API request with retry mechanism
     func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<ApiResponse<T>, APIError> {
+        // Log the API request
+        Crashlytics.crashlytics().log("API Request: \(endpoint.method) \(endpoint.path)")
+        
         // url checking, if URL is not valid then return Fail
         guard let url = URL(string: endpoint.baseURL + endpoint.path) else {
+            Crashlytics.crashlytics().log("Invalid URL: \(endpoint.baseURL + endpoint.path)")
             return Fail(error: APIError.invalidURL)
                 .eraseToAnyPublisher()
         }
@@ -90,23 +155,98 @@ class NetworkService: NetworkServiceProtocol {
                 guard let httpResponse = response as? HTTPURLResponse else {
                     throw APIError.invalidResponse
                 }
-                // check status code is 2xx
-                guard (200...299).contains(httpResponse.statusCode) else {
+                
+                // Handle different status codes
+                switch httpResponse.statusCode {
+                case 200...299:
+                    // Success status codes, continue processing
+                    break
+                case 401:
+                    // Automatically handle token errors
+                    TokenManager.shared.handleTokenError()
+                    throw APIError.unauthorized
+                case 403:
+                    throw APIError.forbidden
+                case 404:
+                    throw APIError.notFound
+                case 500...599:
+                    throw APIError.serverError
+                default:
                     throw APIError.invalidStatusCode(httpResponse.statusCode)
                 }
-                // check decode error
+                
+                // check decode error with detailed error handling
                 do {
                     let decodedResponse = try JSONDecoder().decode(ApiResponse<T>.self, from: data)
                     return decodedResponse
+                } catch let decodingError as DecodingError {
+                    // Handle specific decoding errors
+                    switch decodingError {
+                    case .keyNotFound(let key, let context):
+                        throw APIError.decodingError(DecodingError.keyNotFound(key, context))
+                    case .typeMismatch(let type, let context):
+                        throw APIError.decodingError(DecodingError.typeMismatch(type, context))
+                    case .valueNotFound(let type, let context):
+                        throw APIError.decodingError(DecodingError.valueNotFound(type, context))
+                    case .dataCorrupted(let context):
+                        throw APIError.decodingError(DecodingError.dataCorrupted(context))
+                    @unknown default:
+                        throw APIError.decodingError(decodingError)
+                    }
                 } catch {
                     throw APIError.decodingError(error)
                 }
             } // covert error into APIError
             .mapError { error in
-                if let urlError = error as? URLError, urlError.code == .timedOut {
-                    return APIError.timeout
+                if let urlError = error as? URLError {
+                    switch urlError.code {
+                    case .timedOut:
+                        return APIError.timeout
+                    case .notConnectedToInternet:
+                        return APIError.noInternetConnection
+                    case .cannotConnectToHost:
+                        return APIError.connectionFailed
+                    case .networkConnectionLost:
+                        return APIError.connectionLost
+                    default:
+                        return APIError.networkError(error)
+                    }
                 }
                 return APIError.networkError(error)
+            }
+            .retry(maxRetries) { error in
+                // Retry only for network-related errors, not for auth or server errors
+                if let apiError = error as? APIError {
+                    switch apiError {
+                    case .timeout, .networkError, .noInternetConnection, .connectionFailed, .connectionLost:
+                        return true
+                    default:
+                        return false
+                    }
+                }
+                return false
+            }
+            .catch { error -> AnyPublisher<ApiResponse<T>, APIError> in
+                // Log the error to Crashlytics
+                if let apiError = error as? APIError {
+                    Crashlytics.crashlytics().record(error: apiError, userInfo: [
+                        "endpoint": endpoint.path,
+                        "method": endpoint.method,
+                        "baseURL": endpoint.baseURL
+                    ])
+                } else {
+                    Crashlytics.crashlytics().record(error: error, userInfo: [
+                        "endpoint": endpoint.path,
+                        "method": endpoint.method,
+                        "baseURL": endpoint.baseURL
+                    ])
+                }
+                
+                // Handle final failure with user-friendly error
+                if let apiError = error as? APIError {
+                    return Fail(error: apiError).eraseToAnyPublisher()
+                }
+                return Fail(error: APIError.networkError(error)).eraseToAnyPublisher()
             }
             .receive(on: DispatchQueue.main)    // on main
             .eraseToAnyPublisher()

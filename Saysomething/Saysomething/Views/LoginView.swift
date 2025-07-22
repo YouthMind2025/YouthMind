@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseCrashlytics
 
 struct LoginView: View {
     @StateObject private var viewModel = LoginViewModel()
@@ -47,6 +48,10 @@ struct LoginView: View {
                 ProgressView().padding(.vertical)
             }
             Button(action: {
+                // Log login attempt
+                Crashlytics.crashlytics().log("Login attempt started")
+                Crashlytics.crashlytics().setCustomValue(viewModel.email, forKey: "login_email")
+                
                 viewModel.register()
             }) {
                 Text("Register / Login")
@@ -69,6 +74,10 @@ struct LoginView: View {
             .disabled(true)
             .padding(.horizontal)
             if let error = viewModel.errorMessage {
+                // Log login error
+                Crashlytics.crashlytics().log("Login failed: \(error)")
+                Crashlytics.crashlytics().setCustomValue(error, forKey: "login_error")
+                
                 Text(error)
                     .foregroundColor(.white)
                     .padding()
@@ -77,8 +86,21 @@ struct LoginView: View {
                     .padding(.horizontal)
                     .transition(.move(edge: .top))
             }
+            if let success = viewModel.successMessage {
+                Text(success)
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(Color.green)
+                    .cornerRadius(8)
+                    .padding(.horizontal)
+                    .transition(.move(edge: .top))
+            }
             if viewModel.isLoggedIn {
-                Text("Logged in successfully!")
+                // Log successful login
+                Crashlytics.crashlytics().log("Login successful")
+                Crashlytics.crashlytics().setUserID(viewModel.email)
+                
+                Text("Login successful!")
                     .foregroundColor(.white)
                     .padding()
                     .background(Color.green)
