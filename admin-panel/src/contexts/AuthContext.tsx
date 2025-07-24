@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import { authApi } from '../services/api';
 
 interface User {
   id: string;
@@ -11,8 +12,7 @@ interface User {
 }
 
 interface JWTPayload {
-  sub: string; // user id
-  email: string;
+  sub: string; // user's email stored in subject claim
   exp: number; // expiration timestamp
   iat: number; // issued at timestamp
 }
@@ -71,10 +71,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const decodeToken = (token: string): User | null => {
     try {
       const decoded = jwtDecode<JWTPayload>(token);
-      
+
       return {
-        id: decoded.sub,
-        email: decoded.email,
+        id: '', // ID not present in token; you can fetch by email if needed
+        email: decoded.sub,
         firstName: 'Admin',
         lastName: 'User'
       };
@@ -115,44 +115,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string, recaptchaToken: string): Promise<boolean> => {
     try {
       setLoading(true);
-      
-      // Mock authentication for admin panel
-      // In a real system, this would call a proper login API endpoint
-      
-      // Admin credentials check
-      if (email === 'admin@youthmind.com' && password === 'admin') {
-        const mockToken = 'mock-admin-token-' + Date.now();
-        const mockUser = {
-          id: '1',
-          email: 'admin@youthmind.com',
-          firstName: 'Admin',
-          lastName: 'User'
-        };
-        localStorage.setItem('admin_token', mockToken);
-        setUser(mockUser);
+      setIsAuthenticated(false);
+      setUser(null);
+      // Call backend login API
+      const response = await authApi.adminLogin(email, password);
+      const data = response.data;
+      if (data && data.accessToken) {
+        localStorage.setItem('admin_token', data.accessToken);
+        // Use user info from backend response
+        setUser({
+          id: data.user.id,
+          email: data.user.email,
+          firstName: data.user.firstName,
+          lastName: data.user.lastName,
+          createdAt: data.user.createdAt,
+          updatedAt: data.user.updatedAt,
+        });
         setIsAuthenticated(true);
         return true;
+      } else {
+        return false;
       }
-      
-      // Test user credentials (for demo purposes)
-      if (email === 'test@youthmind.com' && password === 'test123') {
-        const mockToken = 'mock-test-token-' + Date.now();
-        const mockUser = {
-          id: '2',
-          email: 'test@youthmind.com',
-          firstName: 'Test',
-          lastName: 'Admin'
-        };
-        localStorage.setItem('admin_token', mockToken);
-        setUser(mockUser);
-        setIsAuthenticated(true);
-        return true;
-      }
-      
-      // Invalid credentials
-      console.log('Invalid credentials provided');
-      return false;
-      
     } catch (error: any) {
       console.error('Login failed:', error);
       return false;

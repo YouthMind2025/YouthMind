@@ -2,7 +2,8 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8081',
+  // Always use backend on port 8080 unless overridden by environment variable
+  baseURL: process.env.REACT_APP_API_URL || '/',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -12,9 +13,12 @@ const api = axios.create({
 // Request interceptor to inject Authorization header
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('admin_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Do not attach token for auth endpoints
+    if (config.url && !config.url.startsWith('/v1/auth')) {
+      const token = localStorage.getItem('admin_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -40,11 +44,8 @@ api.interceptors.response.use(
 
 // Auth API methods for admin login using backend auth system
 export const authApi = {
-  // Note: Admin login now uses mock authentication in AuthContext
-  // When backend implements proper login endpoint, uncomment and update:
-  // adminLogin: (email: string, password: string) => 
-  //   api.post('/v1/auth/login', { email, password }),
-  
+  adminLogin: (email: string, password: string) => 
+    api.post('/v1/auth/login', { email, password }),
   // Test auth endpoint for health checks
   testAuth: () => api.get('/v1/auth/test'),
 };
@@ -81,6 +82,13 @@ export const postsApi = {
     emotionTag?: string;
     aiMetadata?: string;
   }) => api.post('/v1/posts/create', data),
+
+  // Get paginated feed of posts (matches backend /v1/posts/feed)
+  getFeed: (
+    page: number = 0,
+    size: number = 20,
+    sortBy: string = 'newest'
+  ) => api.get('/v1/posts/feed', { params: { page, size, sortBy } }),
 };
 
 // System health and monitoring

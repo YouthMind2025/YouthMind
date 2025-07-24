@@ -4,17 +4,13 @@ import { postsApi } from '../../services/api';
 // Updated interface to match backend Post entity
 interface Post {
   id: string;
-  userId: string;
   content: string;
   emotionTag: string;
   aiMetadata?: string;
   createdAt: string;
-  user?: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-  };
+  anonymousUserId?: string;
+  understandingCount?: number;
+  hasUserUnderstood?: boolean;
 }
 
 interface PostsTableProps {
@@ -57,17 +53,14 @@ const PostsTable: React.FC<PostsTableProps> = ({
   };
 
   const getUserDisplayName = (post: Post) => {
-    if (post.user) {
-      return `${post.user.firstName} ${post.user.lastName}`;
+    if (post.anonymousUserId) {
+      return truncateId(post.anonymousUserId);
     }
-    return truncateId(post.userId);
+    return 'Anonymous';
   };
 
   const getUserIdentifier = (post: Post) => {
-    if (post.user) {
-      return post.user.email;
-    }
-    return post.userId;
+    return post.anonymousUserId || '';
   };
 
   const toggleExpanded = (postId: string) => {
@@ -217,14 +210,10 @@ const PostsTable: React.FC<PostsTableProps> = ({
                           <span className="font-semibold text-gray-700">Content:</span>
                           <p className="mt-1 text-gray-900 whitespace-pre-wrap">{post.content}</p>
                         </div>
-                        <div>
-                          <span className="font-semibold text-gray-700">User ID:</span>
-                          <p className="mt-1 font-mono text-gray-900">{post.userId}</p>
-                        </div>
-                        {post.user && (
+                        {post.anonymousUserId && (
                           <div>
-                            <span className="font-semibold text-gray-700">User Email:</span>
-                            <p className="mt-1 text-gray-900">{post.user.email}</p>
+                            <span className="font-semibold text-gray-700">User ID:</span>
+                            <p className="mt-1 font-mono text-gray-900">{post.anonymousUserId}</p>
                           </div>
                         )}
                         {post.aiMetadata && (

@@ -1,24 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import PostsTable from '../components/PostsTable';
 import PostsFilters from '../components/PostsFilters';
-import { usersApi, postsApi } from '../../services/api';
-import { mockpostdata } from '../../data/mockData';
+import { postsApi } from '../../services/api';
 import './Posts.css';
 
 // Updated interface to match backend Post entity
 interface Post {
   id: string;
-  userId: string;
   content: string;
   emotionTag: string;
   aiMetadata?: string;
   createdAt: string;
-  user?: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-  };
+  anonymousUserId?: string;
+  understandingCount?: number;
+  hasUserUnderstood?: boolean;
 }
 
 interface Filters {
@@ -40,45 +35,28 @@ const Posts: React.FC = () => {
 
   const postsPerPage = 10;
 
-  // Fetch all posts - since backend doesn't have GET posts endpoint, 
-  // we'll use mock data for now but structure it to match backend format
+  // Fetch posts from backend feed endpoint
   useEffect(() => {
     const fetchPosts = async () => {
       setLoading(true);
       try {
-        // Note: postsApi.getPosts() is commented out until backend implements the endpoint
-        // When backend is ready, uncomment the API call below:
-        // const response = await postsApi.getPosts();
-        // setPosts(response.data);
-        
-        // For now, use formatted mock data that matches backend structure
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
-        
-        const formattedMockData = mockpostdata.posts.map(post => ({
-          id: post.id,
-          userId: post.user.id,
-          content: post.content,
-          emotionTag: post.emotionTag,
-          aiMetadata: undefined,
-          createdAt: post.createdAt,
-          user: {
-            id: post.user.id,
-            email: `user${post.user.id}@example.com`,
-            firstName: 'User',
-            lastName: post.user.id
-          }
-        }));
-        
-        setPosts(formattedMockData);
+        const response = await postsApi.getFeed(currentPage, postsPerPage, 'newest');
+        const feedData = response.data;
+        if (feedData && feedData.posts) {
+          setPosts(feedData.posts);
+        } else {
+          setPosts([]);
+        }
       } catch (error) {
         console.error('Error fetching posts:', error);
+        setPosts([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchPosts();
-  }, []); // Empty dependency array - fetch only once
+  }, [currentPage]); // Re-fetch when page changes
 
   // Apply filters
   useEffect(() => {
