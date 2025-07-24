@@ -146,6 +146,9 @@ const Login: React.FC = () => {
           sitekey={RECAPTCHA_CONFIG.siteKey}
           size="invisible"
           badge={RECAPTCHA_CONFIG.badge}
+          onErrored={() => {
+            console.warn('reCAPTCHA errored (timeout or duplicate). Continuing without token.');
+          }}
         />
       </div>
     </div>
