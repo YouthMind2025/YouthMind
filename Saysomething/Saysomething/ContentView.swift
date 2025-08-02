@@ -1,8 +1,8 @@
 //
 //  ContentView.swift
-//  Saysomething
+//  SaySomething
 //
-//  Created by user278797 on 6/6/25.
+//  Created by Dawei Bao on 01/08/2025.
 //
 
 import SwiftUI
@@ -14,6 +14,7 @@ struct ContentView: View {
                 .imageScale(.large)
                 .foregroundStyle(.tint)
             Text("Hello, world!")
+                .padding()
         }
         .padding()
     }
