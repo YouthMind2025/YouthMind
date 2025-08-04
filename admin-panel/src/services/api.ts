@@ -69,9 +69,7 @@ export const usersApi = {
 export const postsApi = {
   // Note: Backend doesn't have GET posts endpoint, only POST create
   // Uncomment when backend implements these endpoints:
-  
-  // getPosts: () => api.get('/v1/admin/posts'),
-  
+    
   // deletePost: (id: string) => api.delete(`/v1/admin/posts/${id}`),
   
   // flagPost: (id: string) => api.post(`/v1/admin/posts/${id}/flag`),
@@ -89,6 +87,9 @@ export const postsApi = {
     size: number = 20,
     sortBy: string = 'newest'
   ) => api.get('/v1/posts/feed', { params: { page, size, sortBy } }),
+
+  // Get flagged posts for moderation queue
+  getFlaggedPosts: () => api.get('/admin/v1/posts/flagged'),
 };
 
 // System health and monitoring

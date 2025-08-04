@@ -4,7 +4,7 @@ import PostsFilters from '../components/PostsFilters';
 import { postsApi } from '../../services/api';
 import './Posts.css';
 
-// Updated interface to match backend Post entity
+//interface to match backend Post entity
 interface Post {
   id: string;
   content: string;

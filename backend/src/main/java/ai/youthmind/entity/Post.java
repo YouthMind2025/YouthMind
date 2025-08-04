@@ -29,6 +29,15 @@ public class Post {
     
     @Column(name = "ai_metadata", columnDefinition = "TEXT") 
     private String aiMetadata;
+
+    @Column(name = "flagged", nullable = false)
+    private boolean flagged = false;
+
+    @Column(name = "flag_reason")
+    private String flagReason;
+
+    @Column(name = "flagged_at")
+    private LocalDateTime flaggedAt;
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -85,5 +94,29 @@ public class Post {
     
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public boolean isFlagged() {
+        return flagged;
+    }
+
+    public void setFlagged(boolean flagged) {
+        this.flagged = flagged;
+    }
+
+    public String getFlagReason() {
+        return flagReason;
+    }
+
+    public void setFlagReason(String flagReason) {
+        this.flagReason = flagReason;
+    }
+
+    public LocalDateTime getFlaggedAt() {
+        return flaggedAt;
+    }
+
+    public void setFlaggedAt(LocalDateTime flaggedAt) {
+        this.flaggedAt = flaggedAt;
     }
 } 
