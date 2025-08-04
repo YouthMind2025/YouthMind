@@ -17,4 +17,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     List<Post> findByEmotionTag(String emotionTag);
     
     List<Post> findByUserIdAndEmotionTag(UUID userId, String emotionTag);
+    
+    // Retrieve posts that have been flagged for moderation
+    List<Post> findByFlaggedTrue();
 } 

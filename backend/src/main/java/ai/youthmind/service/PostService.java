@@ -3,6 +3,7 @@ package ai.youthmind.service;
 import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.dto.PostDto;
 import ai.youthmind.dto.FeedResponse;
+import ai.youthmind.dto.FlaggedPostDto;
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
 import ai.youthmind.repository.AIAnalysisRepository;
@@ -147,6 +148,28 @@ public class PostService {
         return posts.stream()
             .map(post -> convertToPostDto(post, currentUserId))
             .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all posts that have been flagged for moderation
+     */
+    public List<FlaggedPostDto> getFlaggedPosts() {
+        List<Post> flaggedPosts = postRepository.findByFlaggedTrue();
+        return flaggedPosts.stream()
+                .map(this::convertToFlaggedPostDto)
+                .collect(Collectors.toList());
+    }
+
+    private FlaggedPostDto convertToFlaggedPostDto(Post post) {
+        FlaggedPostDto dto = new FlaggedPostDto();
+        dto.setPostId(post.getId());
+        dto.setFlagReason(post.getFlagReason());
+        dto.setFlaggedAt(post.getFlaggedAt());
+        dto.setAiConfidence(1.0);
+        String content = post.getContent();
+        dto.setContentPreview(content != null && content.length() > 100 ? content.substring(0, 100) + "..." : content);
+        dto.setStatus("pending_review");
+        return dto;
     }
     
     private PostDto convertToPostDto(Post post, UUID currentUserId) {

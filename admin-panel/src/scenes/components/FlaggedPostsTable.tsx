@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { postsApi } from '../../services/api';
-import { flagedmockData } from '../../data/mockData';
 
 interface FlaggedPost {
   post_id: string;
@@ -19,17 +18,10 @@ const FlaggedPostsTable: React.FC = () => {
     const fetchFlaggedPosts = async () => {
       setLoading(true);
       try {
-        // Note: Backend doesn't have flagged posts endpoint
-        // For now, use mock data but in a real system this would be:
-        // const response = await postsApi.getFlaggedPosts();
-        console.log('Backend does not have flagged posts endpoint. Using mock data.');
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setFlaggedPosts(flagedmockData.flagged_posts);
+        const response = await postsApi.getFlaggedPosts();
+        setFlaggedPosts(response.data.flagged_posts);
       } catch (error) {
         console.error('Error fetching flagged posts:', error);
-        setFlaggedPosts(flagedmockData.flagged_posts);
       } finally {
         setLoading(false);
       }
@@ -97,7 +89,7 @@ const FlaggedPostsTable: React.FC = () => {
             Flagged Posts ({flaggedPosts.length})
           </h3>
           <span className="text-sm text-gray-500">
-            Note: Using mock data as backend doesn't have flagged posts endpoints
+            Moderation queue powered by live data
           </span>
         </div>
       </div>
