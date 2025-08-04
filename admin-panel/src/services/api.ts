@@ -105,7 +105,11 @@ export const postsApi = {
 
 // System health and monitoring
 export const systemApi = {
-  // Health check using test endpoint
+  /**
+   * Retrieve system health information from Spring Boot Actuator endpoint.
+   * This endpoint is publicly accessible as per backend SecurityConfig.
+   */
+  //getHealth: () => api.get('/actuator/health'),
   getHealth: () => api.get('/v1/auth/test'),
 };
 
