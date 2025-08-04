@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './SystemHealth.css';
 import { systemApi, usersApi } from '../../services/api';
-import { systemmonitoringmockData } from '../../data/mockData';
+
 
 interface HealthData {
   status: string;
@@ -18,7 +18,19 @@ interface HealthData {
 }
 
 const SystemHealth: React.FC = () => {
-  const [healthData, setHealthData] = useState<HealthData>(systemmonitoringmockData);
+  const [healthData, setHealthData] = useState<HealthData>({
+    status: 'unknown',
+    services: {
+      database: 'unknown',
+      redis: 'unknown',
+      ai_service: 'unknown',
+    },
+    metrics: {
+      active_users: 0,
+      posts_today: 0,
+      ai_response_time_avg: 'N/A',
+    },
+  });
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
@@ -26,33 +38,9 @@ const SystemHealth: React.FC = () => {
     const fetchHealthData = async () => {
       setLoading(true);
       try {
-        // TODO: Re-enable when backend authentication is properly configured
-        // For now, use mock data to prevent timeout errors
-        
-        // Simulate loading delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Use mock data for now
-        setHealthData({
-          status: 'healthy',
-          services: {
-            database: 'up',
-            redis: 'up', 
-            ai_service: 'unknown'
-          },
-          metrics: {
-            active_users: 5, // Mock value
-            posts_today: 12, // Mock value
-            ai_response_time_avg: '< 1s'
-          }
-        });
-        
-        /* 
-        // Uncomment this section when backend authentication is working:
         
         // Test backend connectivity
         const healthResponse = await systemApi.getHealth();
-        
         // Get user count as a metric
         let userCount = 0;
         try {
@@ -62,23 +50,48 @@ const SystemHealth: React.FC = () => {
           console.warn('Could not fetch user count:', userError);
         }
 
-        // Update health data based on successful backend calls
+        
+
+        const actuatorPayload = (healthResponse.data ?? {}) as any;
+        const isActuator = actuatorPayload && typeof actuatorPayload.status === 'string';
+
+        const mapStatus = (value?: string): string => {
+          if (!value) return 'unknown';
+          const normalized = value.toUpperCase();
+          if (normalized === 'UP') return 'up';
+          if (normalized === 'DOWN') return 'down';
+          return 'unknown';
+        };
+
+        // Derive overall server health
+        const overallHealth = isActuator
+          ? actuatorPayload.status === 'UP'
+            ? 'healthy'
+            : 'unhealthy'
+          : healthResponse.status === 200
+          ? 'healthy'
+          : 'unhealthy';
+
+        // Pull component details if available (Actuator) otherwise fall back to overall
+        const dbComponent = actuatorPayload.components?.database;
+        const redisComponent = actuatorPayload.components?.redis;
+
         const updatedHealthData: HealthData = {
-          status: healthResponse.status === 200 ? 'healthy' : 'unhealthy',
+          status: overallHealth,
           services: {
-            database: healthResponse.status === 200 ? 'up' : 'down',
-            redis: healthResponse.status === 200 ? 'up' : 'unknown',
-            ai_service: 'unknown'
+            database: isActuator ? mapStatus(dbComponent?.status) : mapStatus(overallHealth === 'healthy' ? 'UP' : 'DOWN'),
+            redis: isActuator ? mapStatus(redisComponent?.status) : 'unknown',
+            ai_service: 'unknown', // TODO: integrate AI service health when available
           },
           metrics: {
             active_users: userCount,
             posts_today: 0,
-            ai_response_time_avg: '< 1s'
-          }
+            ai_response_time_avg: '< 1s',
+          },
         };
 
         setHealthData(updatedHealthData);
-        */
+    
         
         setLastUpdated(new Date());
       } catch (error) {
