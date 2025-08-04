@@ -24,9 +24,9 @@ interface Filters {
 
 const Posts: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [filters, setFilters] = useState<Filters>({
     emotionTag: '',
     startDate: '',
@@ -40,12 +40,18 @@ const Posts: React.FC = () => {
     const fetchPosts = async () => {
       setLoading(true);
       try {
-        const response = await postsApi.getFeed(currentPage, postsPerPage, 'newest');
+        const response = await postsApi.getFeed(currentPage, postsPerPage, 'newest', {
+          emotionTag: filters.emotionTag || undefined,
+          startDate: filters.startDate || undefined,
+          endDate: filters.endDate || undefined,
+        });
         const feedData = response.data;
         if (feedData && feedData.posts) {
           setPosts(feedData.posts);
+          setTotalPages(feedData.totalPages || 0);
         } else {
           setPosts([]);
+          setTotalPages(0);
         }
       } catch (error) {
         console.error('Error fetching posts:', error);
@@ -56,8 +62,9 @@ const Posts: React.FC = () => {
     };
 
     fetchPosts();
-  }, [currentPage]); // Re-fetch when page changes
+  }, [currentPage, filters]); // Re-fetch when page or filters change
 
+  /*
   // Apply filters
   useEffect(() => {
     let filtered = [...posts];
@@ -84,14 +91,15 @@ const Posts: React.FC = () => {
 
     setFilteredPosts(filtered);
     setCurrentPage(0); // Reset to first page when filters change
-  }, [posts, filters]);
+  }, [posts, filters]);*/
 
-  // Client-side pagination
-  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
-  const paginatedPosts = filteredPosts.slice(
-    currentPage * postsPerPage,
-    (currentPage + 1) * postsPerPage
-  );
+  // Posts are already paginated by backend
+  const paginatedPosts = posts;
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [filters]);
 
   const handleFiltersChange = (newFilters: Filters) => {
     setFilters(newFilters);

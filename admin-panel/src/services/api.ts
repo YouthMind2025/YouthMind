@@ -81,12 +81,23 @@ export const postsApi = {
     aiMetadata?: string;
   }) => api.post('/v1/posts/create', data),
 
-  // Get paginated feed of posts (matches backend /v1/posts/feed)
+  // Get paginated feed of posts with optional server-side filters (backend /v1/posts/feed)
   getFeed: (
     page: number = 0,
     size: number = 20,
-    sortBy: string = 'newest'
-  ) => api.get('/v1/posts/feed', { params: { page, size, sortBy } }),
+    sortBy: string = 'newest',
+    filters: {
+      emotionTag?: string;
+      startDate?: string; // ISO string
+      endDate?: string;   // ISO string
+    } = {}
+  ) => {
+    const params: any = { page, size, sortBy };
+    if (filters.emotionTag) params.emotionTag = filters.emotionTag;
+    if (filters.startDate) params.startDate = filters.startDate;
+    if (filters.endDate) params.endDate = filters.endDate;
+    return api.get('/v1/posts/feed', { params });
+  },
 
   // Get flagged posts for moderation queue
   getFlaggedPosts: () => api.get('/admin/v1/posts/flagged'),
