@@ -98,7 +98,7 @@ const SystemHealth: React.FC = () => {
         console.error('Failed to fetch health data:', error);
         // Set services as down if we can't reach backend
         setHealthData({
-          status: 'unhealthy',
+          status: 'DOWN',
           services: {
             database: 'down',
             redis: 'unknown',

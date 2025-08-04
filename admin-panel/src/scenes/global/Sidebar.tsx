@@ -34,11 +34,6 @@ const Sidebar: React.FC = () => {
       {/* User Info Section */}
       <div className="sidebar-section user-info">
         <div className="user-details">
-          <div className="user-avatar">
-            <span className="avatar-text">
-              {getUserInitials()}
-            </span>
-          </div>
           <div className="user-text">
             <p className="user-name">{getUserDisplayName()}</p>
             <p className="user-role">Administrator</p>
