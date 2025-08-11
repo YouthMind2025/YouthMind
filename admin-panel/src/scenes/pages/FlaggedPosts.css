@@ -1,0 +1,37 @@
+.page-container {
+  width: 100%;
+  min-height: 100vh;
+  /*max-width: 1200px;*/
+  margin: 0 auto;
+  background-color: #dadcf3;
+}
+
+/*
+.flagged-bg {
+  background-color: #dadcf3;
+  min-height: 100vh;
+  width: 100vw;
+}
+*/
+
+.page-header {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #000;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.page-content {
+  padding: 1rem 0;
+}
+
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 2rem;
+  }
+} 
