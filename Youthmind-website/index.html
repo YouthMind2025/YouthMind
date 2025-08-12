@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouthMind - 青年思维</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="navbar">
+        <div class="nav-container">
+            <!-- 公司名称 -->
+            <div class="logo">
+                <a href="#home">
+                    <div class="logo-icon">
+                        <img src = "images/σ¢╛µáç.pic.jpg" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <span class="logo-text">YouthMind</span>
+                </a>
+            </div>
+            
+            <!-- 中央导航菜单 -->
+            <nav class="nav-menu">
+                <ul>
+                    <li><a href="#home" class="nav-link active">Home</a></li>
+                    <li><a href="#articles" class="nav-link">Articles</a></li>
+                    <li><a href="#contact" class="nav-link">Contact us</a></li>
+                </ul>
+            </nav>
+            
+            <!-- 右侧按钮组 -->
+            <div class="auth-buttons">
+                <button class="btn-signin">Log in</button>
+                <button class="btn-join">Join for free</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <main>
+        <!-- Home Section -->
+        <section id="home" class="home-section">
+            <!-- Hero Section -->
+            <div class="hero">
+                <div class="hero-content">
+                    <h1>Welcome to YouthMind</h1>
+                    <p>A young people's organization in the AI era</p>
+                </div>
+            </div>
+
+            <!-- Team Introduction Section -->
+            <div class="team-intro">
+                <div class="container">
+                    <div class="team-intro-content">
+                        <div class="team-intro-text">
+                            <h2>YouthMind Team Introduction</h2>
+                            <p>YouthMind is an international and interdisciplinary innovation team composed of 14 young members from the UK, China, Switzerland, and the Dubai.</p>
+                            <button class="btn-team-article">Read this article</button>
+                        </div>
+                        <div class="team-intro-image">
+                            <!-- 为用户上传的图片预留空间 -->
+                            <div class="image-placeholder">
+                                <img src = "images/σ¢╛µáç.pic.jpg" style="width: 100%; height: 100%; object-fit: cover; ">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Our Experience Section -->
+            <div class="experience-section">
+                <div class="container">
+                    <div class="experience-header">
+                        <h2>Our Experience</h2>
+                        <p>A young people's organization in the AI era</p>
+                    </div>
+                    
+                    <div class="experience-content">
+                        <!-- 地球图标 -->
+                        <div class="globe-container">
+                            <div class="globe">
+                                <div class="globe-sphere">
+                                    <div class="globe-surface"></div>
+                                    <div class="globe-highlight"></div>
+                                    <div class="globe-shadow"></div>
+                                </div>
+                                <div class="globe-dot"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- 五个功能模块 -->
+                        <div class="experience-modules">
+                            <div class="module">
+                                <div class="module-number">2+</div>
+                                <div class="module-icon">📖</div>
+                                <div class="module-title">Training</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-number">5+</div>
+                                <div class="module-icon">🤝</div>
+                                <div class="module-title">Meeting</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-number">3+</div>
+                                <div class="module-icon">💬</div>
+                                <div class="module-title">Saloon</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-number">10+</div>
+                                <div class="module-icon">📝</div>
+                                <div class="module-title">Post</div>
+                            </div>
+                            <div class="module">
+                                <div class="module-number">50+</div>
+                                <div class="module-icon">👥</div>
+                                <div class="module-title">Followers</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Articles Section -->
+        <section id="articles" class="articles">
+            <div class="container">
+                <h2>Hot Articles</h2>
+                
+                <!-- 文章菜单 -->
+                <div class="articles-menu">
+                    <button class="article-menu-btn active" data-article="1">Article 1</button>
+                    <button class="article-menu-btn" data-article="2">Article 2</button>
+                    <button class="article-menu-btn" data-article="3">Article 3</button>
+                    <button class="article-menu-btn" data-article="4">Article 4</button>
+                </div>
+                
+                <!-- 文章展示区域 -->
+                <div class="article-display">
+                    <div class="article-item active" data-article="1">
+                        <div class="article-cover">
+                            <div class="article-date">Dec 15, 2024</div>
+                            <div class="article-image-placeholder">Article 1 Cover</div>
+                        </div>
+                        <div class="article-content">
+                            <h3 class="article-title">Innovation in AI Education</h3>
+                            <p class="article-intro">Exploring how artificial intelligence is revolutionizing the way we learn and teach in the modern educational landscape...</p>
+                            <button class="btn-read-article" data-article="1">Read this article</button>
+                        </div>
+                    </div>
+                    
+                    <div class="article-item" data-article="2">
+                        <div class="article-cover">
+                            <div class="article-date">Dec 12, 2024</div>
+                            <div class="article-image-placeholder">Article 2 Cover</div>
+                        </div>
+                        <div class="article-content">
+                            <h3 class="article-title">Youth Leadership in Digital Era</h3>
+                            <p class="article-intro">Understanding how young leaders are shaping the future of technology and digital transformation across industries...</p>
+                            <button class="btn-read-article" data-article="2">Read this article</button>
+                        </div>
+                    </div>
+                    
+                    <div class="article-item" data-article="3">
+                        <div class="article-cover">
+                            <div class="article-date">Dec 10, 2024</div>
+                            <div class="article-image-placeholder">Article 3 Cover</div>
+                        </div>
+                        <div class="article-content">
+                            <h3 class="article-title">Global Collaboration Networks</h3>
+                            <p class="article-intro">How international teams are leveraging technology to create innovative solutions for tomorrow's challenges...</p>
+                            <button class="btn-read-article" data-article="3">Read this article</button>
+                        </div>
+                    </div>
+                    
+                    <div class="article-item" data-article="4">
+                        <div class="article-cover">
+                            <div class="article-date">Dec 8, 2024</div>
+                            <div class="article-image-placeholder">Article 4 Cover</div>
+                        </div>
+                        <div class="article-content">
+                            <h3 class="article-title">Sustainable Innovation Practices</h3>
+                            <p class="article-intro">Discovering eco-friendly approaches to innovation that balance technological advancement with environmental responsibility...</p>
+                            <button class="btn-read-article" data-article="4">Read this article</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Post Sections -->
+            <div class="post-sections">
+                <div class="container">
+                    <h2>Post Sections</h2>
+                    
+                    <div class="posts-slider-container">
+                        <button class="slider-btn prev-btn" id="prevBtn">‹</button>
+                        <div class="posts-slider">
+                            <div class="post-card">
+                                <div class="post-cover">
+                                    <div class="post-date">Dec 18, 2024</div>
+                                    <div class="post-image">AI Research Post</div>
+                                </div>
+                                <div class="post-info">
+                                    <h3 class="post-title">Future of Machine Learning</h3>
+                                    <p class="post-summary">Exploring the latest developments in machine learning algorithms and their transformative real-world applications.</p>
+                                    <button class="btn-read-more-post" data-post="1">Read More</button>
+                                </div>
+                            </div>
+                            
+                            <div class="post-card">
+                                <div class="post-cover">
+                                    <div class="post-date">Dec 16, 2024</div>
+                                    <div class="post-image">Tech Innovation Post</div>
+                                </div>
+                                <div class="post-info">
+                                    <h3 class="post-title">Blockchain Revolution</h3>
+                                    <p class="post-summary">Understanding how blockchain technology is revolutionizing industries far beyond cryptocurrency applications.</p>
+                                    <button class="btn-read-more-post" data-post="2">Read More</button>
+                                </div>
+                            </div>
+                            
+                            <div class="post-card">
+                                <div class="post-cover">
+                                    <div class="post-date">Dec 14, 2024</div>
+                                    <div class="post-image">Design Thinking Post</div>
+                                </div>
+                                <div class="post-info">
+                                    <h3 class="post-title">Design Thinking in Tech</h3>
+                                    <p class="post-summary">How design thinking methodology is revolutionizing product development and creating exceptional user experiences.</p>
+                                    <button class="btn-read-more-post" data-post="3">Read More</button>
+                                </div>
+                            </div>
+                            
+                            <div class="post-card">
+                                <div class="post-cover">
+                                    <div class="post-date">Dec 11, 2024</div>
+                                    <div class="post-image">Sustainability Post</div>
+                                </div>
+                                <div class="post-info">
+                                    <h3 class="post-title">Green Technology Trends</h3>
+                                    <p class="post-summary">Examining the latest trends in sustainable technology and breakthrough environmental innovations.</p>
+                                    <button class="btn-read-more-post" data-post="4">Read More</button>
+                                </div>
+                            </div>
+                            
+                            <div class="post-card">
+                                <div class="post-cover">
+                                    <div class="post-date">Dec 9, 2024</div>
+                                    <div class="post-image">Leadership Post</div>
+                                </div>
+                                <div class="post-info">
+                                    <h3 class="post-title">Digital Leadership Skills</h3>
+                                    <p class="post-summary">Essential leadership skills and competencies for successfully navigating the digital transformation era.</p>
+                                    <button class="btn-read-more-post" data-post="5">Read More</button>
+                                </div>
+                            </div>
+                            
+                            <div class="post-card">
+                                <div class="post-cover">
+                                    <div class="post-date">Dec 7, 2024</div>
+                                    <div class="post-image">Innovation Post</div>
+                                </div>
+                                <div class="post-info">
+                                    <h3 class="post-title">Innovation Methodologies</h3>
+                                    <p class="post-summary">Proven methodologies and frameworks for fostering innovation and creativity in modern organizations.</p>
+                                    <button class="btn-read-more-post" data-post="6">Read More</button>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="slider-btn next-btn" id="nextBtn">›</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Contact Section -->
+        <section id="contact" class="contact">
+            <div class="container">
+                <h2>Contact us</h2>
+                <div class="contact-content">
+                    <div class="contact-info">
+                        <h3>Get in Touch</h3>
+                        <p>We are very glad to hear from you. Whether it's cooperation suggestions, feedback or any questions, please feel free to contact us at any time.</p>
+                        <div class="contact-details">
+                            <div class="contact-item">
+                                <strong>Email:</strong>
+                                <span>andy@youthmind.ai</span>
+                            </div>
+                        </div>
+                    </div>
+                    <form class="contact-form">
+                        <div class="form-group">
+                            <input type="text" placeholder="Your Name" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="email" placeholder="Your Email" required>
+                        </div>
+                        <div class="form-group">
+                            <textarea placeholder="Your Message" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn-submit">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section copyright-section">
+                    <h3>Copyright & Privacy Policy</h3>
+                    
+                    <div class="policy-content">
+                        <h4>Copyright Notice</h4>
+                        <p>All content on this website, including text, images, videos, and designs, is protected by copyright laws. Unauthorized use, reproduction, or distribution is prohibited.</p>
+                        
+                        <h4>Privacy Policy</h4>
+                        <p>We respect your privacy. Personal information is collected only to improve services and is never shared without your consent, except as required by law.</p>
+                        
+                        <h4>Disclaimer</h4>
+                        <p>While we strive for accuracy, we do not guarantee the completeness or reliability of the information provided. Use the content at your own risk.</p>
+                    </div>
+                </div>
+
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 YouthMind. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 登录弹窗 -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Log In</h2>
+                <span class="close" data-modal="loginModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="loginForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="loginEmail">Email Address</label>
+                        <input type="email" id="loginEmail" name="email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" name="password" placeholder="Enter your password" required>
+                    </div>
+                    <div class="form-options">
+                        <label class="remember-me">
+                            <input type="checkbox" name="remember">
+                            <span class="checkmark"></span>
+                            Remember me
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-auth">Log In</button>
+                </form>
+                <div class="auth-divider">
+                    <span>Don't have an account?</span>
+                </div>
+                <button class="btn-switch" onclick="switchToRegister()">Sign Up Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 注册弹窗 -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Sign Up</h2>
+                <span class="close" data-modal="registerModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="registerForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="registerName">Name</label>
+                        <input type="text" id="registerName" name="name" placeholder="Enter your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerEmail">Email Address</label>
+                        <input type="email" id="registerEmail" name="email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" name="password" placeholder="Enter password (at least 6 characters)" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter password" required>
+                    </div>
+                    <div class="form-options">
+                        <label class="terms-agree">
+                            <input type="checkbox" name="terms" required>
+                            <span class="checkmark"></span>
+                            I agree to the <a href="#" class="terms-link">Terms of Service</a> and <a href="#" class="privacy-link">Privacy Policy</a>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-auth">Sign Up</button>
+                </form>
+                <div class="auth-divider">
+                    <span>Already have an account?</span>
+                </div>
+                <button class="btn-switch" onclick="switchToLogin()">Log In Now</button>
+                         </div>
+         </div>
+     </div>
+
+    <!-- 文章详情弹窗 -->
+    <div id="articleModal" class="modal article-modal">
+        <div class="modal-content article-modal-content">
+            <div class="modal-header">
+                <h2 id="articleModalTitle">Article Title</h2>
+                <span class="close" data-modal="articleModal">&times;</span>
+            </div>
+            <div class="modal-body article-modal-body">
+                <div class="article-meta">
+                    <span id="articleModalDate" class="article-modal-date">Dec 15, 2024</span>
+                    <span class="article-modal-author">By YouthMind Team</span>
+                </div>
+                <div class="article-modal-image">
+                    <div id="articleModalImage" class="article-modal-image-placeholder">Article Cover</div>
+                </div>
+                <div id="articleModalContent" class="article-modal-text">
+                    <!-- 文章内容将通过JavaScript动态加载 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
