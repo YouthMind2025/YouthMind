@@ -96,6 +96,10 @@ public class Post {
         this.createdAt = createdAt;
     }
 
+    public boolean isFlagged() {
+        return flagged;
+    }
+
     public void setFlagged(boolean flagged) {
         this.flagged = flagged;
     }
