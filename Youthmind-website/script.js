@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initAuthModals();
     
     // 初始化3D地球交互
-    initGlobeInteraction();
+    /* Spinning globe removed */
     
     // 初始化文章功能
     initArticleFeatures();
@@ -700,149 +700,7 @@ function initPostSlider() {
     slider.style.cursor = 'grab';
 }
 
-// 3D地球交互功能
-function initGlobeInteraction() {
-    const globe = document.querySelector('.globe');
-    const globeSurface = document.querySelector('.globe-surface');
-    if (!globe || !globeSurface) return;
-    
-    let isDragging = false;
-    let previousMousePosition = { x: 0, y: 0 };
-    let rotation = { x: -10, y: 0 }; // 初始倾斜角度
-    let autoRotationPaused = false;
-    
-    // 设置初始角度
-    globe.style.transform = `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`;
-    
-    // 鼠标按下
-    globe.addEventListener('mousedown', function(e) {
-        isDragging = true;
-        autoRotationPaused = true;
-        previousMousePosition = { x: e.clientX, y: e.clientY };
-        globe.style.cursor = 'grabbing';
-        
-        // 暂停表面自动旋转
-        globeSurface.style.animationPlayState = 'paused';
-    });
-    
-    // 鼠标移动
-    document.addEventListener('mousemove', function(e) {
-        if (!isDragging) return;
-        
-        const deltaX = e.clientX - previousMousePosition.x;
-        const deltaY = e.clientY - previousMousePosition.y;
-        
-        rotation.y += deltaX * 0.8;
-        rotation.x -= deltaY * 0.8;
-        
-        // 限制垂直旋转角度，模拟真实地球
-        rotation.x = Math.max(-60, Math.min(60, rotation.x));
-        
-        globe.style.transform = `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`;
-        
-        previousMousePosition = { x: e.clientX, y: e.clientY };
-    });
-    
-    // 鼠标释放
-    document.addEventListener('mouseup', function() {
-        if (isDragging) {
-            isDragging = false;
-            globe.style.cursor = 'grab';
-            
-            // 2秒后恢复自动旋转
-            setTimeout(() => {
-                if (!isDragging) {
-                    autoRotationPaused = false;
-                    globeSurface.style.animationPlayState = 'running';
-                }
-            }, 2000);
-        }
-    });
-    
-    // 鼠标离开窗口也停止拖拽
-    document.addEventListener('mouseleave', function() {
-        if (isDragging) {
-            isDragging = false;
-            globe.style.cursor = 'grab';
-        }
-    });
-    
-    // 添加惯性旋转效果
-    let velocity = { x: 0, y: 0 };
-    let lastTime = Date.now();
-    
-    document.addEventListener('mousemove', function(e) {
-        if (isDragging) {
-            const currentTime = Date.now();
-            const deltaTime = currentTime - lastTime;
-            
-            if (deltaTime > 0) {
-                const deltaX = e.clientX - previousMousePosition.x;
-                const deltaY = e.clientY - previousMousePosition.y;
-                
-                velocity.x = deltaY / deltaTime * -50;
-                velocity.y = deltaX / deltaTime * 50;
-            }
-            
-            lastTime = currentTime;
-        }
-    });
-    
-    // 惯性动画
-    function inertiaAnimation() {
-        if (!isDragging && !autoRotationPaused && (Math.abs(velocity.x) > 0.1 || Math.abs(velocity.y) > 0.1)) {
-            rotation.x += velocity.x;
-            rotation.y += velocity.y;
-            
-            rotation.x = Math.max(-60, Math.min(60, rotation.x));
-            
-            globe.style.transform = `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`;
-            
-            velocity.x *= 0.95;
-            velocity.y *= 0.95;
-        }
-        requestAnimationFrame(inertiaAnimation);
-    }
-    inertiaAnimation();
-    
-    // 触摸设备支持
-    globe.addEventListener('touchstart', function(e) {
-        e.preventDefault();
-        const touch = e.touches[0];
-        isDragging = true;
-        autoRotationPaused = true;
-        previousMousePosition = { x: touch.clientX, y: touch.clientY };
-        globeSurface.style.animationPlayState = 'paused';
-    });
-    
-    globe.addEventListener('touchmove', function(e) {
-        if (!isDragging) return;
-        e.preventDefault();
-        
-        const touch = e.touches[0];
-        const deltaX = touch.clientX - previousMousePosition.x;
-        const deltaY = touch.clientY - previousMousePosition.y;
-        
-        rotation.y += deltaX * 0.8;
-        rotation.x -= deltaY * 0.8;
-        
-        rotation.x = Math.max(-60, Math.min(60, rotation.x));
-        
-        globe.style.transform = `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`;
-        
-        previousMousePosition = { x: touch.clientX, y: touch.clientY };
-    });
-    
-    globe.addEventListener('touchend', function() {
-        isDragging = false;
-        setTimeout(() => {
-            if (!isDragging) {
-                autoRotationPaused = false;
-                globeSurface.style.animationPlayState = 'running';
-            }
-        }, 2000);
-    });
-}
+// (Spinning globe interaction code removed)
 
 // 登录注册弹窗相关功能
 function initAuthModals() {
