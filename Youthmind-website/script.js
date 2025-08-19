@@ -301,11 +301,15 @@ document.addEventListener('DOMContentLoaded', function() {
     /* Spinning globe removed */
     
     // 初始化文章功能
+    // Load articles manifest
     fetch('assets/Articles/articles.json')
         .then(r=>r.json())
         .then(articlesArr=>{
             window.__articlesManifest = articlesArr;
             initArticleFeatures(articlesArr);
+        })
+        .catch(err=>{
+            console.error('Failed to load articles manifest', err);
         });
     
     // 初始化帖子滑动功能
@@ -355,33 +359,7 @@ function initArticleFeatures(articlesArr) {
     // 缓存已加载的文章数据
     const articleCache = {};
 
-    // 配置真实文章信息
-    // const realArticles = {
-    //     '1': {
-    //         title: 'The Crisis of Traditional Education in the AI Era',
-    //         date: '2024',
-    //         file: 'The Crisis of Traditional Education in the AI Era- The Myth of Useless Knowledge and the Reality of AI Replacement.docx',
-    //         cover: 'cover1.jpg'
-    //     },
-    //     '2': {
-    //         title: 'The Educational Revolution in the AI Era',
-    //         date: '2024',
-    //         file: 'The Educational Revolution in the AI Era- From Traditional Classrooms to AI-Native Learning Models.docx',
-    //         cover: 'cover2.jpg'
-    //     },
-    //     '3': {
-    //         title: 'My Online Talk at Stanford',
-    //         date: '2024',
-    //         file: 'My Online Talk at Stanford.docx',
-    //         cover: 'cover3.jpg'
-    //     },
-    //     '4': {
-    //         title: 'My Sharing at the AI For Young Conference',
-    //         date: '2024',
-    //         file: 'My Sharing at the AI For Young Conference-  As a Native of the AI Era, I Want to Do Something That Truly Matters  .docx',
-    //         cover: 'cover4.jpg'
-    //     }
-    // };
+    // (Removed unused realArticles sample configuration block)
 
     function loadArticleData(articleId){
         if(articleCache[articleId]) return Promise.resolve(articleCache[articleId]);
@@ -393,10 +371,22 @@ function initArticleFeatures(articlesArr) {
             .then(r=>r.arrayBuffer())
             .then(buffer=>mammoth.convertToHtml({arrayBuffer:buffer}))
             .then(result=>{
+                // Try to pull first image src (base64) from HTML
+                let imgSrc='';
+                const tmp=document.createElement('div');
+                tmp.innerHTML=result.value||'';
+                const imgEl=tmp.querySelector('img');
+                if(imgEl){
+                    imgSrc=imgEl.getAttribute('src')||'';
+                }
+                if(!imgSrc && info.cover){
+                    imgSrc=`assets/Articles/${info.cover}`;
+                }
+
                 const data={
                     title:info.title,
                     date:info.date,
-                    image:info.cover||'',
+                    image:imgSrc,
                     content:result.value
                 };
                 articleCache[articleId]=data;
@@ -437,10 +427,12 @@ function initArticleFeatures(articlesArr) {
                     document.getElementById('articleModalTitle').textContent = articleData.title;
                     document.getElementById('articleModalDate').textContent = articleData.date;
                     const imgHolder = document.getElementById('articleModalImage');
-                    if(articleData.image){
-                        imgHolder.innerHTML = `<img src="assets/images/${articleData.image}" alt="${articleData.title}" style="width:100%;height:auto;border-radius:10px;">`;
-                    } else {
-                        imgHolder.innerHTML='';
+                    if(imgHolder){
+                        if(articleData.image){
+                            imgHolder.innerHTML=`<img src="assets/Articles/${articleData.image}" alt="${articleData.title}" style="width:100%;height:auto;border-radius:10px;">`;
+                        } else {
+                            imgHolder.innerHTML='';
+                        }
                     }
                     document.getElementById('articleModalContent').innerHTML = articleData.content;
 
@@ -669,7 +661,10 @@ function initPostSlider() {
                 // 更新文章弹窗内容
                 document.getElementById('articleModalTitle').textContent = postData.title;
                 document.getElementById('articleModalDate').textContent = postData.date;
-                document.getElementById('articleModalImage').textContent = postData.image;
+                const imageHolder=document.getElementById('articleModalImage');
+                if(imageHolder){
+                    imageHolder.textContent=postData.image;
+                }
                 document.getElementById('articleModalContent').innerHTML = postData.content;
                 
                 // 显示弹窗
