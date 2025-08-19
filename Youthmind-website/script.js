@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function initArticleFeatures() {
     const menuButtons = document.querySelectorAll('.article-menu-btn');
     const articleItems = document.querySelectorAll('.article-item');
-    const readArticleButtons = document.querySelectorAll('.btn-read-article');
+    const readArticleButtons = document.querySelectorAll('.btn-read-article, .btn-team-article');
     const articleModal = document.getElementById('articleModal');
     
     console.log('Article features initialized:', {
@@ -324,107 +324,35 @@ function initArticleFeatures() {
         readArticleButtons: readArticleButtons.length
     });
     
-    // 文章数据
-    const articlesData = {
-        '1': {
-            title: 'Innovation in AI Education',
-            date: 'Dec 15, 2024',
-            image: 'Article 1 Cover',
-            content: `
-                <p>Artificial Intelligence is transforming the educational landscape in unprecedented ways. From personalized learning experiences to automated assessment systems, AI is reshaping how we teach and learn.</p>
-                
-                <h3>The Current State of AI in Education</h3>
-                <p>Today's educational institutions are increasingly adopting AI-powered tools to enhance learning outcomes. These technologies include adaptive learning platforms, intelligent tutoring systems, and predictive analytics that help identify students at risk of falling behind.</p>
-                
-                <h3>FUCK YOU ME, dont foget to change this</h3>
-                <ul>
-                    <li>Personalized learning paths tailored to individual student needs</li>
-                    <li>Real-time feedback and assessment capabilities</li>
-                    <li>Automated administrative tasks, freeing up educators' time</li>
-                    <li>Enhanced accessibility for students with diverse learning needs</li>
-                </ul>
-                
-                <h3>Challenges and Considerations</h3>
-                <p>While AI offers tremendous potential, we must address concerns about data privacy, algorithmic bias, and the need for human oversight in educational decision-making.</p>
-                
-                <p>The future of education lies in finding the right balance between technological innovation and human-centered pedagogy. By embracing AI while maintaining focus on critical thinking and creativity, we can create more effective and inclusive learning environments.</p>
-            `
-        },
-        '2': {
-            title: 'Youth Leadership in Digital Era',
-            date: 'Dec 12, 2024',
-            image: 'Article 2 Cover',
-            content: `
-                <p>The digital revolution has created new opportunities for young leaders to make their mark on the world. Today's youth are not just consumers of technology—they are creators, innovators, and change-makers.</p>
-                
-                <h3>Digital Native Advantage</h3>
-                <p>Growing up in the digital age has given young people unique insights into technology's potential. They understand intuitively how digital tools can solve problems and create connections across traditional boundaries.</p>
-                
-                <h3>Areas of Impact</h3>
-                <ul>
-                    <li>Social entrepreneurship and impact-driven startups</li>
-                    <li>Digital activism and social movement organization</li>
-                    <li>Sustainable technology development</li>
-                    <li>Cross-cultural collaboration through digital platforms</li>
-                </ul>
-                
-                <h3>Leadership Skills for the Digital Age</h3>
-                <p>Successful young leaders in the digital era combine technical proficiency with emotional intelligence, cultural awareness, and ethical decision-making. They understand that technology is a tool for human empowerment, not an end in itself.</p>
-                
-                <p>As we move forward, supporting youth leadership development will be crucial for creating a more equitable and innovative digital future.</p>
-            `
-        },
-        '3': {
-            title: 'Global Collaboration Networks',
-            date: 'Dec 10, 2024',
-            image: 'Article 3 Cover',
-            content: `
-                <p>In an increasingly connected world, global collaboration networks are emerging as powerful forces for innovation and problem-solving. These networks transcend geographical, cultural, and institutional boundaries.</p>
-                
-                <h3>The Power of Distributed Innovation</h3>
-                <p>Modern challenges require diverse perspectives and expertise. Global collaboration networks enable organizations to tap into talent and ideas from around the world, creating solutions that no single entity could develop alone.</p>
-                
-                <h3>Technology Enablers</h3>
-                <ul>
-                    <li>Cloud-based collaboration platforms</li>
-                    <li>Real-time communication tools</li>
-                    <li>Project management and version control systems</li>
-                    <li>Virtual and augmented reality for immersive collaboration</li>
-                </ul>
-                
-                <h3>Success Factors</h3>
-                <p>Effective global collaboration requires more than just technology. It demands cultural sensitivity, clear communication protocols, shared goals, and trust-building mechanisms.</p>
-                
-                <h3>Future Trends</h3>
-                <p>We're seeing the emergence of blockchain-based collaboration networks, AI-assisted team formation, and new models of intellectual property sharing that will further enhance global collaboration capabilities.</p>
-            `
-        },
-        '4': {
-            title: 'Sustainable Innovation Practices',
-            date: 'Dec 8, 2024',
-            image: 'Article 4 Cover',
-            content: `
-                <p>As environmental concerns become increasingly urgent, the innovation community is embracing sustainable practices that balance technological advancement with ecological responsibility.</p>
-                
-                <h3>Principles of Sustainable Innovation</h3>
-                <p>Sustainable innovation goes beyond just reducing environmental impact. It involves creating solutions that are economically viable, socially beneficial, and environmentally responsible throughout their entire lifecycle.</p>
-                
-                <h3>Key Approaches</h3>
-                <ul>
-                    <li>Circular economy design principles</li>
-                    <li>Life cycle assessment integration</li>
-                    <li>Stakeholder-inclusive development processes</li>
-                    <li>Biomimicry and nature-inspired solutions</li>
-                </ul>
-                
-                <h3>Industry Applications</h3>
-                <p>From renewable energy systems to biodegradable materials, sustainable innovation is transforming industries and creating new market opportunities. Companies that embrace these practices often find competitive advantages in efficiency, risk management, and brand reputation.</p>
-                
-                <h3>The Role of Youth</h3>
-                <p>Young innovators are particularly well-positioned to drive sustainable practices, as they will inherit the long-term consequences of today's decisions. Their fresh perspectives and commitment to environmental stewardship are essential for creating a sustainable future.</p>
-            `
-        }
-    };
+    // 缓存已加载的文章数据
+    const articleCache = {};
+
+    function loadArticleData(articleId) {
+        if (articleCache[articleId]) return Promise.resolve(articleCache[articleId]);
+
+        return fetch(`assets/Articles/article${articleId}.doc`)
+            .then(res => {
+                if (!res.ok) throw new Error('Article file not found');
+                return res.text();
+            })
+            .then(text => {
+                // Expect first lines: Title:, Date:, Image:
+                const lines = text.split(/\r?\n/);
+                let title='', date='', image='';
+                let bodyStart=0;
+                for(let i=0;i<lines.length;i++){
+                    const line=lines[i].trim();
+                    if(line.startsWith('Title:')){ title=line.replace('Title:','').trim(); }
+                    else if(line.startsWith('Date:')){ date=line.replace('Date:','').trim(); }
+                    else if(line.startsWith('Image:')){ image=line.replace('Image:','').trim(); }
+                    else if(line===''){ bodyStart=i+1; break; }
+                }
+                const content=lines.slice(bodyStart).join('\n');
+                const data={title,date,image,content};
+                articleCache[articleId]=data;
+                return data;
+            });
+    }
     
     // 文章菜单切换功能
     menuButtons.forEach(button => {
@@ -453,18 +381,18 @@ function initArticleFeatures() {
     readArticleButtons.forEach(button => {
         button.addEventListener('click', function() {
             const articleId = this.getAttribute('data-article');
-            const articleData = articlesData[articleId];
-            
-            if (articleData) {
-                // 更新弹窗内容
-                document.getElementById('articleModalTitle').textContent = articleData.title;
-                document.getElementById('articleModalDate').textContent = articleData.date;
-                document.getElementById('articleModalImage').textContent = articleData.image;
-                document.getElementById('articleModalContent').innerHTML = articleData.content;
-                
-                // 显示弹窗
-                showModal('articleModal');
-            }
+
+            loadArticleData(articleId)
+                .then(articleData => {
+                    document.getElementById('articleModalTitle').textContent = articleData.title;
+                    document.getElementById('articleModalDate').textContent = articleData.date;
+                    const imgHolder = document.getElementById('articleModalImage');
+                    imgHolder.innerHTML = `<img src="assets/Articles/${articleData.image}" alt="${articleData.title}" style="width:100%;height:auto;border-radius:10px;">`;
+                    document.getElementById('articleModalContent').innerHTML = articleData.content;
+
+                    showModal('articleModal');
+                })
+                .catch(err => console.error('Failed to load article', err));
         });
     });
 }
