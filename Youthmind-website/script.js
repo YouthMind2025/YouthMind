@@ -301,7 +301,12 @@ document.addEventListener('DOMContentLoaded', function() {
     /* Spinning globe removed */
     
     // 初始化文章功能
-    initArticleFeatures();
+    fetch('assets/Articles/articles.json')
+        .then(r=>r.json())
+        .then(articlesArr=>{
+            window.__articlesManifest = articlesArr;
+            initArticleFeatures(articlesArr);
+        });
     
     // 初始化帖子滑动功能
     initPostSlider();
@@ -312,10 +317,33 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // 文章功能初始化
-function initArticleFeatures() {
-    const menuButtons = document.querySelectorAll('.article-menu-btn');
-    const articleItems = document.querySelectorAll('.article-item');
-    const readArticleButtons = document.querySelectorAll('.btn-read-article, .btn-team-article');
+function initArticleFeatures(articlesArr) {
+    const menuContainer=document.querySelector('.articles-menu');
+    const displayContainer=document.querySelector('.article-display');
+
+    // clear containers
+    menuContainer.innerHTML='';
+    displayContainer.innerHTML='';
+
+    articlesArr.forEach((art,index)=>{
+        // menu button
+        const btn=document.createElement('button');
+        btn.className=`article-menu-btn${index===0?' active':''}`;
+        btn.dataset.article=art.id;
+        btn.textContent=art.title;
+        menuContainer.appendChild(btn);
+
+        // preview card
+        const item=document.createElement('div');
+        item.className=`article-item${index===0?' active':''}`;
+        item.dataset.article=art.id;
+        item.innerHTML=`<div class="article-cover"><div class="article-date">${art.date}</div><div class="article-image-placeholder">${art.cover||'Cover'}</div></div><div class="article-content"><h3 class="article-title">${art.title}</h3><p class="article-intro">${art.intro||''}</p><button class="btn-read-article" data-article="${art.id}">Read this article</button></div>`;
+        displayContainer.appendChild(item);
+    });
+
+    const menuButtons=menuContainer.querySelectorAll('.article-menu-btn');
+    const articleItems=displayContainer.querySelectorAll('.article-item');
+    const readArticleButtons=document.querySelectorAll('.btn-read-article, .btn-team-article');
     const articleModal = document.getElementById('articleModal');
     
     console.log('Article features initialized:', {
@@ -328,36 +356,36 @@ function initArticleFeatures() {
     const articleCache = {};
 
     // 配置真实文章信息
-    const realArticles = {
-        '1': {
-            title: 'The Crisis of Traditional Education in the AI Era',
-            date: '2024',
-            file: 'The Crisis of Traditional Education in the AI Era- The Myth of Useless Knowledge and the Reality of AI Replacement.docx',
-            cover: 'cover1.jpg'
-        },
-        '2': {
-            title: 'The Educational Revolution in the AI Era',
-            date: '2024',
-            file: 'The Educational Revolution in the AI Era- From Traditional Classrooms to AI-Native Learning Models.docx',
-            cover: 'cover2.jpg'
-        },
-        '3': {
-            title: 'My Online Talk at Stanford',
-            date: '2024',
-            file: 'My Online Talk at Stanford.docx',
-            cover: 'cover3.jpg'
-        },
-        '4': {
-            title: 'My Sharing at the AI For Young Conference',
-            date: '2024',
-            file: 'My Sharing at the AI For Young Conference-  As a Native of the AI Era, I Want to Do Something That Truly Matters  .docx',
-            cover: 'cover4.jpg'
-        }
-    };
+    // const realArticles = {
+    //     '1': {
+    //         title: 'The Crisis of Traditional Education in the AI Era',
+    //         date: '2024',
+    //         file: 'The Crisis of Traditional Education in the AI Era- The Myth of Useless Knowledge and the Reality of AI Replacement.docx',
+    //         cover: 'cover1.jpg'
+    //     },
+    //     '2': {
+    //         title: 'The Educational Revolution in the AI Era',
+    //         date: '2024',
+    //         file: 'The Educational Revolution in the AI Era- From Traditional Classrooms to AI-Native Learning Models.docx',
+    //         cover: 'cover2.jpg'
+    //     },
+    //     '3': {
+    //         title: 'My Online Talk at Stanford',
+    //         date: '2024',
+    //         file: 'My Online Talk at Stanford.docx',
+    //         cover: 'cover3.jpg'
+    //     },
+    //     '4': {
+    //         title: 'My Sharing at the AI For Young Conference',
+    //         date: '2024',
+    //         file: 'My Sharing at the AI For Young Conference-  As a Native of the AI Era, I Want to Do Something That Truly Matters  .docx',
+    //         cover: 'cover4.jpg'
+    //     }
+    // };
 
     function loadArticleData(articleId){
         if(articleCache[articleId]) return Promise.resolve(articleCache[articleId]);
-        const info = realArticles[articleId];
+        const info = (window.__articlesManifest||[]).find(a=>a.id===articleId);
         if(!info) return Promise.reject('Article not configured');
 
         const filePath = `assets/Articles/${info.file}`;
