@@ -572,7 +572,7 @@ main {
     border-radius: 12px;
     box-shadow: 0 3px 15px rgba(139, 92, 246, 0.08);
     transition: all 0.3s ease;
-    min-width: 90px;
+    min-width: 170px;
     border-top: 2px solid var(--primary-purple);
 }
 
@@ -1941,6 +1941,17 @@ main {
     color: var(--text-gray);
 }
 
+/* Ensure images inside article modal fit nicely without overflowing */
+.article-modal-image img {
+    max-width: 100%;
+    height: auto;
+    max-height: 400px;
+    object-fit: contain;
+    border-radius: 15px;
+    display: block;
+    margin: 0 auto;
+}
+
 .article-modal-text {
     font-size: 1.1rem;
     line-height: 1.8;
@@ -1966,6 +1977,15 @@ main {
 
 .article-modal-text li {
     margin-bottom: 8px;
+}
+
+.article-modal-text img {
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    border-radius: 10px;
 }
 
 /* 移动端适配 */
@@ -2006,6 +2026,16 @@ main {
         font-size: 1rem;
     }
 } 
+
+/* Constrain images inside the modal placeholder so they never exceed modal height */
+.article-modal-image-placeholder img {
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    border-radius: 10px;
+}
 
 /* World Map container */
 .map-container {
