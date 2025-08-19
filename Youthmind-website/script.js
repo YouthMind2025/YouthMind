@@ -306,6 +306,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初始化帖子滑动功能
     initPostSlider();
     
+    // 初始化静态世界地图
+    initWorldMap();
+    
 });
 
 // 文章功能初始化
@@ -1181,4 +1184,59 @@ function handleLogout() {
         
         showMessage('已成功退出登录', 'success');
     }
+} 
+
+// ------------------------------
+// 静态世界地图初始化
+// ------------------------------
+function initWorldMap() {
+    const mapElement = document.getElementById('map');
+    if (!mapElement || typeof L === 'undefined') return;
+
+    const map = L.map('map', {
+        center: [20, 0],
+        zoom: 2,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        zoomControl: false,
+        tap: false
+    });
+
+    // 加载 OpenStreetMap 瓦片
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '',
+        interactive: false,
+        noWrap: true
+    }).addTo(map);
+
+    const markerCoords = [
+        [25.2048, 55.2708],   // Dubai
+        [51.4545, -2.5879],   // Bristol (UK)
+        [39.9042, 116.4074],  // Beijing (China)
+        [19.5664, 109.9497]   // Hainan (China)
+    ];
+
+    // 添加标记并收集到数组中
+    const markers = markerCoords.map(coords => (
+        L.circleMarker(coords, {
+            radius: 10,
+            color: '#ff0000',
+            weight: 2,
+            fillColor: '#ff3b3b',
+            fillOpacity: 1
+        }).addTo(map)
+    ));
+
+    // 调整视图以包含所有标记
+    const bounds = L.latLngBounds(markerCoords);
+    map.fitBounds(bounds.pad(0.3));
+
+    // 禁用拖动平移后保持视图固定
+    map.once('moveend', () => {
+        map.dragging.disable();
+    });
+
 } 
