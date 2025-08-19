@@ -327,28 +327,50 @@ function initArticleFeatures() {
     // 缓存已加载的文章数据
     const articleCache = {};
 
-    function loadArticleData(articleId) {
-        if (articleCache[articleId]) return Promise.resolve(articleCache[articleId]);
+    // 配置真实文章信息
+    const realArticles = {
+        '1': {
+            title: 'The Crisis of Traditional Education in the AI Era',
+            date: '2024',
+            file: 'The Crisis of Traditional Education in the AI Era- The Myth of Useless Knowledge and the Reality of AI Replacement.docx',
+            cover: 'cover1.jpg'
+        },
+        '2': {
+            title: 'The Educational Revolution in the AI Era',
+            date: '2024',
+            file: 'The Educational Revolution in the AI Era- From Traditional Classrooms to AI-Native Learning Models.docx',
+            cover: 'cover2.jpg'
+        },
+        '3': {
+            title: 'My Online Talk at Stanford',
+            date: '2024',
+            file: 'My Online Talk at Stanford.docx',
+            cover: 'cover3.jpg'
+        },
+        '4': {
+            title: 'My Sharing at the AI For Young Conference',
+            date: '2024',
+            file: 'My Sharing at the AI For Young Conference-  As a Native of the AI Era, I Want to Do Something That Truly Matters  .docx',
+            cover: 'cover4.jpg'
+        }
+    };
 
-        return fetch(`assets/Articles/article${articleId}.doc`)
-            .then(res => {
-                if (!res.ok) throw new Error('Article file not found');
-                return res.text();
-            })
-            .then(text => {
-                // Expect first lines: Title:, Date:, Image:
-                const lines = text.split(/\r?\n/);
-                let title='', date='', image='';
-                let bodyStart=0;
-                for(let i=0;i<lines.length;i++){
-                    const line=lines[i].trim();
-                    if(line.startsWith('Title:')){ title=line.replace('Title:','').trim(); }
-                    else if(line.startsWith('Date:')){ date=line.replace('Date:','').trim(); }
-                    else if(line.startsWith('Image:')){ image=line.replace('Image:','').trim(); }
-                    else if(line===''){ bodyStart=i+1; break; }
-                }
-                const content=lines.slice(bodyStart).join('\n');
-                const data={title,date,image,content};
+    function loadArticleData(articleId){
+        if(articleCache[articleId]) return Promise.resolve(articleCache[articleId]);
+        const info = realArticles[articleId];
+        if(!info) return Promise.reject('Article not configured');
+
+        const filePath = `assets/Articles/${info.file}`;
+        return fetch(filePath)
+            .then(r=>r.arrayBuffer())
+            .then(buffer=>mammoth.convertToHtml({arrayBuffer:buffer}))
+            .then(result=>{
+                const data={
+                    title:info.title,
+                    date:info.date,
+                    image:info.cover||'',
+                    content:result.value
+                };
                 articleCache[articleId]=data;
                 return data;
             });
@@ -387,7 +409,11 @@ function initArticleFeatures() {
                     document.getElementById('articleModalTitle').textContent = articleData.title;
                     document.getElementById('articleModalDate').textContent = articleData.date;
                     const imgHolder = document.getElementById('articleModalImage');
-                    imgHolder.innerHTML = `<img src="assets/Articles/${articleData.image}" alt="${articleData.title}" style="width:100%;height:auto;border-radius:10px;">`;
+                    if(articleData.image){
+                        imgHolder.innerHTML = `<img src="assets/images/${articleData.image}" alt="${articleData.title}" style="width:100%;height:auto;border-radius:10px;">`;
+                    } else {
+                        imgHolder.innerHTML='';
+                    }
                     document.getElementById('articleModalContent').innerHTML = articleData.content;
 
                     showModal('articleModal');
