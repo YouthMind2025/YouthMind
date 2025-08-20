@@ -32,7 +32,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/").permitAll()
                 .requestMatchers("/api/test/**").permitAll()
-                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/v1/auth/**").permitAll()
                 .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/docs/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
                 // Actuator endpoints for monitoring and DevOps
@@ -47,7 +47,7 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/conditions").hasRole("ADMIN")
                 .requestMatchers("/actuator/**").hasRole("ADMIN")
                 // Application endpoints
-                .requestMatchers("/v1/auth/register").permitAll()
+                .requestMatchers("/v1/auth/test").authenticated()
                 .requestMatchers("/v1/posts/create").authenticated()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

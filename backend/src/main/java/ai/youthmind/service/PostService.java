@@ -3,6 +3,7 @@ package ai.youthmind.service;
 import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.dto.PostDto;
 import ai.youthmind.dto.FeedResponse;
+import ai.youthmind.dto.FlaggedPostDto;
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
 import ai.youthmind.repository.AIAnalysisRepository;
@@ -92,20 +93,35 @@ public class PostService {
     /**
      * Get paginated feed of posts
      */
-    public FeedResponse getFeed(int page, int size, String sortBy, UUID currentUserId) {
+    public FeedResponse getFeed(int page, int size, String sortBy, String emotionTag, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate, UUID currentUserId) {
         // Check cache first
-        String cacheKey = String.format("feed:latest:%d:%d:%s", page, size, sortBy);
+        String cacheKey = String.format("feed:latest:%d:%d:%s:%s:%s:%s", page, size, sortBy,
+                emotionTag == null ? "" : emotionTag,
+                startDate == null ? "" : startDate.toString(),
+                endDate == null ? "" : endDate.toString());
         FeedResponse cachedFeed = redisService.getCachedFeed(cacheKey);
         if (cachedFeed != null) {
             return cachedFeed;
         }
-        
+
         // Create pageable with sorting
         Sort sort = getSortFromString(sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
-        
-        // Get posts from database
-        Page<Post> postPage = postRepository.findAll(pageable);
+
+        // Determine appropriate query based on filters
+        Page<Post> postPage;
+        boolean hasEmotion = emotionTag != null && !emotionTag.isBlank();
+        boolean hasDateRange = startDate != null && endDate != null;
+
+        if (hasEmotion && hasDateRange) {
+            postPage = postRepository.findByEmotionTagIgnoreCaseAndCreatedAtBetween(emotionTag, startDate, endDate, pageable);
+        } else if (hasEmotion) {
+            postPage = postRepository.findByEmotionTagIgnoreCase(emotionTag, pageable);
+        } else if (hasDateRange) {
+            postPage = postRepository.findByCreatedAtBetween(startDate, endDate, pageable);
+        } else {
+            postPage = postRepository.findAll(pageable);
+        }
         
         // Convert to DTOs
         List<PostDto> postDtos = postPage.getContent().stream()
@@ -147,6 +163,28 @@ public class PostService {
         return posts.stream()
             .map(post -> convertToPostDto(post, currentUserId))
             .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all posts that have been flagged for moderation
+     */
+    public List<FlaggedPostDto> getFlaggedPosts() {
+        List<Post> flaggedPosts = postRepository.findByFlaggedTrue();
+        return flaggedPosts.stream()
+                .map(this::convertToFlaggedPostDto)
+                .collect(Collectors.toList());
+    }
+
+    private FlaggedPostDto convertToFlaggedPostDto(Post post) {
+        FlaggedPostDto dto = new FlaggedPostDto();
+        dto.setPostId(post.getId());
+        dto.setFlagReason(post.getFlagReason());
+        dto.setFlaggedAt(post.getFlaggedAt());
+        dto.setAiConfidence(1.0);
+        String content = post.getContent();
+        dto.setContentPreview(content != null && content.length() > 100 ? content.substring(0, 100) + "..." : content);
+        dto.setStatus("pending_review");
+        return dto;
     }
     
     private PostDto convertToPostDto(Post post, UUID currentUserId) {

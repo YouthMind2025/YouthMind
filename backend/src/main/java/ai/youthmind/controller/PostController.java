@@ -72,7 +72,7 @@ public class PostController {
     @GetMapping("/feed")
     @Operation(
         summary = "Get paginated feed of posts",
-        description = "Retrieve a paginated list of posts with caching support"
+        description = "Retrieve a paginated list of posts with optional filters and caching support"
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Feed retrieved successfully"),
@@ -86,7 +86,16 @@ public class PostController {
         @RequestParam(defaultValue = "20") int size,
         
         @Parameter(description = "Sort order", example = "newest")
-        @RequestParam(defaultValue = "newest") String sortBy
+        @RequestParam(defaultValue = "newest") String sortBy,
+
+        @Parameter(description = "Filter by emotion tag", example = "joy")
+        @RequestParam(required = false) String emotionTag,
+
+        @Parameter(description = "Filter by start date (ISO 8601)", example = "2023-01-01T00:00:00")
+        @RequestParam(required = false) String startDate,
+
+        @Parameter(description = "Filter by end date (ISO 8601)", example = "2023-12-31T23:59:59")
+        @RequestParam(required = false) String endDate
     ) {
         // Extract user ID from JWT token
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -97,8 +106,22 @@ public class PostController {
         if (size < 1) size = 20;
         if (size > 100) size = 100; // Limit max page size
         
+        // Parse date filters if provided
+        java.time.LocalDateTime startDt = null;
+        java.time.LocalDateTime endDt = null;
+        try {
+            if (startDate != null && !startDate.isBlank()) {
+                startDt = java.time.LocalDateTime.parse(startDate);
+            }
+            if (endDate != null && !endDate.isBlank()) {
+                endDt = java.time.LocalDateTime.parse(endDate);
+            }
+        } catch (Exception e) {
+            // Ignore parse errors and treat as null - alternatively handle validation
+        }
+
         // Get feed from service (includes caching)
-        FeedResponse feedResponse = postService.getFeed(page, size, sortBy, userId);
+        FeedResponse feedResponse = postService.getFeed(page, size, sortBy, emotionTag, startDt, endDt, userId);
         
         return ResponseEntity.ok(feedResponse);
     }
