@@ -78,9 +78,13 @@ public class PostService {
     public Post createPost(UUID userId, PostCreateRequest request) {
         Post post = new Post();
         post.setUserId(userId);
+        post.setTitle(request.getTitle());
         post.setContent(request.getContent());
-        post.setEmotionTag(request.getEmotionTag());
-        post.setAiMetadata(request.getAiMetadata());
+        post.setEmotion(request.getEmotion());
+        post.setPreImg(request.getPreImg());
+        post.setResonance(0); // New post starts with 0 resonance
+        post.setViewCount(0); // New post starts with 0 views
+        post.setCollectCount(0); // New post starts with 0 collections
         
         Post savedPost = postRepository.save(post);
         
@@ -93,10 +97,10 @@ public class PostService {
     /**
      * Get paginated feed of posts
      */
-    public FeedResponse getFeed(int page, int size, String sortBy, String emotionTag, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate, UUID currentUserId) {
+    public FeedResponse getFeed(int page, int size, String sortBy, String emotion, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate, UUID currentUserId) {
         // Check cache first
         String cacheKey = String.format("feed:latest:%d:%d:%s:%s:%s:%s", page, size, sortBy,
-                emotionTag == null ? "" : emotionTag,
+                emotion == null ? "" : emotion,
                 startDate == null ? "" : startDate.toString(),
                 endDate == null ? "" : endDate.toString());
         FeedResponse cachedFeed = redisService.getCachedFeed(cacheKey);
@@ -110,13 +114,13 @@ public class PostService {
 
         // Determine appropriate query based on filters
         Page<Post> postPage;
-        boolean hasEmotion = emotionTag != null && !emotionTag.isBlank();
+        boolean hasEmotion = emotion != null && !emotion.isBlank();
         boolean hasDateRange = startDate != null && endDate != null;
 
         if (hasEmotion && hasDateRange) {
-            postPage = postRepository.findByEmotionTagIgnoreCaseAndCreatedAtBetween(emotionTag, startDate, endDate, pageable);
+            postPage = postRepository.findByEmotionIgnoreCaseAndCreatedAtBetween(emotion, startDate, endDate, pageable);
         } else if (hasEmotion) {
-            postPage = postRepository.findByEmotionTagIgnoreCase(emotionTag, pageable);
+            postPage = postRepository.findByEmotionIgnoreCase(emotion, pageable);
         } else if (hasDateRange) {
             postPage = postRepository.findByCreatedAtBetween(startDate, endDate, pageable);
         } else {
@@ -146,10 +150,10 @@ public class PostService {
     }
     
     /**
-     * Get posts by emotion tag
+     * Get posts by emotion
      */
-    public List<PostDto> getPostsByEmotionTag(String emotionTag, UUID currentUserId) {
-        List<Post> posts = postRepository.findByEmotionTag(emotionTag);
+    public List<PostDto> getPostsByEmotionTag(String emotion, UUID currentUserId) {
+        List<Post> posts = postRepository.findByEmotion(emotion);
         return posts.stream()
             .map(post -> convertToPostDto(post, currentUserId))
             .collect(Collectors.toList());
@@ -190,15 +194,18 @@ public class PostService {
     private PostDto convertToPostDto(Post post, UUID currentUserId) {
         PostDto dto = new PostDto();
         dto.setId(post.getId());
+        dto.setTitle(post.getTitle());
         dto.setContent(post.getContent());
-        dto.setEmotionTag(post.getEmotionTag());
-        dto.setAiMetadata(post.getAiMetadata());
-        dto.setCreatedAt(post.getCreatedAt());
-        dto.setAnonymousUserId("user_" + post.getUserId().toString().substring(0, 8));
+        dto.setPreImg(post.getPreImg());
+        dto.setEmotion(post.getEmotion());
+        dto.setDate(post.getCreatedAt());
+        dto.setResonance(post.getResonance());
+        dto.setView(post.getViewCount());
+        dto.setCollect(post.getCollectCount());
         
-        // TODO: Implement understanding count and user reaction tracking
-        dto.setUnderstandingCount(0);
-        dto.setHasUserUnderstood(false);
+        // TODO: Implement user reaction tracking - for now set defaults
+        dto.setIsresonanced(false);
+        dto.setIsCollected(false);
         
         return dto;
     }
