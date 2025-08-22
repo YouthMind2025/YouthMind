@@ -11,55 +11,73 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Post data transfer object for feed responses")
+@Schema(description = "Post data transfer object matching iOS Post model exactly")
 public class PostDto {
     
     @Schema(description = "Unique identifier for the post", example = "123e4567-e89b-12d3-a456-426614174000")
     private UUID id;
     
+    @Schema(description = "Number of likes/resonance", example = "15")
+    private int resonance;
+    
+    @Schema(description = "Number of views", example = "120")
+    private int view;
+    
+    @Schema(description = "Number of times this post has been collected/saved", example = "8")
+    private int collect;
+    
+    @Schema(description = "Post title", example = "My thoughts on today")
+    private String title;
+    
     @Schema(description = "Post content", example = "Feeling overwhelmed with school lately...")
     private String content;
     
-    @Schema(description = "Emotion tag for the post", example = "stress")
-    private String emotionTag;
+    @Schema(description = "Preview image URL", example = "https://example.com/image.jpg")
+    private String preImg;
     
-    @Schema(description = "AI metadata as JSON string", example = "{\"sentiment\": \"negative\", \"confidence\": 0.85}")
-    private String aiMetadata;
+    @Schema(description = "Whether current user has resonated/liked this post", example = "false")
+    private boolean isresonanced;
+    
+    @Schema(description = "Whether current user has collected/saved this post", example = "false")
+    private boolean isCollected;
+    
+    @Schema(description = "Emotion tag for the post", example = "happy")
+    private String emotion;
     
     @Schema(description = "Timestamp when the post was created", example = "2024-01-15T10:30:00")
-    private LocalDateTime createdAt;
-    
-    @Schema(description = "Anonymous user identifier", example = "user_123")
-    private String anonymousUserId;
-    
-    @Schema(description = "Number of understanding reactions", example = "5")
-    private int understandingCount;
-    
-    @Schema(description = "Whether the current user has reacted with understanding", example = "false")
-    private boolean hasUserUnderstood;
+    private LocalDateTime date;
     
     // Explicit getters and setters
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
     
+    public int getResonance() { return resonance; }
+    public void setResonance(int resonance) { this.resonance = resonance; }
+    
+    public int getView() { return view; }
+    public void setView(int view) { this.view = view; }
+    
+    public int getCollect() { return collect; }
+    public void setCollect(int collect) { this.collect = collect; }
+    
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
     
-    public String getEmotionTag() { return emotionTag; }
-    public void setEmotionTag(String emotionTag) { this.emotionTag = emotionTag; }
+    public String getPreImg() { return preImg; }
+    public void setPreImg(String preImg) { this.preImg = preImg; }
     
-    public String getAiMetadata() { return aiMetadata; }
-    public void setAiMetadata(String aiMetadata) { this.aiMetadata = aiMetadata; }
+    public boolean isIsresonanced() { return isresonanced; }
+    public void setIsresonanced(boolean isresonanced) { this.isresonanced = isresonanced; }
     
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public boolean isCollected() { return isCollected; }
+    public void setIsCollected(boolean isCollected) { this.isCollected = isCollected; }
     
-    public String getAnonymousUserId() { return anonymousUserId; }
-    public void setAnonymousUserId(String anonymousUserId) { this.anonymousUserId = anonymousUserId; }
+    public String getEmotion() { return emotion; }
+    public void setEmotion(String emotion) { this.emotion = emotion; }
     
-    public int getUnderstandingCount() { return understandingCount; }
-    public void setUnderstandingCount(int understandingCount) { this.understandingCount = understandingCount; }
-    
-    public boolean isHasUserUnderstood() { return hasUserUnderstood; }
-    public void setHasUserUnderstood(boolean hasUserUnderstood) { this.hasUserUnderstood = hasUserUnderstood; }
+    public LocalDateTime getDate() { return date; }
+    public void setDate(LocalDateTime date) { this.date = date; }
 } 

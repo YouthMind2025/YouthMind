@@ -24,8 +24,8 @@ public class Post {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
     
-    @Column(name = "emotion_tag", length = 100)
-    private String emotionTag;
+    @Column(name = "emotion", length = 100)
+    private String emotion;
     
     @Column(name = "ai_metadata", columnDefinition = "TEXT") 
     private String aiMetadata;
@@ -72,12 +72,12 @@ public class Post {
         this.content = content;
     }
     
-    public String getEmotionTag() {
-        return emotionTag;
+    public String getEmotion() {
+        return emotion;
     }
     
-    public void setEmotionTag(String emotionTag) {
-        this.emotionTag = emotionTag;
+    public void setEmotion(String emotion) {
+        this.emotion = emotion;
     }
     
     public String getAiMetadata() {
