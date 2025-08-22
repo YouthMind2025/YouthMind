@@ -6,23 +6,37 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Request data for creating a new post")
+@Schema(description = "Request data for creating a new post - matches iOS CreatePostRequest")
 public class PostCreateRequest {
+    
+    @NotBlank(message = "Title is required")
+    @Schema(description = "Post title", example = "My thoughts on today", required = true)
+    private String title;
     
     @NotBlank(message = "Content is required")
     @Schema(description = "Post content", example = "Feeling overwhelmed with school lately...", required = true)
     private String content;
     
-    @Schema(description = "Emotion tag for the post", example = "stress")
-    private String emotionTag;
+    @Schema(description = "Emotion for the post", example = "happy", required = false)
+    private String emotion;
     
-    @Schema(description = "Optional AI metadata as JSON string", example = "{\"sentiment\": \"negative\", \"confidence\": 0.85}")
-    private String aiMetadata;
+    @Schema(description = "Preview image URL", example = "https://example.com/image.jpg", required = false)
+    private String preImg;
     
     // Explicit getters and setters
+    public String getTitle() {
+        return title;
+    }
+    
+    public void setTitle(String title) {
+        this.title = title;
+    }
+    
     public String getContent() {
         return content;
     }
@@ -31,19 +45,19 @@ public class PostCreateRequest {
         this.content = content;
     }
     
-    public String getEmotionTag() {
-        return emotionTag;
+    public String getEmotion() {
+        return emotion;
     }
     
-    public void setEmotionTag(String emotionTag) {
-        this.emotionTag = emotionTag;
+    public void setEmotion(String emotion) {
+        this.emotion = emotion;
     }
     
-    public String getAiMetadata() {
-        return aiMetadata;
+    public String getPreImg() {
+        return preImg;
     }
     
-    public void setAiMetadata(String aiMetadata) {
-        this.aiMetadata = aiMetadata;
+    public void setPreImg(String preImg) {
+        this.preImg = preImg;
     }
 } 

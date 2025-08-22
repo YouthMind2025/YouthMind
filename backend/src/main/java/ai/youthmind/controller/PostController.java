@@ -55,10 +55,22 @@ public class PostController {
         // Create the post
         Post savedPost = postService.createPost(userId, request);
         
-        // Build response
-        PostCreateResponse response = new PostCreateResponse();
-        response.setPostId(savedPost.getId());
-        response.setCreatedAt(savedPost.getCreatedAt());
+        // Build full PostDto for response
+        PostDto postDto = new PostDto();
+        postDto.setId(savedPost.getId());
+        postDto.setTitle(savedPost.getTitle());
+        postDto.setContent(savedPost.getContent());
+        postDto.setPreImg(savedPost.getPreImg());
+        postDto.setEmotion(savedPost.getEmotion());
+        postDto.setDate(savedPost.getCreatedAt());
+        postDto.setResonance(savedPost.getResonance());
+        postDto.setView(savedPost.getViewCount());
+        postDto.setCollect(savedPost.getCollectCount());
+        postDto.setIsresonanced(false); // New post, user hasn't resonated yet
+        postDto.setIsCollected(false);  // New post, user hasn't collected yet
+        
+        // Build response with full post data
+        PostCreateResponse response = new PostCreateResponse(postDto, "Post created successfully");
 
         // Publish enhanced event with structured data
         redisService.publishPostCreatedEvent(

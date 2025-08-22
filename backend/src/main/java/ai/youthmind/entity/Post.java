@@ -27,6 +27,21 @@ public class Post {
     @Column(name = "emotion", length = 100)
     private String emotion;
     
+    @Column(name = "title", length = 255)
+    private String title;
+    
+    @Column(name = "pre_img", length = 500)
+    private String preImg;
+    
+    @Column(name = "resonance", nullable = false)
+    private int resonance = 0;
+    
+    @Column(name = "view_count", nullable = false)
+    private int viewCount = 0;
+    
+    @Column(name = "collect_count", nullable = false)
+    private int collectCount = 0;
+    
     @Column(name = "ai_metadata", columnDefinition = "TEXT") 
     private String aiMetadata;
 
@@ -78,6 +93,46 @@ public class Post {
     
     public void setEmotion(String emotion) {
         this.emotion = emotion;
+    }
+    
+    public String getTitle() {
+        return title;
+    }
+    
+    public void setTitle(String title) {
+        this.title = title;
+    }
+    
+    public String getPreImg() {
+        return preImg;
+    }
+    
+    public void setPreImg(String preImg) {
+        this.preImg = preImg;
+    }
+    
+    public int getResonance() {
+        return resonance;
+    }
+    
+    public void setResonance(int resonance) {
+        this.resonance = resonance;
+    }
+    
+    public int getViewCount() {
+        return viewCount;
+    }
+    
+    public void setViewCount(int viewCount) {
+        this.viewCount = viewCount;
+    }
+    
+    public int getCollectCount() {
+        return collectCount;
+    }
+    
+    public void setCollectCount(int collectCount) {
+        this.collectCount = collectCount;
     }
     
     public String getAiMetadata() {
