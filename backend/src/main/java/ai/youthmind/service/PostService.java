@@ -152,7 +152,7 @@ public class PostService {
     /**
      * Get posts by emotion
      */
-    public List<PostDto> getPostsByEmotionTag(String emotion, UUID currentUserId) {
+    public List<PostDto> getPostsByEmotion(String emotion, UUID currentUserId) {
         List<Post> posts = postRepository.findByEmotion(emotion);
         return posts.stream()
             .map(post -> convertToPostDto(post, currentUserId))

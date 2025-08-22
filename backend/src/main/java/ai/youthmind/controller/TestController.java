@@ -134,13 +134,13 @@ public class TestController {
     public ApiResponse<Map<String, String>> testRedisPubSub(
         @RequestParam(defaultValue = "test_post_123") String postId,
         @RequestParam(defaultValue = "test_user_456") String userId,
-        @RequestParam(defaultValue = "happy") String emotionTag
+        @RequestParam(defaultValue = "happy") String emotion
     ) {
         Map<String, String> result = new HashMap<>();
         
         try {
             // Test structured event publishing
-            redisService.publishPostCreatedEvent(postId, userId, emotionTag);
+            redisService.publishPostCreatedEvent(postId, userId, emotion);
             result.put("post_created_event", "Published successfully");
             
             // Test AI processed event
