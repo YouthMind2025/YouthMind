@@ -138,8 +138,8 @@ public class RedisService {
     }
 
     // Enhanced event publishing with structured data
-    public void publishPostCreatedEvent(String postId, String userId, String emotionTag) {
-        PostCreatedEvent event = new PostCreatedEvent(postId, userId, emotionTag, System.currentTimeMillis());
+    public void publishPostCreatedEvent(String postId, String userId, String emotion) {
+        PostCreatedEvent event = new PostCreatedEvent(postId, userId, emotion, System.currentTimeMillis());
         redisTemplate.convertAndSend(postCreatedChannel, event);
     }
 
@@ -152,13 +152,13 @@ public class RedisService {
     public static class PostCreatedEvent {
         private String postId;
         private String userId;
-        private String emotionTag;
+        private String emotion;
         private long timestamp;
 
-        public PostCreatedEvent(String postId, String userId, String emotionTag, long timestamp) {
+        public PostCreatedEvent(String postId, String userId, String emotion, long timestamp) {
             this.postId = postId;
             this.userId = userId;
-            this.emotionTag = emotionTag;
+            this.emotion = emotion;
             this.timestamp = timestamp;
         }
 
@@ -169,8 +169,8 @@ public class RedisService {
         public String getUserId() { return userId; }
         public void setUserId(String userId) { this.userId = userId; }
         
-        public String getEmotionTag() { return emotionTag; }
-        public void setEmotionTag(String emotionTag) { this.emotionTag = emotionTag; }
+        public String getEmotion() { return emotion; }
+        public void setEmotion(String emotion) { this.emotion = emotion; }
         
         public long getTimestamp() { return timestamp; }
         public void setTimestamp(long timestamp) { this.timestamp = timestamp; }

@@ -53,17 +53,17 @@ public class RepositoryIntegrationTest {
         Post post1 = new Post();
         post1.setUserId(savedUser.getId());
         post1.setContent("I'm feeling really excited about this new project!");
-        post1.setEmotionTag("excited");
+        post1.setEmotion("excited");
         
         Post post2 = new Post();
         post2.setUserId(savedUser.getId());
         post2.setContent("Just had a calm and peaceful meditation session.");
-        post2.setEmotionTag("calm");
+        post2.setEmotion("calm");
         
         Post post3 = new Post();
         post3.setUserId(savedUser.getId());
         post3.setContent("Feeling a bit anxious about the presentation tomorrow.");
-        post3.setEmotionTag("anxious");
+        post3.setEmotion("anxious");
         
         LocalDateTime beforePostsSave = LocalDateTime.now();
         Post savedPost1 = postRepository.save(post1);
@@ -75,7 +75,7 @@ public class RepositoryIntegrationTest {
         // Verify posts creation
         System.out.println("Post 1 ID: " + savedPost1.getId());
         System.out.println("Post 1 Content: " + savedPost1.getContent());
-        System.out.println("Post 1 Emotion: " + savedPost1.getEmotionTag());
+        System.out.println("Post 1 Emotion: " + savedPost1.getEmotion());
         System.out.println("Post 1 User ID: " + savedPost1.getUserId());
         System.out.println("Post 1 Created At: " + savedPost1.getCreatedAt());
         
@@ -86,18 +86,18 @@ public class RepositoryIntegrationTest {
         
         for(Post post : userPosts) {
             System.out.println("- Post: " + post.getContent().substring(0, Math.min(30, post.getContent().length())) + "...");
-            System.out.println("  Emotion: " + post.getEmotionTag());
+            System.out.println("  Emotion: " + post.getEmotion());
             System.out.println("  User ID matches: " + post.getUserId().equals(savedUser.getId()));
         }
         
-        // Test 4: Query by emotion tag
-        System.out.println("\n=== Test 4: Querying Posts by Emotion Tag ===");
-        List<Post> calmPosts = postRepository.findByEmotionTag("calm");
+        // Test 4: Query by emotion
+        System.out.println("\n=== Test 4: Querying Posts by Emotion ===");
+        List<Post> calmPosts = postRepository.findByEmotion("calm");
         System.out.println("Number of 'calm' posts: " + calmPosts.size());
         
         for(Post post : calmPosts) {
             System.out.println("- Calm post: " + post.getContent());
-            System.out.println("  Emotion tag is 'calm': " + "calm".equals(post.getEmotionTag()));
+            System.out.println("  Emotion is 'calm': " + "calm".equals(post.getEmotion()));
         }
         
         // Test 5: Test user repository methods

@@ -158,7 +158,7 @@ public class PostController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UUID userId = (UUID) authentication.getPrincipal();
         
-        List<PostDto> posts = postService.getPostsByEmotionTag(emotion, userId);
+        List<PostDto> posts = postService.getPostsByEmotion(emotion, userId);
         
         ApiResponse<List<PostDto>> apiResponse = ApiResponse.success(posts, 200);
         return ResponseEntity.ok(apiResponse);

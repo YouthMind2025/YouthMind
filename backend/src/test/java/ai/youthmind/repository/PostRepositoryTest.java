@@ -37,7 +37,7 @@ public class PostRepositoryTest {
         Post post = new Post();
         post.setUserId(savedUser.getId());
         post.setContent("This is a test post content");
-        post.setEmotionTag("happy");
+        post.setEmotion("happy");
         
         // When
         Post savedPost = postRepository.save(post);
@@ -46,7 +46,7 @@ public class PostRepositoryTest {
         // Then
         assertThat(savedPost.getId()).isNotNull();
         assertThat(savedPost.getContent()).isEqualTo("This is a test post content");
-        assertThat(savedPost.getEmotionTag()).isEqualTo("happy");
+        assertThat(savedPost.getEmotion()).isEqualTo("happy");
         assertThat(savedPost.getUserId()).isNotNull();
         assertThat(savedPost.getUserId()).isEqualTo(savedUser.getId());
         assertThat(savedPost.getCreatedAt()).isNotNull();
@@ -67,13 +67,13 @@ public class PostRepositoryTest {
         Post post1 = new Post();
         post1.setUserId(savedUser.getId());
         post1.setContent("First post");
-        post1.setEmotionTag("excited");
+        post1.setEmotion("excited");
         postRepository.save(post1);
         
         Post post2 = new Post();
         post2.setUserId(savedUser.getId());
         post2.setContent("Second post");
-        post2.setEmotionTag("calm");
+        post2.setEmotion("calm");
         postRepository.save(post2);
         
         entityManager.flush();
@@ -87,7 +87,7 @@ public class PostRepositoryTest {
     }
     
     @Test
-    public void testFindByEmotionTag() {
+    public void testFindByEmotion() {
         // Given
         User user = new User();
         user.setEmail("emotion@example.com");
@@ -99,29 +99,29 @@ public class PostRepositoryTest {
         Post post1 = new Post();
         post1.setUserId(savedUser.getId());
         post1.setContent("Happy post");
-        post1.setEmotionTag("happy");
+        post1.setEmotion("happy");
         postRepository.save(post1);
         
         Post post2 = new Post();
         post2.setUserId(savedUser.getId());
         post2.setContent("Another happy post");
-        post2.setEmotionTag("happy");
+        post2.setEmotion("happy");
         postRepository.save(post2);
         
         Post post3 = new Post();
         post3.setUserId(savedUser.getId());
         post3.setContent("Sad post");
-        post3.setEmotionTag("sad");
+        post3.setEmotion("sad");
         postRepository.save(post3);
         
         entityManager.flush();
         
         // When
-        List<Post> happyPosts = postRepository.findByEmotionTag("happy");
+        List<Post> happyPosts = postRepository.findByEmotion("happy");
         
         // Then
         assertThat(happyPosts).hasSize(2);
-        assertThat(happyPosts).extracting(Post::getEmotionTag).containsOnly("happy");
+        assertThat(happyPosts).extracting(Post::getEmotion).containsOnly("happy");
     }
     
     @Test
@@ -137,7 +137,7 @@ public class PostRepositoryTest {
         Post post = new Post();
         post.setUserId(savedUser.getId());
         post.setContent("Testing user ID relationship");
-        post.setEmotionTag("neutral");
+        post.setEmotion("neutral");
         
         // When
         Post savedPost = postRepository.save(post);
