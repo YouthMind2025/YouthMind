@@ -6,6 +6,7 @@ import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.dto.PostCreateResponse;
 import ai.youthmind.dto.PostDto;
 import ai.youthmind.entity.Post;
+import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.service.PostService;
 import ai.youthmind.service.RedisService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -184,6 +185,31 @@ public class PostController {
         List<PostDto> posts = postService.getPostsByUser(userId, currentUserId);
         
         ApiResponse<List<PostDto>> apiResponse = ApiResponse.success(posts, 200);
+        return ResponseEntity.ok(apiResponse);
+    }
+    
+    @GetMapping("/{id}")
+    @Operation(
+        summary = "Get post details by ID",
+        description = "Retrieve detailed information about a specific post with view tracking"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Post retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @ApiResponse(responseCode = "404", description = "Post not found")
+    })
+    public ResponseEntity<ApiResponse<PostDto>> getPostById(
+        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id
+    ) {
+        // Extract user ID from JWT token
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID userId = (UUID) authentication.getPrincipal();
+        
+        // Get post with view tracking
+        PostDto post = postService.getPostById(id, userId);
+        
+        ApiResponse<PostDto> apiResponse = ApiResponse.success(post, 200);
         return ResponseEntity.ok(apiResponse);
     }
 } 

@@ -6,8 +6,11 @@ import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.dto.FlaggedPostDto;
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
+import ai.youthmind.entity.PostView;
+import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.repository.AIAnalysisRepository;
 import ai.youthmind.repository.PostRepository;
+import ai.youthmind.repository.PostViewRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -31,6 +34,9 @@ public class PostService {
     
     @Autowired
     private AIAnalysisRepository aiAnalysisRepository;
+    
+    @Autowired
+    private PostViewRepository postViewRepository;
     
     @Autowired
     private RedisService redisService;
@@ -177,6 +183,35 @@ public class PostService {
         return flaggedPosts.stream()
                 .map(this::convertToFlaggedPostDto)
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * Get post by ID with view tracking
+     * Increments view count only for first-time views per user
+     */
+    public PostDto getPostById(UUID postId, UUID currentUserId) {
+        // Find the post
+        Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new ResourceNotFoundException("Post", "id", postId));
+        
+        // Check if current user has already viewed this post
+        boolean hasUserViewed = postViewRepository.existsByUserIdAndPostId(currentUserId, postId);
+        
+        // If first time viewing, record the view
+        if (!hasUserViewed) {
+            PostView newView = new PostView(currentUserId, postId);
+            postViewRepository.save(newView);
+            
+            // Update post view count
+            post.setViewCount(post.getViewCount() + 1);
+            postRepository.save(post);
+            
+            // Invalidate cache if needed
+            redisService.invalidateFeedCache();
+        }
+        
+        // Convert to DTO and return
+        return convertToPostDto(post, currentUserId);
     }
 
     private FlaggedPostDto convertToFlaggedPostDto(Post post) {
