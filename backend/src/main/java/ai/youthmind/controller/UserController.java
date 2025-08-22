@@ -1,5 +1,6 @@
 package ai.youthmind.controller;
 
+import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.dto.UserDto;
 import ai.youthmind.entity.User;
 import ai.youthmind.service.UserService;

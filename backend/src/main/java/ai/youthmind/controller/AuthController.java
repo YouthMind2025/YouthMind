@@ -1,5 +1,6 @@
 package ai.youthmind.controller;
 
+import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.dto.AuthResponse;
 import ai.youthmind.dto.LoginRequest;
 import ai.youthmind.dto.RegisterRequest;
@@ -51,20 +52,22 @@ public class AuthController {
         @ApiResponse(responseCode = "400", description = "Invalid OTP, validation error, or email already exists"),
         @ApiResponse(responseCode = "409", description = "User with this email already exists")
     })
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<ApiResponse<?>> register(@Valid @RequestBody RegisterRequest request) {
         
         // Validate OTP
         if (!MOCK_OTP.equals(request.getPassword())) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "Invalid OTP. Please use '123456'");
-            return ResponseEntity.badRequest().body(error);
+            ApiResponse<Map<String, String>> response = ApiResponse.error(error, 400);
+            return ResponseEntity.badRequest().body(response);
         }
         
         // Check if user already exists
         if (userService.existsByEmail(request.getEmail())) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "User with this email already exists");
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+            ApiResponse<Map<String, String>> response = ApiResponse.error(error, 409);
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         }
         
         try {
@@ -100,12 +103,14 @@ public class AuthController {
             response.setExpiresIn(expiresIn);
             response.setUser(userDto);
             
-            return ResponseEntity.ok(response);
+            ApiResponse<AuthResponse> apiResponse = ApiResponse.success(response, 200);
+            return ResponseEntity.ok(apiResponse);
             
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "Registration failed: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            ApiResponse<Map<String, String>> errorResponse = ApiResponse.error(error, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 
@@ -119,7 +124,7 @@ public class AuthController {
         @ApiResponse(responseCode = "400", description = "Invalid request data"),
         @ApiResponse(responseCode = "401", description = "Invalid credentials - wrong email or password")
     })
-    public ResponseEntity<?> login(@Valid @RequestBody @Parameter(description = "User login credentials", required = true) LoginRequest request) {
+    public ResponseEntity<ApiResponse<?>> login(@Valid @RequestBody @Parameter(description = "User login credentials", required = true) LoginRequest request) {
         
         try {
             // Find user by email
@@ -127,7 +132,8 @@ public class AuthController {
             if (userOpt.isEmpty()) {
                 Map<String, String> error = new HashMap<>();
                 error.put("error", "Invalid credentials");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+                ApiResponse<Map<String, String>> response = ApiResponse.error(error, 401);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
             User user = userOpt.get();
@@ -136,7 +142,8 @@ public class AuthController {
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                 Map<String, String> error = new HashMap<>();
                 error.put("error", "Invalid credentials");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+                ApiResponse<Map<String, String>> response = ApiResponse.error(error, 401);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
             // Generate JWT token (using same logic as register)
@@ -162,12 +169,14 @@ public class AuthController {
             response.setExpiresIn(expiresIn);
             response.setUser(userDto);
             
-            return ResponseEntity.ok(response);
+            ApiResponse<AuthResponse> apiResponse = ApiResponse.success(response, 200);
+            return ResponseEntity.ok(apiResponse);
             
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "Login failed: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            ApiResponse<Map<String, String>> errorResponse = ApiResponse.error(error, 500);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 
@@ -177,10 +186,11 @@ public class AuthController {
         description = "Test endpoint to verify authentication is working"
     )
     @ApiResponse(responseCode = "200", description = "Authentication test successful")
-    public ResponseEntity<Map<String, String>> testAuth() {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Authentication test successful");
-        response.put("timestamp", String.valueOf(System.currentTimeMillis()));
+    public ResponseEntity<ApiResponse<Map<String, String>>> testAuth() {
+        Map<String, String> data = new HashMap<>();
+        data.put("message", "Authentication test successful");
+        data.put("timestamp", String.valueOf(System.currentTimeMillis()));
+        ApiResponse<Map<String, String>> response = ApiResponse.success(data, 200);
         return ResponseEntity.ok(response);
     }
 }

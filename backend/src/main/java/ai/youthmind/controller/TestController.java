@@ -1,5 +1,6 @@
 package ai.youthmind.controller;
 
+import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.service.RedisService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,8 +34,8 @@ public class TestController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successfully returned greeting message")
     })
-    public String hello() {
-        return "Hello, YouthMind!";
+    public ApiResponse<String> hello() {
+        return ApiResponse.success("Hello, YouthMind!", 200);
     }
 
     @GetMapping("/health")
@@ -45,8 +46,8 @@ public class TestController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Backend is healthy and running")
     })
-    public String health() {
-        return "YouthMind Backend is running successfully!";
+    public ApiResponse<String> health() {
+        return ApiResponse.success("YouthMind Backend is running successfully!", 200);
     }
 
     @GetMapping("/redis")
@@ -58,19 +59,22 @@ public class TestController {
         @ApiResponse(responseCode = "200", description = "Redis test completed successfully"),
         @ApiResponse(responseCode = "500", description = "Redis connection failed or test failed")
     })
-    public String testRedis() {
+    public ApiResponse<String> testRedis() {
         String key = "youthmind:test:greeting";
         String value = "Hello from Redis!";
         try {
             redisService.setValue(key, value, 1, TimeUnit.MINUTES);
             String retrievedValue = (String) redisService.getValue(key);
             if (value.equals(retrievedValue)) {
-                return "OK: Successfully set and retrieved a value from Redis. Got: '" + retrievedValue + "'";
+                String message = "OK: Successfully set and retrieved a value from Redis. Got: '" + retrievedValue + "'";
+                return ApiResponse.success(message, 200);
             } else {
-                return "FAIL: Retrieved a different value from Redis. Expected: '" + value + "', Got: '" + retrievedValue + "'";
+                String message = "FAIL: Retrieved a different value from Redis. Expected: '" + value + "', Got: '" + retrievedValue + "'";
+                return ApiResponse.error(message, 500);
             }
         } catch (Exception e) {
-            return "FAIL: An exception occurred while interacting with Redis: " + e.getMessage();
+            String message = "FAIL: An exception occurred while interacting with Redis: " + e.getMessage();
+            return ApiResponse.error(message, 500);
         }
     }
 
@@ -82,7 +86,7 @@ public class TestController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cache test completed successfully")
     })
-    public Map<String, Object> testRedisCache() {
+    public ApiResponse<Map<String, Object>> testRedisCache() {
         Map<String, Object> result = new HashMap<>();
         
         try {
@@ -116,7 +120,7 @@ public class TestController {
             result.put("error", e.getMessage());
         }
         
-        return result;
+        return ApiResponse.success(result, 200);
     }
 
     @PostMapping("/redis/pubsub")
@@ -127,7 +131,7 @@ public class TestController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Pub/sub test completed successfully")
     })
-    public Map<String, String> testRedisPubSub(
+    public ApiResponse<Map<String, String>> testRedisPubSub(
         @RequestParam(defaultValue = "test_post_123") String postId,
         @RequestParam(defaultValue = "test_user_456") String userId,
         @RequestParam(defaultValue = "happy") String emotionTag
@@ -154,7 +158,7 @@ public class TestController {
             result.put("status", "Pub/sub test failed");
         }
         
-        return result;
+        return ApiResponse.success(result, 200);
     }
 
     @GetMapping("/redis/hot-posts")
@@ -165,7 +169,7 @@ public class TestController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Hot posts test completed successfully")
     })
-    public Map<String, Object> testHotPosts() {
+    public ApiResponse<Map<String, Object>> testHotPosts() {
         Map<String, Object> result = new HashMap<>();
         
         try {
@@ -185,6 +189,6 @@ public class TestController {
             result.put("status", "Hot posts test failed");
         }
         
-        return result;
+        return ApiResponse.success(result, 200);
     }
 } 
