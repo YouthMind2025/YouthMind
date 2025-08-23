@@ -1,11 +1,12 @@
 package ai.youthmind.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -13,8 +14,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Schema(description = "Post data transfer object matching iOS Post model exactly")
 public class PostDto {
-    
-    @Schema(description = "Unique identifier for the post", example = "123e4567-e89b-12d3-a456-426614174000")
     private UUID id;
     
     @Schema(description = "Number of likes/resonance", example = "15")

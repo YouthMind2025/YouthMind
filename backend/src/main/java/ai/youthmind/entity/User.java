@@ -25,11 +25,29 @@ public class User {
     @Column(name = "password", nullable = false)
     private String password;
     
+    @Column(name = "username", unique = true)
+    private String username;
+    
     @Column(name = "first_name")
     private String firstName;
     
     @Column(name = "last_name")
     private String lastName;
+    
+    @Column(name = "bio", columnDefinition = "TEXT")
+    private String bio;
+    
+    @Column(name = "avatar")
+    private String avatar;
+    
+    @Column(name = "posts_count", nullable = false)
+    private Integer postsCount = 0;
+    
+    @Column(name = "likes_count", nullable = false)
+    private Integer likesCount = 0;
+    
+    @Column(name = "bookmarks_count", nullable = false)
+    private Integer bookmarksCount = 0;
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -73,6 +91,14 @@ public class User {
         this.password = password;
     }
     
+    public String getUsername() {
+        return username;
+    }
+    
+    public void setUsername(String username) {
+        this.username = username;
+    }
+    
     public String getFirstName() {
         return firstName;
     }
@@ -87,6 +113,46 @@ public class User {
     
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+    
+    public String getBio() {
+        return bio;
+    }
+    
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+    
+    public String getAvatar() {
+        return avatar;
+    }
+    
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+    
+    public Integer getPostsCount() {
+        return postsCount;
+    }
+    
+    public void setPostsCount(Integer postsCount) {
+        this.postsCount = postsCount;
+    }
+    
+    public Integer getLikesCount() {
+        return likesCount;
+    }
+    
+    public void setLikesCount(Integer likesCount) {
+        this.likesCount = likesCount;
+    }
+    
+    public Integer getBookmarksCount() {
+        return bookmarksCount;
+    }
+    
+    public void setBookmarksCount(Integer bookmarksCount) {
+        this.bookmarksCount = bookmarksCount;
     }
     
     public LocalDateTime getCreatedAt() {
