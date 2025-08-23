@@ -46,7 +46,7 @@ public class PostController {
         @ApiResponse(responseCode = "400", description = "Invalid request data"),
         @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     })
-    public ResponseEntity<PostCreateResponse> createPost(@Valid @RequestBody PostCreateRequest request) {
+    public ResponseEntity<ai.youthmind.dto.ApiResponse<PostCreateResponse>> createPost(@Valid @RequestBody PostCreateRequest request) {
         // Extract user ID from JWT token
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UUID userId = (UUID) authentication.getPrincipal();
@@ -54,10 +54,23 @@ public class PostController {
         // Create the post
         Post savedPost = postService.createPost(userId, request);
         
-        // Build response
+        // Build response according to API specification
         PostCreateResponse response = new PostCreateResponse();
-        response.setPostId(savedPost.getId());
+        response.setId(savedPost.getId());
+        response.setAuthorId(savedPost.getUserId());
+        response.setAuthorName("John Doe"); // TODO: Get actual author name
+        response.setTitle(savedPost.getTitle());
+        response.setContent(savedPost.getContent());
+        response.setEmotion(savedPost.getEmotionTag());
+        response.setPreImg(savedPost.getPreImg());
+        response.setTopics(savedPost.getTopics() != null ? savedPost.getTopics().split(",") : new String[0]);
+        response.setResonance(savedPost.getLikes() != null ? savedPost.getLikes() : 0);
+        response.setViews(savedPost.getViews() != null ? savedPost.getViews() : 0);
+        response.setCollects(savedPost.getBookmarks() != null ? savedPost.getBookmarks() : 0);
+        response.setIsResonanced(false);
+        response.setIsCollected(false);
         response.setCreatedAt(savedPost.getCreatedAt());
+        response.setUpdatedAt(savedPost.getUpdatedAt());
 
         // Publish enhanced event with structured data
         redisService.publishPostCreatedEvent(
@@ -66,7 +79,7 @@ public class PostController {
             savedPost.getEmotionTag()
         );
         
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ai.youthmind.dto.ApiResponse.success(response, 201));
     }
 
     @GetMapping("/feed")
