@@ -53,9 +53,9 @@ public class PostServiceTest {
         testPost.setTitle("Test Post");
         testPost.setContent("Test content");
         testPost.setEmotion("happy");
-        testPost.setViewCount(5);
+        testPost.setView(5);
         testPost.setResonance(10);
-        testPost.setCollectCount(2);
+        testPost.setCollect(2);
         testPost.setCreatedAt(LocalDateTime.now());
     }
     
@@ -155,7 +155,7 @@ public class PostServiceTest {
         
         // Then
         verify(postRepository).save(argThat(post -> 
-            post.getViewCount() == 6 // Should be incremented from 5 to 6
+            post.getView() == 6 // Should be incremented from 5 to 6
         ));
     }
 } 

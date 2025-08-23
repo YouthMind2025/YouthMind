@@ -84,12 +84,12 @@ public class ComprehensiveApiTest {
         testPost.setUserId(testUser.getId());
         testPost.setTitle("Test Post");
         testPost.setContent("This is a test post content");
-        testPost.setEmotionTag("happy");
+        testPost.setEmotion("happy");
         testPost.setTopics("test,example");
         testPost.setPreImg("preview.jpg");
-        testPost.setLikes(0);
-        testPost.setBookmarks(0);
-        testPost.setViews(0);
+        testPost.setResonance(0);
+        testPost.setCollect(0);
+        testPost.setView(0);
         testPost = postRepository.save(testPost);
 
         // Create test comment
@@ -165,23 +165,23 @@ public class ComprehensiveApiTest {
         assertEquals(testUser.getId(), testPost.getUserId());
         assertEquals("Test Post", testPost.getTitle());
         assertEquals("This is a test post content", testPost.getContent());
-        assertEquals("happy", testPost.getEmotionTag());
+        assertEquals("happy", testPost.getEmotion());
         assertEquals("test,example", testPost.getTopics());
         assertEquals("preview.jpg", testPost.getPreImg());
-        assertEquals(0, testPost.getLikes());
-        assertEquals(0, testPost.getBookmarks());
-        assertEquals(0, testPost.getViews());
+        assertEquals(0, testPost.getResonance());
+        assertEquals(0, testPost.getCollect());
+        assertEquals(0, testPost.getView());
 
         // Test repository methods
         List<Post> userPosts = postRepository.findByUserId(testUser.getId());
         assertEquals(1, userPosts.size());
         assertEquals(testPost.getId(), userPosts.get(0).getId());
 
-        List<Post> postsByEmotion = postRepository.findByEmotionTag("happy");
+        List<Post> postsByEmotion = postRepository.findByEmotion("happy");
         assertEquals(1, postsByEmotion.size());
         assertEquals(testPost.getId(), postsByEmotion.get(0).getId());
 
-        List<Post> userPostsByEmotion = postRepository.findByUserIdAndEmotionTag(testUser.getId(), "happy");
+        List<Post> userPostsByEmotion = postRepository.findByUserIdAndEmotion(testUser.getId(), "happy");
         assertEquals(1, userPostsByEmotion.size());
         assertEquals(testPost.getId(), userPostsByEmotion.get(0).getId());
     }
@@ -350,11 +350,10 @@ public class ComprehensiveApiTest {
         assertEquals("password123", loginRequest.getPassword());
 
         // Test PostCreateRequest DTO
-        PostCreateRequest postRequest = new PostCreateRequest("Test Title", "Test Content", "happy", "test,example", "preview.jpg", null);
+        PostCreateRequest postRequest = new PostCreateRequest("Test Title", "Test Content", "happy", "preview.jpg");
         assertEquals("Test Title", postRequest.getTitle());
         assertEquals("Test Content", postRequest.getContent());
-        assertEquals("happy", postRequest.getEmotionTag());
-        assertEquals("test,example", postRequest.getTopics());
+        assertEquals("happy", postRequest.getEmotion());
         assertEquals("preview.jpg", postRequest.getPreImg());
 
         // Test CommentCreateRequest DTO
@@ -440,19 +439,18 @@ public class ComprehensiveApiTest {
         postDto.setUserId(testPost.getUserId());
         postDto.setTitle(testPost.getTitle());
         postDto.setContent(testPost.getContent());
-        postDto.setEmotionTag(testPost.getEmotionTag());
+        postDto.setEmotion(testPost.getEmotion());
         postDto.setTopics(testPost.getTopics());
         postDto.setPreImg(testPost.getPreImg());
-        postDto.setLikes(testPost.getLikes());
-        postDto.setBookmarks(testPost.getBookmarks());
-        postDto.setViews(testPost.getViews());
+        postDto.setResonance(testPost.getResonance());
+        postDto.setCollect(testPost.getCollect());
+        postDto.setView(testPost.getView());
         postDto.setAiMetadata(testPost.getAiMetadata());
         postDto.setFlagged(testPost.isFlagged());
         postDto.setFlagReason(testPost.getFlagReason());
         postDto.setFlaggedAt(testPost.getFlaggedAt());
         postDto.setCreatedAt(testPost.getCreatedAt());
         postDto.setAuthor(authorDto);
-        postDto.setComments(null);
         postDto.setLiked(false);
         postDto.setBookmarked(false);
         postDto.setCommentsCount(0);
@@ -553,12 +551,12 @@ public class ComprehensiveApiTest {
         invalidPost.setUserId(UUID.randomUUID()); // Non-existent user
         invalidPost.setTitle("Invalid Post");
         invalidPost.setContent("This should fail");
-        invalidPost.setEmotionTag("sad");
+        invalidPost.setEmotion("sad");
         invalidPost.setTopics("invalid");
         invalidPost.setPreImg("invalid.jpg");
-        invalidPost.setLikes(0);
-        invalidPost.setBookmarks(0);
-        invalidPost.setViews(0);
+        invalidPost.setResonance(0);
+        invalidPost.setCollect(0);
+        invalidPost.setView(0);
 
         // This should throw an exception due to foreign key constraint
         assertThrows(Exception.class, () -> postRepository.save(invalidPost));
@@ -632,9 +630,9 @@ public class ComprehensiveApiTest {
         assertEquals(0, testUser.getPostsCount());
         assertEquals(0, testUser.getLikesCount());
         assertEquals(0, testUser.getBookmarksCount());
-        assertEquals(0, testPost.getLikes());
-        assertEquals(0, testPost.getBookmarks());
-        assertEquals(0, testPost.getViews());
+        assertEquals(0, testPost.getResonance());
+        assertEquals(0, testPost.getCollect());
+        assertEquals(0, testPost.getView());
         assertEquals(0, testComment.getLikes());
         assertFalse(testConversation.getIsPinned());
     }
@@ -646,44 +644,44 @@ public class ComprehensiveApiTest {
         post2.setUserId(testUser.getId());
         post2.setTitle("Another Test Post");
         post2.setContent("This is another test post about anxiety");
-        post2.setEmotionTag("anxiety");
+        post2.setEmotion("anxiety");
         post2.setTopics("anxiety,mental-health");
         post2.setPreImg("anxiety-preview.jpg");
-        post2.setLikes(5);
-        post2.setBookmarks(2);
-        post2.setViews(10);
+        post2.setResonance(5);
+        post2.setCollect(2);
+        post2.setView(10);
         post2 = postRepository.save(post2);
 
         Post post3 = new Post();
         post3.setUserId(testUser.getId());
         post3.setTitle("Depression Post");
         post3.setContent("This is a post about depression");
-        post3.setEmotionTag("depression");
+        post3.setEmotion("depression");
         post3.setTopics("depression,mental-health");
         post3.setPreImg("depression-preview.jpg");
-        post3.setLikes(10);
-        post3.setBookmarks(5);
-        post3.setViews(25);
+        post3.setResonance(10);
+        post3.setCollect(5);
+        post3.setView(25);
         post3 = postRepository.save(post3);
 
         // Test emotion filtering
-        List<Post> happyPosts = postRepository.findByEmotionTag("happy");
+        List<Post> happyPosts = postRepository.findByEmotion("happy");
         assertEquals(1, happyPosts.size());
-        assertEquals("happy", happyPosts.get(0).getEmotionTag());
+        assertEquals("happy", happyPosts.get(0).getEmotion());
 
-        List<Post> anxietyPosts = postRepository.findByEmotionTag("anxiety");
+        List<Post> anxietyPosts = postRepository.findByEmotion("anxiety");
         assertEquals(1, anxietyPosts.size());
-        assertEquals("anxiety", anxietyPosts.get(0).getEmotionTag());
+        assertEquals("anxiety", anxietyPosts.get(0).getEmotion());
 
-        // Test sorting by likes
-        var postsByLikes = postRepository.findAllByOrderByLikesDesc(
+        // Test sorting by resonance
+        var postsByResonance = postRepository.findAllByOrderByResonanceDesc(
             org.springframework.data.domain.PageRequest.of(0, 10));
-        assertEquals(3, postsByLikes.getTotalElements());
-        // First post should be the one with most likes (post3 with 10 likes)
-        assertEquals(post3.getId(), postsByLikes.getContent().get(0).getId());
+        assertEquals(3, postsByResonance.getTotalElements());
+        // First post should be the one with most resonance (post3 with 10 resonance)
+        assertEquals(post3.getId(), postsByResonance.getContent().get(0).getId());
 
         // Test sorting by views
-        var postsByViews = postRepository.findAllByOrderByViewsDesc(
+        var postsByViews = postRepository.findAllByOrderByViewDesc(
             org.springframework.data.domain.PageRequest.of(0, 10));
         assertEquals(3, postsByViews.getTotalElements());
         // First post should be the one with most views (post3 with 25 views)
@@ -764,12 +762,12 @@ public class ComprehensiveApiTest {
         workflowPost.setUserId(testUser.getId());
         workflowPost.setTitle("Workflow Post");
         workflowPost.setContent("This is a workflow test post");
-        workflowPost.setEmotionTag("excited");
+        workflowPost.setEmotion("excited");
         workflowPost.setTopics("workflow,test");
         workflowPost.setPreImg("workflow.jpg");
-        workflowPost.setLikes(0);
-        workflowPost.setBookmarks(0);
-        workflowPost.setViews(0);
+        workflowPost.setResonance(0);
+        workflowPost.setCollect(0);
+        workflowPost.setView(0);
         workflowPost = postRepository.save(workflowPost);
 
         // 2. Another user likes the post

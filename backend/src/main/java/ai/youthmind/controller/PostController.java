@@ -11,7 +11,7 @@ import ai.youthmind.service.PostService;
 import ai.youthmind.service.RedisService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -44,9 +44,9 @@ public class PostController {
         description = "Create a new post with content, emotion tag, and optional AI metadata"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Post created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request data"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Post created successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     })
     public ResponseEntity<ApiResponse<PostCreateResponse>> createPost(@Valid @RequestBody PostCreateRequest request) {
         // Extract user ID from JWT token
@@ -65,8 +65,8 @@ public class PostController {
         postDto.setEmotion(savedPost.getEmotion());
         postDto.setDate(savedPost.getCreatedAt());
         postDto.setResonance(savedPost.getResonance());
-        postDto.setView(savedPost.getViewCount());
-        postDto.setCollect(savedPost.getCollectCount());
+        postDto.setView(savedPost.getView());
+        postDto.setCollect(savedPost.getCollect());
         postDto.setIsresonanced(false); // New post, user hasn't resonated yet
         postDto.setIsCollected(false);  // New post, user hasn't collected yet
         
@@ -90,8 +90,8 @@ public class PostController {
         description = "Retrieve a paginated list of posts with optional filters and caching support"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Feed retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Feed retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     })
     public ResponseEntity<ApiResponse<FeedResponse>> getFeed(
         @Parameter(description = "Page number (0-based)", example = "0")
@@ -148,8 +148,8 @@ public class PostController {
         description = "Retrieve posts filtered by specific emotion"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Posts retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Posts retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     })
     public ResponseEntity<ApiResponse<List<PostDto>>> getPostsByEmotion(
         @Parameter(description = "Emotion to filter by", example = "happy")
@@ -171,8 +171,8 @@ public class PostController {
         description = "Retrieve posts created by a specific user"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Posts retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Posts retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     })
     public ResponseEntity<ApiResponse<List<PostDto>>> getPostsByUser(
         @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
@@ -194,9 +194,9 @@ public class PostController {
         description = "Retrieve detailed information about a specific post with view tracking"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Post retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
-        @ApiResponse(responseCode = "404", description = "Post not found")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Post retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found")
     })
     public ResponseEntity<ApiResponse<PostDto>> getPostById(
         @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
