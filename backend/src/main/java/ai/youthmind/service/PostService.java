@@ -78,9 +78,15 @@ public class PostService {
     public Post createPost(UUID userId, PostCreateRequest request) {
         Post post = new Post();
         post.setUserId(userId);
+        post.setTitle(request.getTitle());
         post.setContent(request.getContent());
         post.setEmotionTag(request.getEmotionTag());
+        post.setTopics(request.getTopics());
+        post.setPreImg(request.getPreImg());
         post.setAiMetadata(request.getAiMetadata());
+        post.setLikes(0);
+        post.setViews(0);
+        post.setBookmarks(0);
         
         Post savedPost = postRepository.save(post);
         
@@ -166,6 +172,22 @@ public class PostService {
     }
 
     /**
+     * Get post by ID
+     */
+    public Optional<Post> getPostById(UUID postId) {
+        return postRepository.findById(postId);
+    }
+
+    /**
+     * Delete post by ID
+     */
+    public void deletePost(UUID postId) {
+        postRepository.deleteById(postId);
+        // Invalidate feed cache after deleting a post
+        redisService.invalidateFeedCache();
+    }
+
+    /**
      * Get all posts that have been flagged for moderation
      */
     public List<FlaggedPostDto> getFlaggedPosts() {
@@ -173,6 +195,34 @@ public class PostService {
         return flaggedPosts.stream()
                 .map(this::convertToFlaggedPostDto)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Save post (used by draft publishing)
+     */
+    public Post savePost(Post post) {
+        Post savedPost = postRepository.save(post);
+        // Invalidate feed cache after saving a post
+        redisService.invalidateFeedCache();
+        return savedPost;
+    }
+
+    /**
+     * Check if user has resonanced (liked) a post
+     */
+    public boolean hasUserResonancedPost(UUID postId, UUID userId) {
+        // TODO: Implement checking if user has liked/resonanced a post
+        // This would require a PostResonance entity and repository
+        return false;
+    }
+
+    /**
+     * Check if user has collected (bookmarked) a post
+     */
+    public boolean hasUserCollectedPost(UUID postId, UUID userId) {
+        // TODO: Implement checking if user has bookmarked/collected a post
+        // This would require a PostBookmark entity and repository
+        return false;
     }
 
     private FlaggedPostDto convertToFlaggedPostDto(Post post) {

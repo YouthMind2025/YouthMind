@@ -43,8 +43,14 @@ public class UserController {
             .map(user -> new UserDto(
                 user.getId(),
                 user.getEmail(),
+                user.getUsername(),
                 user.getFirstName(),
                 user.getLastName(),
+                user.getBio(),
+                user.getAvatar(),
+                user.getPostsCount(),
+                user.getLikesCount(),
+                user.getBookmarksCount(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()
             ))
@@ -77,8 +83,14 @@ public class UserController {
         UserDto userDto = new UserDto(
             user.getId(),
             user.getEmail(),
+            user.getUsername(),
             user.getFirstName(),
             user.getLastName(),
+            user.getBio(),
+            user.getAvatar(),
+            user.getPostsCount(),
+            user.getLikesCount(),
+            user.getBookmarksCount(),
             user.getCreatedAt(),
             user.getUpdatedAt()
         );
@@ -110,8 +122,14 @@ public class UserController {
         UserDto userDto = new UserDto(
             user.getId(),
             user.getEmail(),
+            user.getUsername(),
             user.getFirstName(),
             user.getLastName(),
+            user.getBio(),
+            user.getAvatar(),
+            user.getPostsCount(),
+            user.getLikesCount(),
+            user.getBookmarksCount(),
             user.getCreatedAt(),
             user.getUpdatedAt()
         );
