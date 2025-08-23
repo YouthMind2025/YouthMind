@@ -27,10 +27,4 @@ public class PostCreateResponse {
         this.post.setDate(createdAt);
         this.message = "Post created successfully";
     }
-    
-    // Constructor for full post data
-    public PostCreateResponse(PostDto post, String message) {
-        this.post = post;
-        this.message = message;
-    }
 } 

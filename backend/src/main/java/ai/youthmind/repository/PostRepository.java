@@ -36,38 +36,38 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     // Enhanced methods from backend branch
     Page<Post> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
     
-    Page<Post> findByEmotionTag(String emotionTag, Pageable pageable);
+    Page<Post> findByEmotion(String emotion, Pageable pageable);
     
-    Page<Post> findByEmotionTagOrderByCreatedAtDesc(String emotionTag, Pageable pageable);
+    Page<Post> findByEmotionOrderByCreatedAtDesc(String emotion, Pageable pageable);
     
     Page<Post> findAllByOrderByCreatedAtDesc(Pageable pageable);
     
-    Page<Post> findAllByOrderByLikesDesc(Pageable pageable);
+    Page<Post> findAllByOrderByResonanceDesc(Pageable pageable);
     
-    Page<Post> findAllByOrderByViewsDesc(Pageable pageable);
+    Page<Post> findAllByOrderByViewDesc(Pageable pageable);
     
     @Query("SELECT p FROM Post p WHERE p.title LIKE %:query% OR p.content LIKE %:query% OR p.topics LIKE %:query% ORDER BY p.createdAt DESC")
     Page<Post> searchPosts(@Param("query") String query, Pageable pageable);
     
-    @Query("SELECT p FROM Post p WHERE (p.title LIKE %:query% OR p.content LIKE %:query% OR p.topics LIKE %:query%) AND p.emotionTag = :emotion ORDER BY p.createdAt DESC")
+    @Query("SELECT p FROM Post p WHERE (p.title LIKE %:query% OR p.content LIKE %:query% OR p.topics LIKE %:query%) AND p.emotion = :emotion ORDER BY p.createdAt DESC")
     Page<Post> searchPostsByEmotion(@Param("query") String query, @Param("emotion") String emotion, Pageable pageable);
     
-    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.likes DESC")
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.resonance DESC")
     Page<Post> findTrendingPosts(@Param("since") LocalDateTime since, Pageable pageable);
     
-    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.views DESC")
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.view DESC")
     Page<Post> findMostViewedPosts(@Param("since") LocalDateTime since, Pageable pageable);
     
-    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.bookmarks DESC")
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.collect DESC")
     Page<Post> findMostBookmarkedPosts(@Param("since") LocalDateTime since, Pageable pageable);
     
-    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since AND (:emotion IS NULL OR p.emotionTag = :emotion) ORDER BY p.likes DESC")
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since AND (:emotion IS NULL OR p.emotion = :emotion) ORDER BY p.resonance DESC")
     List<Post> findMostLikedPosts(@Param("since") LocalDateTime since, @Param("emotion") String emotion, Pageable pageable);
     
-    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since AND (:emotion IS NULL OR p.emotionTag = :emotion) ORDER BY p.views DESC")
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since AND (:emotion IS NULL OR p.emotion = :emotion) ORDER BY p.view DESC")
     List<Post> findMostViewedPosts(@Param("since") LocalDateTime since, @Param("emotion") String emotion, Pageable pageable);
     
-    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since AND (:emotion IS NULL OR p.emotionTag = :emotion) ORDER BY p.bookmarks DESC")
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since AND (:emotion IS NULL OR p.emotion = :emotion) ORDER BY p.collect DESC")
     List<Post> findMostBookmarkedPosts(@Param("since") LocalDateTime since, @Param("emotion") String emotion, Pageable pageable);
     
     void deleteByUserId(UUID userId);

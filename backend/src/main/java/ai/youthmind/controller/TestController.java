@@ -5,7 +5,7 @@ import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.service.RedisService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,7 +32,7 @@ public class TestController {
         description = "Simple greeting endpoint to verify the API is running"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successfully returned greeting message")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully returned greeting message")
     })
     public ApiResponse<String> hello() {
         return ApiResponse.success("Hello, YouthMind!", 200);
@@ -44,7 +44,7 @@ public class TestController {
         description = "Health check endpoint to verify the backend service is running"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Backend is healthy and running")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Backend is healthy and running")
     })
     public ApiResponse<String> health() {
         return ApiResponse.success("YouthMind Backend is running successfully!", 200);
@@ -56,8 +56,8 @@ public class TestController {
         description = "Test Redis connectivity by setting and retrieving a test value"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Redis test completed successfully"),
-        @ApiResponse(responseCode = "500", description = "Redis connection failed or test failed")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Redis test completed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Redis connection failed or test failed")
     })
     public ApiResponse<String> testRedis() {
         String key = "youthmind:test:greeting";
@@ -84,7 +84,7 @@ public class TestController {
         description = "Test Redis caching with feed simulation"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Cache test completed successfully")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cache test completed successfully")
     })
     public ApiResponse<Map<String, Object>> testRedisCache() {
         Map<String, Object> result = new HashMap<>();
@@ -129,7 +129,7 @@ public class TestController {
         description = "Test Redis pub/sub messaging by publishing test events"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Pub/sub test completed successfully")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Pub/sub test completed successfully")
     })
     public ApiResponse<Map<String, String>> testRedisPubSub(
         @RequestParam(defaultValue = "test_post_123") String postId,
@@ -167,7 +167,7 @@ public class TestController {
         description = "Test Redis hot posts scoring system"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Hot posts test completed successfully")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Hot posts test completed successfully")
     })
     public ApiResponse<Map<String, Object>> testHotPosts() {
         Map<String, Object> result = new HashMap<>();
