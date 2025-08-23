@@ -181,12 +181,12 @@ public class DraftService {
         post.setUserId(userId);
         post.setTitle(draft.getTitle());
         post.setContent(draft.getContent());
-        post.setEmotionTag(draft.getEmotion());
+        post.setEmotion(draft.getEmotion());
         post.setTopics(draft.getTopics());
         post.setPreImg(null); // Drafts don't have preview images
-        post.setLikes(0);
-        post.setBookmarks(0);
-        post.setViews(0);
+        post.setResonance(0);
+        post.setCollect(0);
+        post.setView(0);
 
         Post savedPost = postRepository.save(post);
 
@@ -199,12 +199,12 @@ public class DraftService {
         response.setAuthorId(savedPost.getUserId());
         response.setTitle(savedPost.getTitle());
         response.setContent(savedPost.getContent());
-        response.setEmotion(savedPost.getEmotionTag());
+        response.setEmotion(savedPost.getEmotion());
         response.setPreImg(savedPost.getPreImg());
         response.setTopics(savedPost.getTopics());
-        response.setResonance(savedPost.getLikes());
-        response.setViews(savedPost.getViews());
-        response.setCollects(savedPost.getBookmarks());
+        response.setResonance(savedPost.getResonance());
+        response.setViews(savedPost.getView());
+        response.setCollects(savedPost.getCollect());
         response.setResonanced(false);
         response.setCollected(false);
         response.setCreatedAt(savedPost.getCreatedAt());
