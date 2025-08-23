@@ -292,12 +292,12 @@ public class DraftController {
             post.setUserId(currentUserId);
             post.setTitle(draft.getTitle());
             post.setContent(draft.getContent());
-            post.setEmotionTag(draft.getEmotion());
+            post.setEmotion(draft.getEmotion());
             post.setTopics(draft.getTopics());
             post.setPreImg(null); // No image for published draft
-            post.setLikes(0);
-            post.setBookmarks(0);
-            post.setViews(0);
+            post.setResonance(0);
+            post.setCollect(0);
+            post.setView(0);
             post.setCreatedAt(LocalDateTime.now());
 
             Post savedPost = postService.savePost(post);
@@ -340,12 +340,12 @@ public class DraftController {
         dto.setUserId(post.getUserId());
         dto.setTitle(post.getTitle());
         dto.setContent(post.getContent());
-        dto.setEmotionTag(post.getEmotionTag());
+        dto.setEmotion(post.getEmotion());
         dto.setPreImg(post.getPreImg());
         dto.setTopics(post.getTopics());
-        dto.setLikes(post.getLikes());
-        dto.setViews(post.getViews());
-        dto.setBookmarks(post.getBookmarks());
+        dto.setResonance(post.getResonance());
+        dto.setView(post.getView());
+        dto.setCollect(post.getCollect());
         dto.setCreatedAt(post.getCreatedAt());
         dto.setLiked(false);
         dto.setBookmarked(false);
