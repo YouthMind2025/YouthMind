@@ -1,5 +1,6 @@
 # YouthMind (SaySomething App)
 
+
 **YouthMind** is a next-generation mobile application designed to revolutionize youth mental health support through cutting-edge AI technology, anonymous community engagement, and personalized emotional intelligence.
 
 ## 🎯 Project Overview
@@ -50,7 +51,7 @@ Our platform creates a safe space where young people can express themselves anon
 
 ### 1. iOS Client (SwiftUI)
 
-**Features**: Anonymous browsing, user registration/login, post creation, resonance ("like") system, commenting, emotion museum, avatar/cover design, push notifications.
+**Features**: Anonymous browsing, user registration/login, post creation, resonance ("like") system, commenting, emotion museum, avatar/cover design and push notifications.
 
 **Backend Interactions**:
 

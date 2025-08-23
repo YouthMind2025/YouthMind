@@ -1,6 +1,5 @@
 package ai.youthmind.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,73 +10,17 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "User data transfer object for API operations")
 public class UserDto {
-    
-    @Schema(description = "Unique identifier for the user", example = "123e4567-e89b-12d3-a456-426614174000")
     private UUID id;
-    
-    @Schema(description = "User's email address", example = "user@example.com")
     private String email;
-    
-    @Schema(description = "User's first name", example = "John")
+    private String username;
     private String firstName;
-    
-    @Schema(description = "User's last name", example = "Doe")
     private String lastName;
-    
-    @Schema(description = "Timestamp when the user account was created", example = "2024-01-15T10:30:00")
+    private String bio;
+    private String avatar;
+    private Integer postsCount;
+    private Integer likesCount;
+    private Integer bookmarksCount;
     private LocalDateTime createdAt;
-    
-    @Schema(description = "Timestamp when the user account was last updated", example = "2024-01-15T10:30:00")
     private LocalDateTime updatedAt;
-    
-    // Explicit getters and setters to ensure they work
-    public UUID getId() {
-        return id;
-    }
-    
-    public void setId(UUID id) {
-        this.id = id;
-    }
-    
-    public String getEmail() {
-        return email;
-    }
-    
-    public void setEmail(String email) {
-        this.email = email;
-    }
-    
-    public String getFirstName() {
-        return firstName;
-    }
-    
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-    
-    public String getLastName() {
-        return lastName;
-    }
-    
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-    
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-    
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-    
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-    
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
 } 

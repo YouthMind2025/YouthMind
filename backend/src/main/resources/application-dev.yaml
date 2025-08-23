@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8081
 
 spring:
   application:
@@ -32,6 +32,15 @@ spring:
       port: 6379
       timeout: 2000ms
       connect-timeout: 2000ms
+
+  # CORS configuration
+  web:
+    cors:
+      allowed-origins: "*"
+      allowed-methods: "*"
+      allowed-headers: "*"
+      allow-credentials: true
+      max-age: 3600
 
 # JWT Configuration
 jwt:

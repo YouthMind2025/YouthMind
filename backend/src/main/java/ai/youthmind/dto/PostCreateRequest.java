@@ -1,12 +1,10 @@
 package ai.youthmind.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @Data
 @NoArgsConstructor
@@ -19,7 +17,6 @@ public class PostCreateRequest {
     private String title;
     
     @NotBlank(message = "Content is required")
-    @Schema(description = "Post content", example = "Feeling overwhelmed with school lately...", required = true)
     private String content;
     
     @Schema(description = "Emotion for the post", example = "happy", required = false)
