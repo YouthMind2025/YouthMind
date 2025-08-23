@@ -1,10 +1,12 @@
 package ai.youthmind.controller;
 
+import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.dto.PostCreateResponse;
 import ai.youthmind.dto.PostDto;
 import ai.youthmind.entity.Post;
+import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.service.PostService;
 import ai.youthmind.service.RedisService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,7 +48,7 @@ public class PostController {
         @ApiResponse(responseCode = "400", description = "Invalid request data"),
         @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     })
-    public ResponseEntity<PostCreateResponse> createPost(@Valid @RequestBody PostCreateRequest request) {
+    public ResponseEntity<ApiResponse<PostCreateResponse>> createPost(@Valid @RequestBody PostCreateRequest request) {
         // Extract user ID from JWT token
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UUID userId = (UUID) authentication.getPrincipal();
@@ -54,19 +56,32 @@ public class PostController {
         // Create the post
         Post savedPost = postService.createPost(userId, request);
         
-        // Build response
-        PostCreateResponse response = new PostCreateResponse();
-        response.setPostId(savedPost.getId());
-        response.setCreatedAt(savedPost.getCreatedAt());
+        // Build full PostDto for response
+        PostDto postDto = new PostDto();
+        postDto.setId(savedPost.getId());
+        postDto.setTitle(savedPost.getTitle());
+        postDto.setContent(savedPost.getContent());
+        postDto.setPreImg(savedPost.getPreImg());
+        postDto.setEmotion(savedPost.getEmotion());
+        postDto.setDate(savedPost.getCreatedAt());
+        postDto.setResonance(savedPost.getResonance());
+        postDto.setView(savedPost.getViewCount());
+        postDto.setCollect(savedPost.getCollectCount());
+        postDto.setIsresonanced(false); // New post, user hasn't resonated yet
+        postDto.setIsCollected(false);  // New post, user hasn't collected yet
+        
+        // Build response with full post data
+        PostCreateResponse response = new PostCreateResponse(postDto, "Post created successfully");
 
         // Publish enhanced event with structured data
         redisService.publishPostCreatedEvent(
             savedPost.getId().toString(), 
             userId.toString(), 
-            savedPost.getEmotionTag()
+            savedPost.getEmotion()
         );
         
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        ApiResponse<PostCreateResponse> apiResponse = ApiResponse.success(response, 201);
+        return ResponseEntity.status(HttpStatus.CREATED).body(apiResponse);
     }
 
     @GetMapping("/feed")
@@ -78,7 +93,7 @@ public class PostController {
         @ApiResponse(responseCode = "200", description = "Feed retrieved successfully"),
         @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     })
-    public ResponseEntity<FeedResponse> getFeed(
+    public ResponseEntity<ApiResponse<FeedResponse>> getFeed(
         @Parameter(description = "Page number (0-based)", example = "0")
         @RequestParam(defaultValue = "0") int page,
         
@@ -88,8 +103,8 @@ public class PostController {
         @Parameter(description = "Sort order", example = "newest")
         @RequestParam(defaultValue = "newest") String sortBy,
 
-        @Parameter(description = "Filter by emotion tag", example = "joy")
-        @RequestParam(required = false) String emotionTag,
+        @Parameter(description = "Filter by emotion", example = "happy")
+        @RequestParam(required = false) String emotion,
 
         @Parameter(description = "Filter by start date (ISO 8601)", example = "2023-01-01T00:00:00")
         @RequestParam(required = false) String startDate,
@@ -121,31 +136,33 @@ public class PostController {
         }
 
         // Get feed from service (includes caching)
-        FeedResponse feedResponse = postService.getFeed(page, size, sortBy, emotionTag, startDt, endDt, userId);
+        FeedResponse feedResponse = postService.getFeed(page, size, sortBy, emotion, startDt, endDt, userId);
         
-        return ResponseEntity.ok(feedResponse);
+        ApiResponse<FeedResponse> apiResponse = ApiResponse.success(feedResponse, 200);
+        return ResponseEntity.ok(apiResponse);
     }
 
-    @GetMapping("/by-emotion/{emotionTag}")
+    @GetMapping("/by-emotion/{emotion}")
     @Operation(
-        summary = "Get posts by emotion tag",
-        description = "Retrieve posts filtered by specific emotion tag"
+        summary = "Get posts by emotion",
+        description = "Retrieve posts filtered by specific emotion"
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Posts retrieved successfully"),
         @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     })
-    public ResponseEntity<List<PostDto>> getPostsByEmotion(
-        @Parameter(description = "Emotion tag to filter by", example = "stress")
-        @PathVariable String emotionTag
+    public ResponseEntity<ApiResponse<List<PostDto>>> getPostsByEmotion(
+        @Parameter(description = "Emotion to filter by", example = "happy")
+        @PathVariable String emotion
     ) {
         // Extract user ID from JWT token
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UUID userId = (UUID) authentication.getPrincipal();
         
-        List<PostDto> posts = postService.getPostsByEmotionTag(emotionTag, userId);
+        List<PostDto> posts = postService.getPostsByEmotion(emotion, userId);
         
-        return ResponseEntity.ok(posts);
+        ApiResponse<List<PostDto>> apiResponse = ApiResponse.success(posts, 200);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping("/by-user/{userId}")
@@ -157,7 +174,7 @@ public class PostController {
         @ApiResponse(responseCode = "200", description = "Posts retrieved successfully"),
         @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     })
-    public ResponseEntity<List<PostDto>> getPostsByUser(
+    public ResponseEntity<ApiResponse<List<PostDto>>> getPostsByUser(
         @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
         @PathVariable UUID userId
     ) {
@@ -167,6 +184,32 @@ public class PostController {
         
         List<PostDto> posts = postService.getPostsByUser(userId, currentUserId);
         
-        return ResponseEntity.ok(posts);
+        ApiResponse<List<PostDto>> apiResponse = ApiResponse.success(posts, 200);
+        return ResponseEntity.ok(apiResponse);
+    }
+    
+    @GetMapping("/{id}")
+    @Operation(
+        summary = "Get post details by ID",
+        description = "Retrieve detailed information about a specific post with view tracking"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Post retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @ApiResponse(responseCode = "404", description = "Post not found")
+    })
+    public ResponseEntity<ApiResponse<PostDto>> getPostById(
+        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id
+    ) {
+        // Extract user ID from JWT token
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID userId = (UUID) authentication.getPrincipal();
+        
+        // Get post with view tracking
+        PostDto post = postService.getPostById(id, userId);
+        
+        ApiResponse<PostDto> apiResponse = ApiResponse.success(post, 200);
+        return ResponseEntity.ok(apiResponse);
     }
 } 
