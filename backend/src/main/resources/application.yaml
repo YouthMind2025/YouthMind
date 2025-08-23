@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8081
 
 spring:
   application:
@@ -100,7 +100,7 @@ springdoc:
       name: MIT License
       url: https://opensource.org/licenses/MIT
   servers:
-    - url: http://localhost:8080
+    - url: http://localhost:8081
       description: Development server
     - url: https://api.youthmind.ai
       description: Production server

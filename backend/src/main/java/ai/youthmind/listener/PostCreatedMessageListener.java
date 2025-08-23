@@ -43,15 +43,15 @@ public class PostCreatedMessageListener implements MessageListener {
         log.info("Processing structured post created event:");
         log.info("  Post ID: {}", event.getPostId());
         log.info("  User ID: {}", event.getUserId());
-        log.info("  Emotion Tag: {}", event.getEmotionTag());
+        log.info("  Emotion: {}", event.getEmotion());
         log.info("  Timestamp: {}", event.getTimestamp());
         
         // Invalidate feed cache when new post is created
         redisService.invalidateFeedCache();
         
         // Update hot post scoring if needed
-        if (event.getEmotionTag() != null) {
-            double score = calculateHotPostScore(event.getEmotionTag(), event.getTimestamp());
+        if (event.getEmotion() != null) {
+            double score = calculateHotPostScore(event.getEmotion(), event.getTimestamp());
             redisService.updateHotPostScore(event.getPostId(), score);
         }
         
@@ -66,12 +66,12 @@ public class PostCreatedMessageListener implements MessageListener {
         redisService.invalidateFeedCache();
     }
     
-    private double calculateHotPostScore(String emotionTag, long timestamp) {
+    private double calculateHotPostScore(String emotion, long timestamp) {
         // Simple scoring algorithm - can be enhanced by Harley
         double baseScore = 1.0;
         
         // Boost score for certain emotions
-        switch (emotionTag.toLowerCase()) {
+        switch (emotion.toLowerCase()) {
             case "excited":
             case "happy":
             case "grateful":
