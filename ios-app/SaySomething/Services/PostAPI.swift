@@ -60,6 +60,25 @@ struct PostAPI {
         )
         return NetworkService.shared.request(endpoint)
     }
+    
+    // Toggle post collection (save/unsave)
+    static func toggleCollection(postId: UUID) -> AnyPublisher<ApiResponse<Post>, APIError> {
+        var headers: [String: String] = [NetworkConfiguration.Headers.contentType: NetworkConfiguration.Headers.applicationJSON]
+        // Collection toggle requires JWT
+        if let token = TokenManager.shared.getToken() {
+            headers[NetworkConfiguration.Headers.authorization] = "Bearer \(token)"
+        } else {
+            return Fail(error: APIError.invalidStatusCode(NetworkConfiguration.StatusCode.unauthorized)).eraseToAnyPublisher()
+        }
+        
+        let endpoint = Endpoint(
+            baseURL: "http://localhost:8080",
+            path: "/v1/posts/\(postId)/collect",
+            method: NetworkConfiguration.HTTPMethod.PUT,
+            headers: headers
+        )
+        return NetworkService.shared.request(endpoint)
+    }
 }
 
 struct CreatePostRequest: Codable {

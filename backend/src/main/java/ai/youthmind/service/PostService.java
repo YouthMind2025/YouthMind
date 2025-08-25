@@ -6,10 +6,12 @@ import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.dto.FlaggedPostDto;
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
+import ai.youthmind.entity.PostCollection;
 import ai.youthmind.entity.PostResonance;
 import ai.youthmind.entity.PostView;
 import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.repository.AIAnalysisRepository;
+import ai.youthmind.repository.PostCollectionRepository;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.PostResonanceRepository;
 import ai.youthmind.repository.PostViewRepository;
@@ -42,6 +44,9 @@ public class PostService {
     
     @Autowired
     private PostResonanceRepository postResonanceRepository;
+    
+    @Autowired
+    private PostCollectionRepository postCollectionRepository;
     
     @Autowired
     private RedisService redisService;
@@ -267,6 +272,47 @@ public class PostService {
         return convertToPostDto(post, userId);
     }
 
+    /**
+     * Toggle collection (save/unsave) for a post
+     * 
+     * @param postId The post ID
+     * @param userId The user ID
+     * @return PostDto with updated collection information
+     */
+    @Transactional
+    public PostDto toggleCollection(UUID postId, UUID userId) {
+        // Find the post
+        Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new ResourceNotFoundException("Post", "id", postId));
+        
+        // Check if user has already collected this post
+        boolean hasCollected = postCollectionRepository.existsByUserIdAndPostId(userId, postId);
+        
+        if (hasCollected) {
+            // User already collected, so remove the collection (unsave)
+            postCollectionRepository.deleteByUserIdAndPostId(userId, postId);
+            
+            // Decrement collection count
+            post.setCollect(post.getCollect() - 1);
+        } else {
+            // User hasn't collected, so add the collection (save)
+            PostCollection collection = new PostCollection(userId, postId);
+            postCollectionRepository.save(collection);
+            
+            // Increment collection count
+            post.setCollect(post.getCollect() + 1);
+        }
+        
+        // Save the updated post
+        postRepository.save(post);
+        
+        // Invalidate cache
+        redisService.invalidateFeedCache();
+        
+        // Return updated post DTO
+        return convertToPostDto(post, userId);
+    }
+
     private FlaggedPostDto convertToFlaggedPostDto(Post post) {
         FlaggedPostDto dto = new FlaggedPostDto();
         dto.setPostId(post.getId());
@@ -295,8 +341,9 @@ public class PostService {
         boolean isResonanced = postResonanceRepository.existsByUserIdAndPostId(currentUserId, post.getId());
         dto.setIsresonanced(isResonanced);
         
-        // TODO: Implement collection tracking - for now set default
-        dto.setIsCollected(false);
+        // Check if current user has collected this post
+        boolean isCollected = postCollectionRepository.existsByUserIdAndPostId(currentUserId, post.getId());
+        dto.setIsCollected(isCollected);
         
         return dto;
     }

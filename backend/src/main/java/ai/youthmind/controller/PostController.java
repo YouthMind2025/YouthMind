@@ -237,4 +237,29 @@ public class PostController {
         ApiResponse<PostDto> apiResponse = ApiResponse.success(updatedPost, 200);
         return ResponseEntity.ok(apiResponse);
     }
+    
+    @PutMapping("/{id}/collect")
+    @Operation(
+        summary = "Toggle post collection (save/unsave)",
+        description = "Save or unsave a post. If the user has already saved the post, this will unsave it, otherwise it will save it."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Collection toggled successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found")
+    })
+    public ResponseEntity<ApiResponse<PostDto>> toggleCollection(
+        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id
+    ) {
+        // Extract user ID from JWT token
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID userId = (UUID) authentication.getPrincipal();
+        
+        // Toggle collection
+        PostDto updatedPost = postService.toggleCollection(id, userId);
+        
+        ApiResponse<PostDto> apiResponse = ApiResponse.success(updatedPost, 200);
+        return ResponseEntity.ok(apiResponse);
+    }
 } 
