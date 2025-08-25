@@ -792,9 +792,15 @@ main {
 /* 文章封面 */
 .article-cover {
     position: relative;
-    height: 300px;
+    height: 250px;
     border-radius: 15px;
     overflow: hidden;
+}
+
+.article-cover img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
 }
 
 .article-date {
@@ -1959,6 +1965,14 @@ main {
     display: block;
     margin: 0 auto;
     border-radius: 10px;
+}
+
+.article-modal-image img{
+    width:100%;
+    height:auto;
+    max-height:300px;
+    object-fit:contain;
+    border-radius:10px;
 }
 
 /* 移动端适配 */
