@@ -262,4 +262,87 @@ public class PostController {
         ApiResponse<PostDto> apiResponse = ApiResponse.success(updatedPost, 200);
         return ResponseEntity.ok(apiResponse);
     }
+    
+    @GetMapping("/search")
+    @Operation(
+        summary = "Search posts with text query and emotion filter",
+        description = "Search posts by text content (title, content, topics) with optional emotion filtering. " +
+                     "Supports pagination and multiple sorting options including relevance-based ranking."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Search completed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid search parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<FeedResponse>> searchPosts(
+        @Parameter(description = "Search query text", example = "mental health", required = true)
+        @RequestParam String query,
+        
+        @Parameter(description = "Filter by emotion", example = "happy", required = false)
+        @RequestParam(required = false) String emotion,
+        
+        @Parameter(description = "Page number (0-based)", example = "0")
+        @RequestParam(defaultValue = "0") int page,
+        
+        @Parameter(description = "Number of posts per page", example = "20")
+        @RequestParam(defaultValue = "20") int size,
+        
+        @Parameter(description = "Sort order", example = "relevance", allowableValues = {"newest", "oldest", "relevance", "popular", "most_viewed", "most_collected"})
+        @RequestParam(defaultValue = "relevance") String sortBy
+    ) {
+        // Extract user ID from JWT token
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID userId = (UUID) authentication.getPrincipal();
+        
+        // Validate pagination parameters
+        if (page < 0) page = 0;
+        if (size < 1) size = 20;
+        if (size > 100) size = 100; // Limit max page size
+        
+        // Execute search
+        FeedResponse searchResults = postService.searchPosts(query, emotion, page, size, sortBy, userId);
+        
+        ApiResponse<FeedResponse> apiResponse = ApiResponse.success(searchResults, 200);
+        return ResponseEntity.ok(apiResponse);
+    }
+    
+    @GetMapping("/search/advanced")
+    @Operation(
+        summary = "Advanced search with relevance scoring",
+        description = "Advanced search that ranks results by relevance (title matches > content matches > topic matches) " +
+                     "with optional emotion filtering. Best for finding the most relevant posts first."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Advanced search completed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid search parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<FeedResponse>> advancedSearch(
+        @Parameter(description = "Search query text", example = "anxiety coping strategies", required = true)
+        @RequestParam String query,
+        
+        @Parameter(description = "Filter by emotion", example = "calm", required = false)
+        @RequestParam(required = false) String emotion,
+        
+        @Parameter(description = "Page number (0-based)", example = "0")
+        @RequestParam(defaultValue = "0") int page,
+        
+        @Parameter(description = "Number of posts per page", example = "20")
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        // Extract user ID from JWT token
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID userId = (UUID) authentication.getPrincipal();
+        
+        // Validate pagination parameters
+        if (page < 0) page = 0;
+        if (size < 1) size = 20;
+        if (size > 100) size = 100; // Limit max page size
+        
+        // Execute advanced search
+        FeedResponse searchResults = postService.searchPostsWithRelevance(query, emotion, page, size, userId);
+        
+        ApiResponse<FeedResponse> apiResponse = ApiResponse.success(searchResults, 200);
+        return ResponseEntity.ok(apiResponse);
+    }
 } 
