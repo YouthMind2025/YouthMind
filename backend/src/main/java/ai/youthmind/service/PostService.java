@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -552,6 +553,68 @@ public class PostService {
         postRepository.deleteById(postId);
         // Invalidate cache if needed
         redisService.invalidateFeedCache();
+    }
+    
+    /**
+     * Update an existing post
+     * 
+     * @param postId The post ID to update
+     * @param userId The user ID requesting the update
+     * @param updateRequest PostUpdateRequest containing fields to update
+     * @return Updated PostDto
+     */
+    @Transactional
+    public PostDto updatePost(UUID postId, UUID userId, PostUpdateRequest updateRequest) {
+        // Find the post
+        Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new ResourceNotFoundException("Post", "id", postId));
+        
+        // Verify user owns the post
+        if (!post.getUserId().equals(userId)) {
+            throw new IllegalStateException("User not authorized to update this post");
+        }
+        
+        // Validate update request
+        if (!updateRequest.hasUpdates()) {
+            throw new IllegalArgumentException("No fields provided for update");
+        }
+        
+        if (!updateRequest.isValidEmotion()) {
+            throw new IllegalArgumentException("Invalid emotion value provided");
+        }
+        
+        // Update allowed fields
+        if (updateRequest.getTitle() != null) {
+            post.setTitle(updateRequest.getTitle().trim());
+        }
+        
+        if (updateRequest.getContent() != null) {
+            post.setContent(updateRequest.getContent().trim());
+        }
+        
+        if (updateRequest.getEmotion() != null) {
+            post.setEmotion(updateRequest.getEmotion().trim());
+        }
+        
+        if (updateRequest.getPreImg() != null) {
+            post.setPreImg(updateRequest.getPreImg().trim());
+        }
+        
+        if (updateRequest.getTopics() != null) {
+            post.setTopics(updateRequest.getTopics().trim());
+        }
+        
+        // Update timestamp
+        post.setUpdatedAt(LocalDateTime.now());
+        
+        // Save the updated post
+        Post savedPost = postRepository.save(post);
+        
+        // Invalidate cache
+        redisService.invalidateFeedCache();
+        
+        // Return updated post DTO
+        return convertToPostDto(savedPost, userId);
     }
     
     private Sort getSortFromString(String sortBy) {
