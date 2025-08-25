@@ -9,6 +9,8 @@ import ai.youthmind.entity.Post;
 import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.service.PostService;
 import ai.youthmind.service.RedisService;
+import ai.youthmind.util.AuthenticationUtils;
+import ai.youthmind.util.ResponseBuilder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 
@@ -19,12 +21,15 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.HashMap;
+import ai.youthmind.dto.PostViewStats;
 
 @RestController
 @RequestMapping("/v1/posts")
@@ -50,8 +55,7 @@ public class PostController {
     })
     public ResponseEntity<ApiResponse<PostCreateResponse>> createPost(@Valid @RequestBody PostCreateRequest request) {
         // Extract user ID from JWT token
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UUID userId = (UUID) authentication.getPrincipal();
+        UUID userId = AuthenticationUtils.getCurrentUserId();
         
         // Create the post
         Post savedPost = postService.createPost(userId, request);
@@ -80,8 +84,7 @@ public class PostController {
             savedPost.getEmotion()
         );
         
-        ApiResponse<PostCreateResponse> apiResponse = ApiResponse.success(response, 201);
-        return ResponseEntity.status(HttpStatus.CREATED).body(apiResponse);
+        return ResponseBuilder.created(response, "Post created successfully");
     }
 
     @GetMapping("/feed")
@@ -113,8 +116,7 @@ public class PostController {
         @RequestParam(required = false) String endDate
     ) {
         // Extract user ID from JWT token
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UUID userId = (UUID) authentication.getPrincipal();
+        UUID userId = AuthenticationUtils.getCurrentUserId();
         
         // Validate pagination parameters
         if (page < 0) page = 0;
@@ -122,14 +124,14 @@ public class PostController {
         if (size > 100) size = 100; // Limit max page size
         
         // Parse date filters if provided
-        java.time.LocalDateTime startDt = null;
-        java.time.LocalDateTime endDt = null;
+        LocalDateTime startDt = null;
+        LocalDateTime endDt = null;
         try {
             if (startDate != null && !startDate.isBlank()) {
-                startDt = java.time.LocalDateTime.parse(startDate);
+                startDt = LocalDateTime.parse(startDate);
             }
             if (endDate != null && !endDate.isBlank()) {
-                endDt = java.time.LocalDateTime.parse(endDate);
+                endDt = LocalDateTime.parse(endDate);
             }
         } catch (Exception e) {
             // Ignore parse errors and treat as null - alternatively handle validation
@@ -138,8 +140,7 @@ public class PostController {
         // Get feed from service (includes caching)
         FeedResponse feedResponse = postService.getFeed(page, size, sortBy, emotion, startDt, endDt, userId);
         
-        ApiResponse<FeedResponse> apiResponse = ApiResponse.success(feedResponse, 200);
-        return ResponseEntity.ok(apiResponse);
+        return ResponseBuilder.success(feedResponse);
     }
 
     @GetMapping("/by-emotion/{emotion}")
@@ -156,13 +157,11 @@ public class PostController {
         @PathVariable String emotion
     ) {
         // Extract user ID from JWT token
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UUID userId = (UUID) authentication.getPrincipal();
+        UUID userId = AuthenticationUtils.getCurrentUserId();
         
         List<PostDto> posts = postService.getPostsByEmotion(emotion, userId);
         
-        ApiResponse<List<PostDto>> apiResponse = ApiResponse.success(posts, 200);
-        return ResponseEntity.ok(apiResponse);
+        return ResponseBuilder.success(posts);
     }
 
     @GetMapping("/by-user/{userId}")
@@ -179,13 +178,11 @@ public class PostController {
         @PathVariable UUID userId
     ) {
         // Extract current user ID from JWT token
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UUID currentUserId = (UUID) authentication.getPrincipal();
+        UUID currentUserId = AuthenticationUtils.getCurrentUserId();
         
         List<PostDto> posts = postService.getPostsByUser(userId, currentUserId);
         
-        ApiResponse<List<PostDto>> apiResponse = ApiResponse.success(posts, 200);
-        return ResponseEntity.ok(apiResponse);
+        return ResponseBuilder.success(posts);
     }
     
     @GetMapping("/{id}")
@@ -203,14 +200,12 @@ public class PostController {
         @PathVariable UUID id
     ) {
         // Extract user ID from JWT token
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UUID userId = (UUID) authentication.getPrincipal();
+        UUID userId = AuthenticationUtils.getCurrentUserId();
         
         // Get post with view tracking
         PostDto post = postService.getPostById(id, userId);
         
-        ApiResponse<PostDto> apiResponse = ApiResponse.success(post, 200);
-        return ResponseEntity.ok(apiResponse);
+        return ResponseBuilder.success(post);
     }
     
     @PutMapping("/{id}/resonance")
@@ -228,14 +223,12 @@ public class PostController {
         @PathVariable UUID id
     ) {
         // Extract user ID from JWT token
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UUID userId = (UUID) authentication.getPrincipal();
+        UUID userId = AuthenticationUtils.getCurrentUserId();
         
         // Toggle resonance
         PostDto updatedPost = postService.toggleResonance(id, userId);
         
-        ApiResponse<PostDto> apiResponse = ApiResponse.success(updatedPost, 200);
-        return ResponseEntity.ok(apiResponse);
+        return ResponseBuilder.success(updatedPost);
     }
     
     @PutMapping("/{id}/collect")
@@ -249,18 +242,16 @@ public class PostController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found")
     })
     public ResponseEntity<ApiResponse<PostDto>> toggleCollection(
-        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @Parameter(description = "Post ID", example = "123d4567-e89b-12d3-a456-426614174000")
         @PathVariable UUID id
     ) {
         // Extract user ID from JWT token
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UUID userId = (UUID) authentication.getPrincipal();
+        UUID userId = AuthenticationUtils.getCurrentUserId();
         
         // Toggle collection
         PostDto updatedPost = postService.toggleCollection(id, userId);
         
-        ApiResponse<PostDto> apiResponse = ApiResponse.success(updatedPost, 200);
-        return ResponseEntity.ok(apiResponse);
+        return ResponseBuilder.success(updatedPost);
     }
     
     @GetMapping("/search")
@@ -291,8 +282,7 @@ public class PostController {
         @RequestParam(defaultValue = "relevance") String sortBy
     ) {
         // Extract user ID from JWT token
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UUID userId = (UUID) authentication.getPrincipal();
+        UUID userId = AuthenticationUtils.getCurrentUserId();
         
         // Validate pagination parameters
         if (page < 0) page = 0;
@@ -302,8 +292,7 @@ public class PostController {
         // Execute search
         FeedResponse searchResults = postService.searchPosts(query, emotion, page, size, sortBy, userId);
         
-        ApiResponse<FeedResponse> apiResponse = ApiResponse.success(searchResults, 200);
-        return ResponseEntity.ok(apiResponse);
+        return ResponseBuilder.success(searchResults);
     }
     
     @GetMapping("/search/advanced")
@@ -331,8 +320,7 @@ public class PostController {
         @RequestParam(defaultValue = "20") int size
     ) {
         // Extract user ID from JWT token
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UUID userId = (UUID) authentication.getPrincipal();
+        UUID userId = AuthenticationUtils.getCurrentUserId();
         
         // Validate pagination parameters
         if (page < 0) page = 0;
@@ -342,7 +330,150 @@ public class PostController {
         // Execute advanced search
         FeedResponse searchResults = postService.searchPostsWithRelevance(query, emotion, page, size, userId);
         
-        ApiResponse<FeedResponse> apiResponse = ApiResponse.success(searchResults, 200);
-        return ResponseEntity.ok(apiResponse);
+        return ResponseBuilder.success(searchResults);
+    }
+    
+    @PutMapping("/{id}")
+    @Operation(
+        summary = "Update post",
+        description = "Update an existing post. Only the post owner can update their posts."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Post updated successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Not authorized to update this post"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<PostDto>> updatePost(
+        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id,
+        @RequestBody Map<String, Object> updateRequest
+    ) {
+        try {
+            // Extract user from authentication
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+
+            Optional<Post> postOpt = postService.getPostById(id);
+            if (postOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseBuilder.error("Post not found", HttpStatus.NOT_FOUND.value()));
+            }
+
+            Post post = postOpt.get();
+            // Check if user owns the post
+            if (!post.getUserId().equals(currentUserId)) {
+                return ResponseBuilder.forbidden("Not authorized to update this post");
+            }
+
+            // TODO: Implement post update logic in PostService
+            // For now, return the current post
+            PostDto postDto = postService.getPostById(id, currentUserId);
+            
+            return ResponseBuilder.success(postDto, "Post update not yet implemented");
+        } catch (Exception e) {
+            return ResponseBuilder.internalServerError("Failed to update post");
+        }
+    }
+    
+    @DeleteMapping("/{id}")
+    @Operation(
+        summary = "Delete post",
+        description = "Delete a post. Only the post owner can delete their posts."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Post deleted successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Not authorized to delete this post"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> deletePost(
+        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id
+    ) {
+        try {
+            // Extract user from authentication
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+
+            Optional<Post> postOpt = postService.getPostById(id);
+            if (postOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseBuilder.error("Post not found", HttpStatus.NOT_FOUND.value()));
+            }
+
+            Post post = postOpt.get();
+            // Check if user owns the post
+            if (!post.getUserId().equals(currentUserId)) {
+                return ResponseBuilder.forbidden("Not authorized to delete this post");
+            }
+
+            // Delete the post
+            postService.deletePost(id);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Post deleted successfully");
+
+            return ResponseBuilder.success(response, "Post deleted successfully");
+        } catch (Exception e) {
+            return ResponseBuilder.internalServerError("Failed to delete post");
+        }
+    }
+    
+    @PostMapping("/{id}/view")
+    @Operation(
+        summary = "Track post view",
+        description = "Track a view for a post by the current user. Only increments count for first-time views per user."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "View tracked successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<PostDto>> trackPostView(
+        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id
+    ) {
+        try {
+            // Extract user from authentication
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            
+            // Track the view using PostService
+            PostDto updatedPost = postService.trackPostView(id, currentUserId);
+            
+            return ResponseBuilder.success(updatedPost, "View tracked successfully");
+        } catch (ResourceNotFoundException e) {
+            return ResponseBuilder.notFound(e.getMessage());
+        } catch (Exception e) {
+            return ResponseBuilder.internalServerError("Failed to track view");
+        }
+    }
+    
+    @GetMapping("/{id}/view-stats")
+    @Operation(
+        summary = "Get post view statistics",
+        description = "Retrieve analytics data about post views including total views, recent views, and engagement metrics"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "View statistics retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<PostViewStats>> getPostViewStats(
+        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id
+    ) {
+        try {
+            // Extract user from authentication
+            UUID userId = AuthenticationUtils.getCurrentUserId();
+            
+            // Get view statistics using PostService
+            PostViewStats viewStats = postService.getPostViewStats(id);
+            
+            return ResponseBuilder.success(viewStats, "View statistics retrieved successfully");
+        } catch (ResourceNotFoundException e) {
+            return ResponseBuilder.notFound(e.getMessage());
+        } catch (Exception e) {
+            return ResponseBuilder.internalServerError("Failed to retrieve view statistics");
+        }
     }
 } 
