@@ -89,8 +89,8 @@ public class PostService {
         post.setEmotion(request.getEmotion());
         post.setPreImg(request.getPreImg());
         post.setResonance(0); // New post starts with 0 resonance
-        post.setViewCount(0); // New post starts with 0 views
-        post.setCollectCount(0); // New post starts with 0 collections
+        post.setView(0); // New post starts with 0 views
+        post.setCollect(0); // New post starts with 0 collections
         
         Post savedPost = postRepository.save(post);
         
@@ -186,6 +186,13 @@ public class PostService {
     }
     
     /**
+     * Get post by ID for internal use (returns Optional<Post>)
+     */
+    public Optional<Post> getPostById(UUID postId) {
+        return postRepository.findById(postId);
+    }
+    
+    /**
      * Get post by ID with view tracking
      * Increments view count only for first-time views per user
      */
@@ -203,7 +210,7 @@ public class PostService {
             postViewRepository.save(newView);
             
             // Update post view count
-            post.setViewCount(post.getViewCount() + 1);
+            post.setView(post.getView() + 1);
             postRepository.save(post);
             
             // Invalidate cache if needed
@@ -235,14 +242,30 @@ public class PostService {
         dto.setEmotion(post.getEmotion());
         dto.setDate(post.getCreatedAt());
         dto.setResonance(post.getResonance());
-        dto.setView(post.getViewCount());
-        dto.setCollect(post.getCollectCount());
+        dto.setView(post.getView());
+        dto.setCollect(post.getCollect());
         
         // TODO: Implement user reaction tracking - for now set defaults
         dto.setIsresonanced(false);
         dto.setIsCollected(false);
         
         return dto;
+    }
+    
+    /**
+     * Save a post entity
+     */
+    public Post savePost(Post post) {
+        return postRepository.save(post);
+    }
+    
+    /**
+     * Delete a post by ID
+     */
+    public void deletePost(UUID postId) {
+        postRepository.deleteById(postId);
+        // Invalidate cache if needed
+        redisService.invalidateFeedCache();
     }
     
     private Sort getSortFromString(String sortBy) {
