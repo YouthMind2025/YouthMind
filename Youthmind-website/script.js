@@ -71,7 +71,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             // 获取表单数据
-            const formData = new FormData(this);
             const name = this.querySelector('input[type="text"]').value;
             const email = this.querySelector('input[type="email"]').value;
             const message = this.querySelector('textarea').value;
@@ -341,20 +340,45 @@ function initArticleFeatures(articlesArr) {
         const item=document.createElement('div');
         item.className=`article-item${index===0?' active':''}`;
         item.dataset.article=art.id;
-        item.innerHTML=`<div class="article-cover"><div class="article-date">${art.date}</div><div class="article-image-placeholder">${art.cover||'Cover'}</div></div><div class="article-content"><h3 class="article-title">${art.title}</h3><p class="article-intro">${art.intro||''}</p><button class="btn-read-article" data-article="${art.id}">Read this article</button></div>`;
+        item.innerHTML=`<div class="article-cover"><div class="article-date">${art.date}</div>${art.cover ? `<img src=\"assets/Articles/${art.cover}\" class=\"article-image\" alt=\"${art.title}\">` : `<div class=\"article-image-placeholder\">Cover</div>`}</div><div class="article-content"><h3 class="article-title">${art.title}</h3><p class="article-intro">${art.intro||''}</p><button class="btn-read-article" data-article="${art.id}">Read this article</button></div>`;
         displayContainer.appendChild(item);
     });
+
+    // 预加载文章图片以填充封面
+    preloadArticleImages(articlesArr);
+
+    function preloadArticleImages(arr){
+        arr.forEach(a=>{
+            // If cover already exists skip
+            const itemEl=document.querySelector(`.article-item[data-article="${a.id}"] .article-cover`);
+            if(!itemEl) return;
+            // If an img already present, skip
+            if(itemEl.querySelector('img')) return;
+
+            loadArticleData(a.id)
+              .then(data=>{
+                  if(data.image){
+                      let img=itemEl.querySelector('img');
+                      if(!img){
+                          img=document.createElement('img');
+                          img.style.width='100%';
+                          img.style.height='100%';
+                          img.style.objectFit='cover';
+                          img.style.borderRadius='15px';
+                          itemEl.innerHTML='';
+                          itemEl.appendChild(img);
+                      }
+                      img.src=/^(data:|https?:)/.test(data.image)?data.image:`assets/Articles/${data.image}`;
+                      img.alt=data.title;
+                  }
+              })
+              .catch(()=>{});
+        });
+    }
 
     const menuButtons=menuContainer.querySelectorAll('.article-menu-btn');
     const articleItems=displayContainer.querySelectorAll('.article-item');
     const readArticleButtons=document.querySelectorAll('.btn-read-article, .btn-team-article');
-    const articleModal = document.getElementById('articleModal');
-    
-    console.log('Article features initialized:', {
-        menuButtons: menuButtons.length,
-        articleItems: articleItems.length,
-        readArticleButtons: readArticleButtons.length
-    });
     
     // 缓存已加载的文章数据
     const articleCache = {};
@@ -378,18 +402,39 @@ function initArticleFeatures(articlesArr) {
                 const imgEl=tmp.querySelector('img');
                 if(imgEl){
                     imgSrc=imgEl.getAttribute('src')||'';
+                    imgEl.remove(); // remove to avoid duplicate image in popup
                 }
                 if(!imgSrc && info.cover){
-                    imgSrc=`assets/Articles/${info.cover}`;
+                    imgSrc=info.cover; // fallback
                 }
 
                 const data={
                     title:info.title,
                     date:info.date,
                     image:imgSrc,
-                    content:result.value
+                    content:tmp.innerHTML // content without first image
                 };
                 articleCache[articleId]=data;
+
+                // 更新预览封面图
+                if(data.image){
+                    const coverHolder=document.querySelector(`.article-item[data-article="${articleId}"] .article-cover`);
+                    if(coverHolder){
+                        let imgEl=coverHolder.querySelector('img');
+                        if(!imgEl){
+                            imgEl=document.createElement('img');
+                            imgEl.style.width='100%';
+                            imgEl.style.height='100%';
+                            imgEl.style.objectFit='cover';
+                            imgEl.style.borderRadius='15px';
+                            coverHolder.innerHTML='';
+                            coverHolder.appendChild(imgEl);
+                        }
+                        const src=/^(data:|https?:)/.test(data.image)?data.image:`assets/Articles/${data.image}`;
+                        imgEl.src=src;
+                        imgEl.alt=data.title;
+                    }
+                }
                 return data;
             });
     }
@@ -398,7 +443,6 @@ function initArticleFeatures(articlesArr) {
     menuButtons.forEach(button => {
         button.addEventListener('click', function() {
             const articleId = this.getAttribute('data-article');
-            console.log('Article button clicked:', articleId);
             
             // 更新按钮状态
             menuButtons.forEach(btn => btn.classList.remove('active'));
@@ -408,7 +452,6 @@ function initArticleFeatures(articlesArr) {
             articleItems.forEach(item => {
                 item.classList.remove('active');
                 if (item.getAttribute('data-article') === articleId) {
-                    console.log('Activating article item:', articleId);
                     setTimeout(() => {
                         item.classList.add('active');
                     }, 100);
@@ -429,7 +472,8 @@ function initArticleFeatures(articlesArr) {
                     const imgHolder = document.getElementById('articleModalImage');
                     if(imgHolder){
                         if(articleData.image){
-                            imgHolder.innerHTML=`<img src="assets/Articles/${articleData.image}" alt="${articleData.title}" style="width:100%;height:auto;border-radius:10px;">`;
+                            const src = /^(data:|https?:)/.test(articleData.image) ? articleData.image : `assets/Articles/${articleData.image}`;
+                            imgHolder.innerHTML=`<img src="${src}" alt="${articleData.title}" style="width:100%;height:auto;border-radius:10px;">`;
                         } else {
                             imgHolder.innerHTML='';
                         }
@@ -448,231 +492,108 @@ function initPostSlider() {
     const slider = document.querySelector('.posts-slider');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
-    const readMoreButtons = document.querySelectorAll('.btn-read-more-post');
-    
     if (!slider || !prevBtn || !nextBtn) return;
-    
+
     const cardWidth = 325; // 卡片宽度 + 间距
-    
-    // 帖子数据
-    const postsData = {
-        '1': {
-            title: 'Future of Machine Learning',
-            date: 'Dec 18, 2024',
-            image: 'AI Research Post',
-            content: `
-                <p>Machine Learning continues to evolve at an unprecedented pace, transforming industries and reshaping our understanding of artificial intelligence capabilities.</p>
-                
-                <h3>Latest Developments</h3>
-                <p>Recent breakthroughs in deep learning, neural networks, and reinforcement learning are opening new possibilities for solving complex real-world problems.</p>
-                
-                <h3>Key Areas of Growth</h3>
-                <ul>
-                    <li>Natural Language Processing and Understanding</li>
-                    <li>Computer Vision and Image Recognition</li>
-                    <li>Autonomous Systems and Robotics</li>
-                    <li>Predictive Analytics and Decision Making</li>
-                </ul>
-                
-                <h3>Industry Applications</h3>
-                <p>From healthcare diagnostics to financial trading, machine learning algorithms are becoming increasingly sophisticated and reliable, enabling automation of complex decision-making processes.</p>
-                
-                <p>The future promises even more exciting developments as we continue to push the boundaries of what's possible with artificial intelligence.</p>
-            `
-        },
-        '2': {
-            title: 'Blockchain Revolution',
-            date: 'Dec 16, 2024',
-            image: 'Tech Innovation Post',
-            content: `
-                <p>Blockchain technology is expanding far beyond its cryptocurrency origins, revolutionizing how we think about trust, transparency, and decentralization in digital systems.</p>
-                
-                <h3>Beyond Cryptocurrency</h3>
-                <p>While Bitcoin introduced blockchain to the world, the technology's applications now span supply chain management, digital identity, smart contracts, and decentralized finance.</p>
-                
-                <h3>Key Benefits</h3>
-                <ul>
-                    <li>Immutable record keeping and transparency</li>
-                    <li>Elimination of intermediaries and reduced costs</li>
-                    <li>Enhanced security through cryptographic protection</li>
-                    <li>Global accessibility and borderless transactions</li>
-                </ul>
-                
-                <h3>Emerging Use Cases</h3>
-                <p>Industries are discovering innovative applications, from healthcare record management to voting systems, real estate transactions, and intellectual property protection.</p>
-                
-                <p>As the technology matures, we're seeing the emergence of more sustainable and scalable blockchain solutions that address earlier limitations.</p>
-            `
-        },
-        '3': {
-            title: 'Design Thinking in Tech',
-            date: 'Dec 14, 2024',
-            image: 'Design Thinking Post',
-            content: `
-                <p>Design thinking methodology is transforming how technology companies approach product development, putting human needs at the center of innovation processes.</p>
-                
-                <h3>The Human-Centered Approach</h3>
-                <p>By emphasizing empathy, ideation, and experimentation, design thinking helps teams create solutions that truly resonate with users and solve real problems.</p>
-                
-                <h3>Core Principles</h3>
-                <ul>
-                    <li>Empathize with users to understand their needs</li>
-                    <li>Define problems clearly and specifically</li>
-                    <li>Ideate creative solutions without constraints</li>
-                    <li>Prototype rapidly and test early</li>
-                    <li>Iterate based on user feedback</li>
-                </ul>
-                
-                <h3>Impact on Tech Industry</h3>
-                <p>Companies adopting design thinking report higher user satisfaction, reduced development costs, and faster time-to-market for successful products.</p>
-                
-                <p>The methodology's emphasis on collaboration and diverse perspectives is particularly valuable in today's complex technological landscape.</p>
-            `
-        },
-        '4': {
-            title: 'Green Technology Trends',
-            date: 'Dec 11, 2024',
-            image: 'Sustainability Post',
-            content: `
-                <p>The green technology sector is experiencing rapid growth as businesses and consumers increasingly prioritize environmental sustainability and climate action.</p>
-                
-                <h3>Renewable Energy Innovations</h3>
-                <p>Solar, wind, and battery technologies are becoming more efficient and cost-effective, making clean energy accessible to more people worldwide.</p>
-                
-                <h3>Emerging Technologies</h3>
-                <ul>
-                    <li>Carbon capture and storage systems</li>
-                    <li>Green hydrogen production and applications</li>
-                    <li>Sustainable materials and biodegradable alternatives</li>
-                    <li>Smart grid and energy management systems</li>
-                </ul>
-                
-                <h3>Business Opportunities</h3>
-                <p>The transition to sustainable technologies is creating new markets and business models, from circular economy platforms to environmental monitoring services.</p>
-                
-                <p>Investment in green technology continues to grow, driven by both regulatory requirements and consumer demand for environmentally responsible products.</p>
-            `
-        },
-        '5': {
-            title: 'Digital Leadership Skills',
-            date: 'Dec 9, 2024',
-            image: 'Leadership Post',
-            content: `
-                <p>The digital transformation era demands new leadership competencies that go beyond traditional management skills to embrace technological fluency and adaptive thinking.</p>
-                
-                <h3>Essential Digital Skills</h3>
-                <p>Modern leaders must understand emerging technologies, data analytics, and digital business models to make informed strategic decisions.</p>
-                
-                <h3>Key Leadership Attributes</h3>
-                <ul>
-                    <li>Technological literacy and continuous learning</li>
-                    <li>Data-driven decision making capabilities</li>
-                    <li>Digital communication and collaboration skills</li>
-                    <li>Change management and adaptability</li>
-                    <li>Cybersecurity awareness and risk management</li>
-                </ul>
-                
-                <h3>Building Digital Teams</h3>
-                <p>Successful digital leaders focus on creating diverse, cross-functional teams that can navigate complex technological challenges while maintaining human-centered values.</p>
-                
-                <p>The ability to balance technological innovation with ethical considerations is becoming increasingly important in digital leadership roles.</p>
-            `
-        },
-        '6': {
-            title: 'Innovation Methodologies',
-            date: 'Dec 7, 2024',
-            image: 'Innovation Post',
-            content: `
-                <p>Organizations are adopting systematic approaches to innovation, using proven methodologies to foster creativity and turn ideas into successful products and services.</p>
-                
-                <h3>Popular Innovation Frameworks</h3>
-                <p>From lean startup methodology to agile development and design sprints, companies are using structured approaches to reduce risk and accelerate innovation.</p>
-                
-                <h3>Key Methodologies</h3>
-                <ul>
-                    <li>Lean Startup and Build-Measure-Learn cycles</li>
-                    <li>Design Sprints for rapid prototyping</li>
-                    <li>Agile and Scrum for iterative development</li>
-                    <li>Open innovation and crowdsourcing</li>
-                    <li>Stage-gate processes for project management</li>
-                </ul>
-                
-                <h3>Creating Innovation Culture</h3>
-                <p>Successful innovation requires more than just methodology—it demands a culture that encourages experimentation, learns from failure, and rewards creative thinking.</p>
-                
-                <p>Organizations that master these methodologies while fostering the right cultural environment are better positioned to thrive in competitive markets.</p>
-            `
-        }
-    };
-    
+
+    // 从 JSON 清单加载帖子数据
+    fetch('assets/Posts/posts.json')
+        .then(r => r.json())
+        .then(postsArr => {
+            slider.innerHTML = '';
+
+            const postCache = {};
+
+            // helper to load a post's json
+            function loadPostData(post){
+                if(postCache[post.id]) return Promise.resolve(postCache[post.id]);
+                return fetch(`assets/Posts/${post.file}`)
+                    .then(r=>r.json())
+                    .then(data=>{
+                        postCache[post.id]=data;
+                        return data;
+                    });
+            }
+
+            // generate cards after loading all post jsons in parallel
+            Promise.all(postsArr.map(p=>loadPostData(p))).then(fullPosts=>{
+                fullPosts.forEach(postData=>{
+                    // derive summary: first 25 words plain text
+                    const tmp=document.createElement('div');
+                    tmp.innerHTML=postData.content||'';
+                    const text=tmp.textContent||'';
+                    const words=text.split(/\s+/).slice(0,25).join(' ')+ '...';
+
+                    const card=document.createElement('div');
+                    card.className='post-card';
+                    card.innerHTML=`<div class="post-cover"><div class="post-date">${postData.date}</div><div class="post-image">${postData.image}</div></div><div class="post-info"><h3 class="post-title">${postData.title}</h3><p class="post-summary">${words}</p><button class="btn-read-more-post" data-post="${postData.id}">Read More</button></div>`;
+                    slider.appendChild(card);
+                });
+
+                // bind buttons
+                slider.querySelectorAll('.btn-read-more-post').forEach(btn=>{
+                    btn.addEventListener('click',function(){
+                        const id=this.getAttribute('data-post');
+                        const data=postCache[id];
+                        if(!data) return;
+                        document.getElementById('articleModalTitle').textContent=data.title;
+                        document.getElementById('articleModalDate').textContent=data.date;
+                        const imageHolder=document.getElementById('articleModalImage');
+                        if(imageHolder){imageHolder.textContent=data.image;}
+                        document.getElementById('articleModalContent').innerHTML=data.content;
+                        showModal('articleModal');
+                    });
+                });
+            });
+        })
+        .catch(err => console.error('Failed to load posts manifest', err));
+
     // 左滑动按钮
-    prevBtn.addEventListener('click', function() {
+    prevBtn.addEventListener('click', function () {
         slider.scrollBy({
             left: -cardWidth,
             behavior: 'smooth'
         });
     });
-    
+
     // 右滑动按钮
-    nextBtn.addEventListener('click', function() {
+    nextBtn.addEventListener('click', function () {
         slider.scrollBy({
             left: cardWidth,
             behavior: 'smooth'
         });
     });
-    
+
     // 触摸滑动支持
     let startX = 0;
     let scrollLeft = 0;
     let isDown = false;
-    
-    slider.addEventListener('mousedown', function(e) {
+
+    slider.addEventListener('mousedown', function (e) {
         isDown = true;
         slider.style.cursor = 'grabbing';
         startX = e.pageX - slider.offsetLeft;
         scrollLeft = slider.scrollLeft;
     });
-    
-    slider.addEventListener('mouseleave', function() {
+
+    slider.addEventListener('mouseleave', function () {
         isDown = false;
         slider.style.cursor = 'grab';
     });
-    
-    slider.addEventListener('mouseup', function() {
+
+    slider.addEventListener('mouseup', function () {
         isDown = false;
         slider.style.cursor = 'grab';
     });
-    
-    slider.addEventListener('mousemove', function(e) {
+
+    slider.addEventListener('mousemove', function (e) {
         if (!isDown) return;
         e.preventDefault();
         const x = e.pageX - slider.offsetLeft;
         const walk = (x - startX) * 2;
         slider.scrollLeft = scrollLeft - walk;
     });
-    
-    // Read More按钮功能
-    readMoreButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const postId = this.getAttribute('data-post');
-            const postData = postsData[postId];
-            
-            if (postData) {
-                // 更新文章弹窗内容
-                document.getElementById('articleModalTitle').textContent = postData.title;
-                document.getElementById('articleModalDate').textContent = postData.date;
-                const imageHolder=document.getElementById('articleModalImage');
-                if(imageHolder){
-                    imageHolder.textContent=postData.image;
-                }
-                document.getElementById('articleModalContent').innerHTML = postData.content;
-                
-                // 显示弹窗
-                showModal('articleModal');
-            }
-        });
-    });
-    
+
     // 设置初始状态
     slider.style.cursor = 'grab';
 }
