@@ -30,6 +30,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.HashMap;
 import ai.youthmind.dto.PostViewStats;
+import ai.youthmind.dto.PostUpdateRequest;
 
 @RestController
 @RequestMapping("/v1/posts")
@@ -347,29 +348,31 @@ public class PostController {
     public ResponseEntity<ApiResponse<PostDto>> updatePost(
         @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
         @PathVariable UUID id,
-        @RequestBody Map<String, Object> updateRequest
+        @Valid @RequestBody PostUpdateRequest updateRequest
     ) {
         try {
             // Extract user from authentication
             UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
-            Optional<Post> postOpt = postService.getPostById(id);
-            if (postOpt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ResponseBuilder.error("Post not found", HttpStatus.NOT_FOUND.value()));
+            // Validate update request
+            if (!updateRequest.hasUpdates()) {
+                return ResponseBuilder.badRequest("No fields provided for update");
             }
 
-            Post post = postOpt.get();
-            // Check if user owns the post
-            if (!post.getUserId().equals(currentUserId)) {
-                return ResponseBuilder.forbidden("Not authorized to update this post");
+            if (!updateRequest.isValidEmotion()) {
+                return ResponseBuilder.badRequest("Invalid emotion value provided");
             }
 
-            // TODO: Implement post update logic in PostService
-            // For now, return the current post
-            PostDto postDto = postService.getPostById(id, currentUserId);
+            // Update the post using PostService
+            PostDto updatedPost = postService.updatePost(id, currentUserId, updateRequest);
             
-            return ResponseBuilder.success(postDto, "Post update not yet implemented");
+            return ResponseBuilder.success(updatedPost, "Post updated successfully");
+        } catch (ResourceNotFoundException e) {
+            return ResponseBuilder.notFound(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseBuilder.badRequest(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseBuilder.forbidden(e.getMessage());
         } catch (Exception e) {
             return ResponseBuilder.internalServerError("Failed to update post");
         }
@@ -396,8 +399,7 @@ public class PostController {
 
             Optional<Post> postOpt = postService.getPostById(id);
             if (postOpt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ResponseBuilder.error("Post not found", HttpStatus.NOT_FOUND.value()));
+                return ResponseBuilder.notFound("Post not found");
             }
 
             Post post = postOpt.get();
