@@ -313,6 +313,123 @@ public class PostService {
         return convertToPostDto(post, userId);
     }
 
+    /**
+     * Search posts with text query and optional emotion filter
+     * 
+     * @param query The search query text
+     * @param emotion Optional emotion filter (can be null)
+     * @param page Page number (0-based)
+     * @param size Page size
+     * @param sortBy Sort order (newest, oldest, relevance)
+     * @param currentUserId Current user ID for personalization
+     * @return FeedResponse with search results
+     */
+    public FeedResponse searchPosts(String query, String emotion, int page, int size, String sortBy, UUID currentUserId) {
+        // Validate search query
+        if (query == null || query.trim().isEmpty()) {
+            throw new IllegalArgumentException("Search query cannot be empty");
+        }
+        
+        // Check cache first
+        String cacheKey = String.format("search:%s:%s:%d:%d:%s", 
+            query.toLowerCase(), 
+            emotion != null ? emotion.toLowerCase() : "all", 
+            page, size, sortBy);
+        FeedResponse cachedResults = redisService.getCachedFeed(cacheKey);
+        if (cachedResults != null) {
+            return cachedResults;
+        }
+
+        // Create pageable with sorting
+        Sort sort = getSearchSortFromString(sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // Execute search based on parameters
+        Page<Post> postPage;
+        if (emotion != null && !emotion.trim().isEmpty()) {
+            // Search with emotion filter
+            postPage = postRepository.searchPostsByEmotion(query.trim(), emotion.trim(), pageable);
+        } else {
+            // Search without emotion filter
+            postPage = postRepository.searchPosts(query.trim(), pageable);
+        }
+        
+        // Convert to DTOs
+        List<PostDto> postDtos = postPage.getContent().stream()
+            .map(post -> convertToPostDto(post, currentUserId))
+            .collect(Collectors.toList());
+        
+        // Build response
+        FeedResponse response = new FeedResponse();
+        response.setPosts(postDtos);
+        response.setCurrentPage(postPage.getNumber());
+        response.setTotalPages(postPage.getTotalPages());
+        response.setTotalElements(postPage.getTotalElements());
+        response.setPageSize(postPage.getSize());
+        response.setHasNext(postPage.hasNext());
+        response.setFirst(postPage.isFirst());
+        response.setLast(postPage.isLast());
+        
+        // Cache the search results (shorter TTL for search results)
+        redisService.cacheFeed(cacheKey, response);
+        
+        return response;
+    }
+
+    /**
+     * Advanced search with relevance scoring and multiple filters
+     * 
+     * @param query The search query text
+     * @param emotion Optional emotion filter
+     * @param page Page number (0-based)
+     * @param size Page size
+     * @param currentUserId Current user ID for personalization
+     * @return FeedResponse with relevance-ranked search results
+     */
+    public FeedResponse searchPostsWithRelevance(String query, String emotion, int page, int size, UUID currentUserId) {
+        // Validate search query
+        if (query == null || query.trim().isEmpty()) {
+            throw new IllegalArgumentException("Search query cannot be empty");
+        }
+        
+        // Check cache first
+        String cacheKey = String.format("search_relevance:%s:%s:%d:%d", 
+            query.toLowerCase(), 
+            emotion != null ? emotion.toLowerCase() : "all", 
+            page, size);
+        FeedResponse cachedResults = redisService.getCachedFeed(cacheKey);
+        if (cachedResults != null) {
+            return cachedResults;
+        }
+
+        // Create pageable
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Execute relevance-based search
+        Page<Post> postPage = postRepository.searchPostsWithRelevance(query.trim(), emotion, pageable);
+        
+        // Convert to DTOs
+        List<PostDto> postDtos = postPage.getContent().stream()
+            .map(post -> convertToPostDto(post, currentUserId))
+            .collect(Collectors.toList());
+        
+        // Build response
+        FeedResponse response = new FeedResponse();
+        response.setPosts(postDtos);
+        response.setCurrentPage(postPage.getNumber());
+        response.setTotalPages(postPage.getTotalPages());
+        response.setTotalElements(postPage.getTotalElements());
+        response.setPageSize(postPage.getSize());
+        response.setHasNext(postPage.hasNext());
+        response.setFirst(postPage.isFirst());
+        response.setLast(postPage.isLast());
+        
+        // Cache the relevance search results
+        redisService.cacheFeed(cacheKey, response);
+        
+        return response;
+    }
+
     private FlaggedPostDto convertToFlaggedPostDto(Post post) {
         FlaggedPostDto dto = new FlaggedPostDto();
         dto.setPostId(post.getId());
@@ -369,6 +486,18 @@ public class PostService {
             case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt");
             case "oldest" -> Sort.by(Sort.Direction.ASC, "createdAt");
             case "popular" -> Sort.by(Sort.Direction.DESC, "createdAt"); // TODO: Implement popularity sorting
+            default -> Sort.by(Sort.Direction.DESC, "createdAt");
+        };
+    }
+
+    private Sort getSearchSortFromString(String sortBy) {
+        return switch (sortBy) {
+            case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt");
+            case "oldest" -> Sort.by(Sort.Direction.ASC, "createdAt");
+            case "relevance" -> Sort.by(Sort.Direction.DESC, "createdAt"); // Relevance is handled in query
+            case "popular" -> Sort.by(Sort.Direction.DESC, "resonance");
+            case "most_viewed" -> Sort.by(Sort.Direction.DESC, "view");
+            case "most_collected" -> Sort.by(Sort.Direction.DESC, "collect");
             default -> Sort.by(Sort.Direction.DESC, "createdAt");
         };
     }

@@ -79,6 +79,54 @@ struct PostAPI {
         )
         return NetworkService.shared.request(endpoint)
     }
+    
+    // Search posts with text query and optional emotion filter
+    static func searchPosts(query: String, emotion: String? = nil, page: Int = 0, size: Int = 20, sortBy: String = "relevance") -> AnyPublisher<ApiResponse<FeedResponse>, APIError> {
+        var headers: [String: String] = [NetworkConfiguration.Headers.contentType: NetworkConfiguration.Headers.applicationJSON]
+        // Search requires JWT
+        if let token = TokenManager.shared.getToken() {
+            headers[NetworkConfiguration.Headers.authorization] = "Bearer \(token)"
+        } else {
+            return Fail(error: APIError.invalidStatusCode(NetworkConfiguration.StatusCode.unauthorized)).eraseToAnyPublisher()
+        }
+        
+        var path = "/v1/posts/search?query=\(query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query)&page=\(page)&size=\(size)&sortBy=\(sortBy)"
+        if let emotion = emotion {
+            path += "&emotion=\(emotion.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? emotion)"
+        }
+        
+        let endpoint = Endpoint(
+            baseURL: "http://localhost:8080",
+            path: path,
+            method: NetworkConfiguration.HTTPMethod.GET,
+            headers: headers
+        )
+        return NetworkService.shared.request(endpoint)
+    }
+    
+    // Advanced search with relevance scoring
+    static func advancedSearch(query: String, emotion: String? = nil, page: Int = 0, size: Int = 20) -> AnyPublisher<ApiResponse<FeedResponse>, APIError> {
+        var headers: [String: String] = [NetworkConfiguration.Headers.contentType: NetworkConfiguration.Headers.applicationJSON]
+        // Advanced search requires JWT
+        if let token = TokenManager.shared.getToken() {
+            headers[NetworkConfiguration.Headers.authorization] = "Bearer \(token)"
+        } else {
+            return Fail(error: APIError.invalidStatusCode(NetworkConfiguration.StatusCode.unauthorized)).eraseToAnyPublisher()
+        }
+        
+        var path = "/v1/posts/search/advanced?query=\(query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query)&page=\(page)&size=\(size)"
+        if let emotion = emotion {
+            path += "&emotion=\(emotion.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? emotion)"
+        }
+        
+        let endpoint = Endpoint(
+            baseURL: "http://localhost:8080",
+            path: path,
+            method: NetworkConfiguration.HTTPMethod.GET,
+            headers: headers
+        )
+        return NetworkService.shared.request(endpoint)
+    }
 }
 
 struct CreatePostRequest: Codable {
@@ -93,5 +141,10 @@ extension CreatePostRequest: JWTInjectable {
 
 // Fetch posts request - JWT required
 struct FetchPostsRequest: JWTInjectable {
+    var shouldInjectJWT: Bool { true }
+}
+
+// Search request - JWT required
+struct SearchRequest: JWTInjectable {
     var shouldInjectJWT: Bool { true }
 } 

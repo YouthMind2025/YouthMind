@@ -46,11 +46,43 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     
     Page<Post> findAllByOrderByViewDesc(Pageable pageable);
     
-    @Query("SELECT p FROM Post p WHERE p.title LIKE %:query% OR p.content LIKE %:query% OR p.topics LIKE %:query% ORDER BY p.createdAt DESC")
+    // Enhanced search methods for POST-006
+    @Query("SELECT p FROM Post p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "ORDER BY p.createdAt DESC")
     Page<Post> searchPosts(@Param("query") String query, Pageable pageable);
     
-    @Query("SELECT p FROM Post p WHERE (p.title LIKE %:query% OR p.content LIKE %:query% OR p.topics LIKE %:query%) AND p.emotion = :emotion ORDER BY p.createdAt DESC")
+    @Query("SELECT p FROM Post p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "AND LOWER(p.emotion) = LOWER(:emotion) " +
+           "ORDER BY p.createdAt DESC")
     Page<Post> searchPostsByEmotion(@Param("query") String query, @Param("emotion") String emotion, Pageable pageable);
+    
+    // Search with optional emotion filter
+    @Query("SELECT p FROM Post p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "AND (:emotion IS NULL OR LOWER(p.emotion) = LOWER(:emotion)) " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> searchPostsWithOptionalEmotion(@Param("query") String query, @Param("emotion") String emotion, Pageable pageable);
+    
+    // Search with relevance scoring (for future enhancement)
+    @Query("SELECT p FROM Post p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "AND (:emotion IS NULL OR LOWER(p.emotion) = LOWER(:emotion)) " +
+           "ORDER BY " +
+           "CASE WHEN LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) THEN 3 " +
+                "WHEN LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) THEN 2 " +
+                "ELSE 1 END DESC, " +
+           "p.createdAt DESC")
+    Page<Post> searchPostsWithRelevance(@Param("query") String query, @Param("emotion") String emotion, Pageable pageable);
     
     @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.resonance DESC")
     Page<Post> findTrendingPosts(@Param("since") LocalDateTime since, Pageable pageable);
