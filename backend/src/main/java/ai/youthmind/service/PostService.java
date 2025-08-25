@@ -2,6 +2,7 @@ package ai.youthmind.service;
 
 import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.dto.PostDto;
+import ai.youthmind.dto.PostDtoBuilder;
 import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.dto.FlaggedPostDto;
 import ai.youthmind.entity.AIAnalysis;
@@ -443,26 +444,38 @@ public class PostService {
     }
     
     private PostDto convertToPostDto(Post post, UUID currentUserId) {
-        PostDto dto = new PostDto();
-        dto.setId(post.getId());
-        dto.setTitle(post.getTitle());
-        dto.setContent(post.getContent());
-        dto.setPreImg(post.getPreImg());
-        dto.setEmotion(post.getEmotion());
-        dto.setDate(post.getCreatedAt());
-        dto.setResonance(post.getResonance());
-        dto.setView(post.getView());
-        dto.setCollect(post.getCollect());
+        // Use the builder pattern for cleaner, more maintainable code
+        PostDtoBuilder builder = PostDtoBuilder.create()
+            .id(post.getId())
+            .title(post.getTitle())
+            .content(post.getContent())
+            .preImg(post.getPreImg())
+            .emotion(post.getEmotion())
+            .date(post.getCreatedAt())
+            .resonance(post.getResonance())
+            .view(post.getView())
+            .collect(post.getCollect())
+            .userId(post.getUserId())
+            .topics(post.getTopics())
+            .aiMetadata(post.getAiMetadata())
+            .flagged(post.isFlagged())
+            .flagReason(post.getFlagReason())
+            .flaggedAt(post.getFlaggedAt())
+            .commentsCount(0); // TODO: Implement comments count
         
         // Check if current user has resonanced this post
-        boolean isResonanced = postResonanceRepository.existsByUserIdAndPostId(currentUserId, post.getId());
-        dto.setIsresonanced(isResonanced);
+        if (currentUserId != null) {
+            boolean isResonanced = postResonanceRepository.existsByUserIdAndPostId(currentUserId, post.getId());
+            builder.isresonanced(isResonanced);
+            
+            // Check if current user has collected this post
+            boolean isCollected = postCollectionRepository.existsByUserIdAndPostId(currentUserId, post.getId());
+            builder.isCollected(isCollected);
+        } else {
+            builder.isresonanced(false).isCollected(false);
+        }
         
-        // Check if current user has collected this post
-        boolean isCollected = postCollectionRepository.existsByUserIdAndPostId(currentUserId, post.getId());
-        dto.setIsCollected(isCollected);
-        
-        return dto;
+        return builder.build();
     }
     
     /**
