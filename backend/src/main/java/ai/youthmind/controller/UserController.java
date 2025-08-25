@@ -7,7 +7,7 @@ import ai.youthmind.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,9 +34,9 @@ public class UserController {
         description = "Retrieve a list of all registered users (admin only)"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "List of users retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
-        @ApiResponse(responseCode = "403", description = "Forbidden - admin access required")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "List of users retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - admin access required")
     })
     public ResponseEntity<List<UserDto>> getAllUsers() {
         List<User> users = userService.getAllUsers();
@@ -66,9 +66,9 @@ public class UserController {
         description = "Retrieve a specific user by their ID"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "User found and retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
-        @ApiResponse(responseCode = "404", description = "User not found")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User found and retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
     })
     public ResponseEntity<UserDto> getUserById(
         @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000", required = true)
@@ -105,9 +105,9 @@ public class UserController {
         description = "Retrieve a specific user by their email address"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "User found and retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
-        @ApiResponse(responseCode = "404", description = "User not found")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User found and retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
     })
     public ResponseEntity<UserDto> getUserByEmail(
         @Parameter(description = "User email address", example = "user@example.com", required = true)
@@ -144,10 +144,10 @@ public class UserController {
         description = "Delete a user account by ID (admin only)"
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "User deleted successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
-        @ApiResponse(responseCode = "403", description = "Forbidden - admin access required"),
-        @ApiResponse(responseCode = "404", description = "User not found")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "User deleted successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - admin access required"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
     })
     public ResponseEntity<Void> deleteUser(
         @Parameter(description = "User ID to delete", example = "123e4567-e89b-12d3-a456-426614174000", required = true)

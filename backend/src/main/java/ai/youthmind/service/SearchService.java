@@ -42,7 +42,7 @@ public class SearchService {
             }
         } else {
             if (emotion != null && !emotion.trim().isEmpty()) {
-                postPage = postRepository.findByEmotionTag(emotion, pageable);
+                postPage = postRepository.findByEmotion(emotion, pageable);
             } else {
                 postPage = postRepository.findAll(pageable);
             }
@@ -194,12 +194,12 @@ public class SearchService {
         dto.setUserId(post.getUserId());
         dto.setTitle(post.getTitle());
         dto.setContent(post.getContent());
-        dto.setEmotionTag(post.getEmotionTag());
+        dto.setEmotion(post.getEmotion());
         dto.setTopics(post.getTopics());
         dto.setPreImg(post.getPreImg());
-        dto.setLikes(post.getLikes());
-        dto.setBookmarks(post.getBookmarks());
-        dto.setViews(post.getViews());
+        dto.setResonance(post.getResonance());
+        dto.setCollect(post.getCollect());
+        dto.setView(post.getView());
         dto.setAiMetadata(post.getAiMetadata());
         dto.setFlagged(post.isFlagged());
         dto.setFlagReason(post.getFlagReason());
@@ -237,10 +237,10 @@ public class SearchService {
         dto.setId(post.getId());
         dto.setTitle(post.getTitle());
         dto.setContent(post.getContent());
-        dto.setEmotion(post.getEmotionTag());
-        dto.setResonance(post.getLikes());
-        dto.setViews(post.getViews());
-        dto.setCollects(post.getBookmarks());
+        dto.setEmotion(post.getEmotion());
+        dto.setResonance(post.getResonance());
+        dto.setViews(post.getView());
+        dto.setCollects(post.getCollect());
         dto.setTrendingScore(calculateTrendingScore(post));
         dto.setCreatedAt(post.getCreatedAt());
         return dto;
@@ -251,10 +251,10 @@ public class SearchService {
         dto.setId(post.getId());
         dto.setTitle(post.getTitle());
         dto.setContent(post.getContent());
-        dto.setEmotion(post.getEmotionTag());
-        dto.setResonance(post.getLikes());
-        dto.setViews(post.getViews());
-        dto.setCollects(post.getBookmarks());
+        dto.setEmotion(post.getEmotion());
+        dto.setResonance(post.getResonance());
+        dto.setViews(post.getView());
+        dto.setCollects(post.getCollect());
         dto.setRank(rank);
         dto.setCreatedAt(post.getCreatedAt());
         return dto;
@@ -266,7 +266,7 @@ public class SearchService {
         long hoursSinceCreation = java.time.Duration.between(post.getCreatedAt(), LocalDateTime.now()).toHours();
         if (hoursSinceCreation == 0) hoursSinceCreation = 1;
         
-        double engagementScore = post.getLikes() * 2 + post.getViews() + post.getBookmarks() * 3;
+        double engagementScore = post.getResonance() * 2 + post.getView() + post.getCollect() * 3;
         double timeDecay = Math.pow(0.95, hoursSinceCreation);
         
         return engagementScore * timeDecay;

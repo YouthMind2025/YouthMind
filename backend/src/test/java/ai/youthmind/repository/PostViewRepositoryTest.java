@@ -52,9 +52,9 @@ public class PostViewRepositoryTest {
         testPost.setTitle("Test Post");
         testPost.setContent("Test content");
         testPost.setEmotion("happy");
-        testPost.setViewCount(0);
+        testPost.setView(0);
         testPost.setResonance(0);
-        testPost.setCollectCount(0);
+        testPost.setCollect(0);
         testPost = postRepository.save(testPost);
         postId = testPost.getId();
     }
@@ -153,9 +153,9 @@ public class PostViewRepositoryTest {
         post2.setTitle("Test Post 2");
         post2.setContent("Test content 2");
         post2.setEmotion("sad");
-        post2.setViewCount(0);
+        post2.setView(0);
         post2.setResonance(0);
-        post2.setCollectCount(0);
+        post2.setCollect(0);
         post2 = postRepository.save(post2);
         
         PostView view1 = new PostView(userId, postId);
