@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import ai.youthmind.dto.PostViewStats;
+import ai.youthmind.exception.ResourceNotFoundException;
 
 @RestController
 @RequestMapping("/v1/posts")
@@ -213,35 +215,67 @@ public class PostManagementController {
 
     @PostMapping("/{postId}/view")
     @Operation(
-        summary = "Increment view count",
-        description = "Increment the view count for a post"
+        summary = "Track post view",
+        description = "Track a view for a post by the current user. Only increments count for first-time views per user."
     )
     @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "View count incremented successfully")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "View tracked successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     })
-    public ResponseEntity<ApiResponse<PostEngagementResponse>> incrementView(@PathVariable UUID postId) {
+    public ResponseEntity<ApiResponse<PostDto>> trackPostView(@PathVariable UUID postId) {
         try {
-            // Extract user from authentication (optional for views)
-            UUID currentUserId = null;
-            try {
-                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-                if (authentication != null && authentication.getPrincipal() instanceof UUID) {
-                    currentUserId = (UUID) authentication.getPrincipal();
-                }
-            } catch (Exception e) {
-                // Views can work without authentication
+            // Extract user from authentication
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(null, "Authentication required", HttpStatus.UNAUTHORIZED.value()));
             }
-
-            // Increment view logic would go here
-            // For now, return a mock response
-            PostEngagementResponse response = new PostEngagementResponse();
-            response.setPostId(postId);
-            response.setViews(157); // Mock value
-
-            return ResponseEntity.ok(ApiResponse.success(response));
+            
+            UUID currentUserId = (UUID) authentication.getPrincipal();
+            
+            // Track the view using PostService
+            PostDto updatedPost = postService.trackPostView(postId, currentUserId);
+            
+            return ResponseEntity.ok(ApiResponse.success(updatedPost, "View tracked successfully"));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(null, e.getMessage(), HttpStatus.NOT_FOUND.value()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(null, HttpStatus.INTERNAL_SERVER_ERROR.value()));
+                .body(ApiResponse.error(null, "Failed to track view", HttpStatus.INTERNAL_SERVER_ERROR.value()));
+        }
+    }
+    
+    @GetMapping("/{postId}/view-stats")
+    @Operation(
+        summary = "Get post view statistics",
+        description = "Retrieve analytics data about post views including total views, recent views, and engagement metrics"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "View statistics retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<PostViewStats>> getPostViewStats(@PathVariable UUID postId) {
+        try {
+            // Extract user from authentication
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(null, "Authentication required", HttpStatus.UNAUTHORIZED.value()));
+            }
+            
+            // Get view statistics using PostService
+            PostViewStats viewStats = postService.getPostViewStats(postId);
+            
+            return ResponseEntity.ok(ApiResponse.success(viewStats, "View statistics retrieved successfully"));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(null, e.getMessage(), HttpStatus.NOT_FOUND.value()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(null, "Failed to retrieve view statistics", HttpStatus.INTERNAL_SERVER_ERROR.value()));
         }
     }
 }

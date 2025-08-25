@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -312,6 +313,65 @@ public class PostService {
         
         // Return updated post DTO
         return convertToPostDto(post, userId);
+    }
+    
+    /**
+     * Track a post view for a specific user
+     * Increments view count only for first-time views per user
+     * 
+     * @param postId The post ID
+     * @param userId The user ID
+     * @return PostDto with updated view information
+     */
+    @Transactional
+    public PostDto trackPostView(UUID postId, UUID userId) {
+        // Find the post
+        Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new ResourceNotFoundException("Post", "id", postId));
+        
+        // Check if current user has already viewed this post
+        boolean hasUserViewed = postViewRepository.existsByUserIdAndPostId(userId, postId);
+        
+        // If first time viewing, record the view
+        if (!hasUserViewed) {
+            PostView newView = new PostView(userId, postId);
+            postViewRepository.save(newView);
+            
+            // Update post view count
+            post.setView(post.getView() + 1);
+            postRepository.save(post);
+            
+            // Invalidate cache if needed
+            redisService.invalidateFeedCache();
+        }
+        
+        // Convert to DTO and return
+        return convertToPostDto(post, userId);
+    }
+    
+    /**
+     * Get post view statistics for analytics
+     * 
+     * @param postId The post ID
+     * @return PostViewStats with view count and unique viewers
+     */
+    public PostViewStats getPostViewStats(UUID postId) {
+        // Verify post exists
+        if (!postRepository.existsById(postId)) {
+            throw new ResourceNotFoundException("Post", "id", postId);
+        }
+        
+        // Get total unique views
+        long totalViews = postViewRepository.countByPostId(postId);
+        
+        // Get recent views (last 30 days)
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        long recentViews = postViewRepository.countByPostIdAndViewedAtAfter(postId, thirtyDaysAgo);
+        
+        // Get unique viewers list (limited to prevent memory issues)
+        List<PostView> recentViewers = postViewRepository.findByPostIdOrderByViewedAtDesc(postId);
+        
+        return new PostViewStats(postId, totalViews, recentViews, recentViewers.size());
     }
 
     /**
