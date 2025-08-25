@@ -84,4 +84,14 @@ public interface PostResonanceRepository extends JpaRepository<PostResonance, UU
      * @return The number of resonances deleted
      */
     long deleteByUserIdAndPostId(UUID userId, UUID postId);
+    
+    /**
+     * Find all resonances by a user for multiple posts (batch operation).
+     * This method is optimized for bulk operations to reduce database queries.
+     *
+     * @param userId The user ID
+     * @param postIds List of post IDs to check
+     * @return List of resonances for the specified posts
+     */
+    List<PostResonance> findByUserIdAndPostIdIn(UUID userId, List<UUID> postIds);
 } 

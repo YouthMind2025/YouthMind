@@ -5,6 +5,9 @@ import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.dto.PostCreateResponse;
 import ai.youthmind.dto.PostDto;
+import ai.youthmind.dto.PostDtoBuilder;
+import ai.youthmind.dto.PostUpdateRequest;
+import ai.youthmind.dto.PostViewStats;
 import ai.youthmind.entity.Post;
 import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.service.PostService;
@@ -13,25 +16,51 @@ import ai.youthmind.util.AuthenticationUtils;
 import ai.youthmind.util.ResponseBuilder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.HashMap;
-import ai.youthmind.dto.PostViewStats;
-import ai.youthmind.dto.PostUpdateRequest;
 
+/**
+ * Post Controller - Unified endpoint for all post-related operations
+ * 
+ * This controller consolidates all post management functionality including:
+ * - Post CRUD operations (create, read, update, delete)
+ * - Post engagement (resonance/likes, collection/saves, views)
+ * - Post discovery (feed, search, filtering)
+ * - Post analytics (view statistics)
+ * 
+ * Key Features:
+ * - JWT-based authentication for all endpoints
+ * - Comprehensive input validation and error handling
+ * - Optimized caching and batch operations
+ * - RESTful API design with consistent response formats
+ * - Swagger/OpenAPI documentation for all endpoints
+ * 
+ * Performance Optimizations:
+ * - Redis caching for frequently accessed data
+ * - Batch database operations for engagement status
+ * - Asynchronous view tracking to improve response times
+ * - Efficient pagination and filtering
+ * 
+ * Security Features:
+ * - User ownership verification for modifications
+ * - Input sanitization and validation
+ * - Rate limiting considerations (implemented at service layer)
+ * 
+ * @author YouthMind Development Team
+ * @version 2.0.0
+ * @since 2024-01-01
+ */
 @RestController
 @RequestMapping("/v1/posts")
 @Tag(name = "Posts", description = "Post creation and management operations")
@@ -61,19 +90,20 @@ public class PostController {
         // Create the post
         Post savedPost = postService.createPost(userId, request);
         
-        // Build full PostDto for response
-        PostDto postDto = new PostDto();
-        postDto.setId(savedPost.getId());
-        postDto.setTitle(savedPost.getTitle());
-        postDto.setContent(savedPost.getContent());
-        postDto.setPreImg(savedPost.getPreImg());
-        postDto.setEmotion(savedPost.getEmotion());
-        postDto.setDate(savedPost.getCreatedAt());
-        postDto.setResonance(savedPost.getResonance());
-        postDto.setView(savedPost.getView());
-        postDto.setCollect(savedPost.getCollect());
-        postDto.setIsresonanced(false); // New post, user hasn't resonated yet
-        postDto.setIsCollected(false);  // New post, user hasn't collected yet
+        // Build full PostDto for response using PostDtoBuilder
+        PostDto postDto = PostDtoBuilder.create()
+            .id(savedPost.getId())
+            .title(savedPost.getTitle())
+            .content(savedPost.getContent())
+            .preImg(savedPost.getPreImg())
+            .emotion(savedPost.getEmotion())
+            .date(savedPost.getCreatedAt())
+            .resonance(savedPost.getResonance())
+            .view(savedPost.getView())
+            .collect(savedPost.getCollect())
+            .isresonanced(false) // New post, user hasn't resonated yet
+            .isCollected(false)  // New post, user hasn't collected yet
+            .build();
         
         // Build response with full post data
         PostCreateResponse response = new PostCreateResponse(postDto, "Post created successfully");
