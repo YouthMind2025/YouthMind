@@ -127,6 +127,44 @@ struct PostAPI {
         )
         return NetworkService.shared.request(endpoint)
     }
+    
+    // MARK: - View Tracking Methods
+    
+    static func trackPostView(postId: UUID) -> AnyPublisher<ApiResponse<Post>, APIError> {
+        var headers: [String: String] = [NetworkConfiguration.Headers.contentType: NetworkConfiguration.Headers.applicationJSON]
+        // View tracking requires JWT
+        if let token = TokenManager.shared.getToken() {
+            headers[NetworkConfiguration.Headers.authorization] = "Bearer \(token)"
+        } else {
+            return Fail(error: APIError.invalidStatusCode(NetworkConfiguration.StatusCode.unauthorized)).eraseToAnyPublisher()
+        }
+        
+        let endpoint = Endpoint(
+            baseURL: "http://localhost:8080",
+            path: "/v1/posts/\(postId)/view",
+            method: NetworkConfiguration.HTTPMethod.POST,
+            headers: headers
+        )
+        return NetworkService.shared.request(endpoint)
+    }
+    
+    static func getPostViewStats(postId: UUID) -> AnyPublisher<ApiResponse<PostViewStats>, APIError> {
+        var headers: [String: String] = [NetworkConfiguration.Headers.contentType: NetworkConfiguration.Headers.applicationJSON]
+        // View stats requires JWT
+        if let token = TokenManager.shared.getToken() {
+            headers[NetworkConfiguration.Headers.authorization] = "Bearer \(token)"
+        } else {
+            return Fail(error: APIError.invalidStatusCode(NetworkConfiguration.StatusCode.unauthorized)).eraseToAnyPublisher()
+        }
+        
+        let endpoint = Endpoint(
+            baseURL: "http://localhost:8080",
+            path: "/v1/posts/\(postId)/view-stats",
+            method: NetworkConfiguration.HTTPMethod.GET,
+            headers: headers
+        )
+        return NetworkService.shared.request(endpoint)
+    }
 }
 
 struct CreatePostRequest: Codable {
