@@ -2,9 +2,11 @@ package ai.youthmind.service;
 
 import ai.youthmind.dto.PostDto;
 import ai.youthmind.entity.Post;
+import ai.youthmind.entity.PostCollection;
 import ai.youthmind.entity.PostResonance;
 import ai.youthmind.entity.PostView;
 import ai.youthmind.exception.ResourceNotFoundException;
+import ai.youthmind.repository.PostCollectionRepository;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.PostResonanceRepository;
 import ai.youthmind.repository.PostViewRepository;
@@ -36,6 +38,9 @@ public class PostServiceTest {
     
     @Mock
     private PostResonanceRepository postResonanceRepository;
+    
+    @Mock
+    private PostCollectionRepository postCollectionRepository;
     
     @Mock
     private RedisService redisService;
@@ -205,6 +210,51 @@ public class PostServiceTest {
         
         // When/Then
         assertThatThrownBy(() -> postService.toggleResonance(postId, userId))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessageContaining("Post not found with id");
+    }
+
+    @Test
+    void toggleCollection_ShouldAddCollection_WhenUserHasNotCollected() {
+        // Given
+        when(postRepository.findById(postId)).thenReturn(Optional.of(testPost));
+        when(postCollectionRepository.existsByUserIdAndPostId(userId, postId)).thenReturn(false);
+        
+        // When
+        PostDto result = postService.toggleCollection(postId, userId);
+        
+        // Then
+        verify(postCollectionRepository).save(any(PostCollection.class));
+        verify(postRepository).save(testPost);
+        assertThat(testPost.getCollect()).isEqualTo(3); // Collect count should be incremented from 2 to 3
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(postId);
+    }
+    
+    @Test
+    void toggleCollection_ShouldRemoveCollection_WhenUserHasAlreadyCollected() {
+        // Given
+        when(postRepository.findById(postId)).thenReturn(Optional.of(testPost));
+        when(postCollectionRepository.existsByUserIdAndPostId(userId, postId)).thenReturn(true);
+        
+        // When
+        PostDto result = postService.toggleCollection(postId, userId);
+        
+        // Then
+        verify(postCollectionRepository).deleteByUserIdAndPostId(userId, postId);
+        verify(postRepository).save(testPost);
+        assertThat(testPost.getCollect()).isEqualTo(1); // Collect count should be decremented from 2 to 1
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(postId);
+    }
+    
+    @Test
+    void toggleCollection_ShouldThrowException_WhenPostNotFound() {
+        // Given
+        when(postRepository.findById(postId)).thenReturn(Optional.empty());
+        
+        // When/Then
+        assertThatThrownBy(() -> postService.toggleCollection(postId, userId))
             .isInstanceOf(ResourceNotFoundException.class)
             .hasMessageContaining("Post not found with id");
     }
