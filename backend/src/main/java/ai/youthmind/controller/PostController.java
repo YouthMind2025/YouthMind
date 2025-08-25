@@ -212,4 +212,29 @@ public class PostController {
         ApiResponse<PostDto> apiResponse = ApiResponse.success(post, 200);
         return ResponseEntity.ok(apiResponse);
     }
+    
+    @PutMapping("/{id}/resonance")
+    @Operation(
+        summary = "Toggle post resonance (like/unlike)",
+        description = "Like or unlike a post. If the user has already liked the post, this will unlike it, otherwise it will like it."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Resonance toggled successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found")
+    })
+    public ResponseEntity<ApiResponse<PostDto>> toggleResonance(
+        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id
+    ) {
+        // Extract user ID from JWT token
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID userId = (UUID) authentication.getPrincipal();
+        
+        // Toggle resonance
+        PostDto updatedPost = postService.toggleResonance(id, userId);
+        
+        ApiResponse<PostDto> apiResponse = ApiResponse.success(updatedPost, 200);
+        return ResponseEntity.ok(apiResponse);
+    }
 } 

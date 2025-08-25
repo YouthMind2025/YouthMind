@@ -6,10 +6,12 @@ import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.dto.FlaggedPostDto;
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
+import ai.youthmind.entity.PostResonance;
 import ai.youthmind.entity.PostView;
 import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.repository.AIAnalysisRepository;
 import ai.youthmind.repository.PostRepository;
+import ai.youthmind.repository.PostResonanceRepository;
 import ai.youthmind.repository.PostViewRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -37,6 +39,9 @@ public class PostService {
     
     @Autowired
     private PostViewRepository postViewRepository;
+    
+    @Autowired
+    private PostResonanceRepository postResonanceRepository;
     
     @Autowired
     private RedisService redisService;
@@ -221,6 +226,47 @@ public class PostService {
         return convertToPostDto(post, currentUserId);
     }
 
+    /**
+     * Toggle resonance (like/unlike) for a post
+     * 
+     * @param postId The post ID
+     * @param userId The user ID
+     * @return PostDto with updated resonance information
+     */
+    @Transactional
+    public PostDto toggleResonance(UUID postId, UUID userId) {
+        // Find the post
+        Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new ResourceNotFoundException("Post", "id", postId));
+        
+        // Check if user has already resonanced this post
+        boolean hasResonanced = postResonanceRepository.existsByUserIdAndPostId(userId, postId);
+        
+        if (hasResonanced) {
+            // User already resonanced, so remove the resonance (unlike)
+            postResonanceRepository.deleteByUserIdAndPostId(userId, postId);
+            
+            // Decrement resonance count
+            post.setResonance(post.getResonance() - 1);
+        } else {
+            // User hasn't resonanced, so add the resonance (like)
+            PostResonance resonance = new PostResonance(userId, postId);
+            postResonanceRepository.save(resonance);
+            
+            // Increment resonance count
+            post.setResonance(post.getResonance() + 1);
+        }
+        
+        // Save the updated post
+        postRepository.save(post);
+        
+        // Invalidate cache
+        redisService.invalidateFeedCache();
+        
+        // Return updated post DTO
+        return convertToPostDto(post, userId);
+    }
+
     private FlaggedPostDto convertToFlaggedPostDto(Post post) {
         FlaggedPostDto dto = new FlaggedPostDto();
         dto.setPostId(post.getId());
@@ -245,8 +291,11 @@ public class PostService {
         dto.setView(post.getView());
         dto.setCollect(post.getCollect());
         
-        // TODO: Implement user reaction tracking - for now set defaults
-        dto.setIsresonanced(false);
+        // Check if current user has resonanced this post
+        boolean isResonanced = postResonanceRepository.existsByUserIdAndPostId(currentUserId, post.getId());
+        dto.setIsresonanced(isResonanced);
+        
+        // TODO: Implement collection tracking - for now set default
         dto.setIsCollected(false);
         
         return dto;

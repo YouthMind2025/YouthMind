@@ -2,9 +2,11 @@ package ai.youthmind.service;
 
 import ai.youthmind.dto.PostDto;
 import ai.youthmind.entity.Post;
+import ai.youthmind.entity.PostResonance;
 import ai.youthmind.entity.PostView;
 import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.repository.PostRepository;
+import ai.youthmind.repository.PostResonanceRepository;
 import ai.youthmind.repository.PostViewRepository;
 import ai.youthmind.service.RedisService;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +33,9 @@ public class PostServiceTest {
     
     @Mock
     private PostViewRepository postViewRepository;
+    
+    @Mock
+    private PostResonanceRepository postResonanceRepository;
     
     @Mock
     private RedisService redisService;
@@ -157,5 +162,50 @@ public class PostServiceTest {
         verify(postRepository).save(argThat(post -> 
             post.getView() == 6 // Should be incremented from 5 to 6
         ));
+    }
+
+    @Test
+    void toggleResonance_ShouldAddResonance_WhenUserHasNotResonanced() {
+        // Given
+        when(postRepository.findById(postId)).thenReturn(Optional.of(testPost));
+        when(postResonanceRepository.existsByUserIdAndPostId(userId, postId)).thenReturn(false);
+        
+        // When
+        PostDto result = postService.toggleResonance(postId, userId);
+        
+        // Then
+        verify(postResonanceRepository).save(any(PostResonance.class));
+        verify(postRepository).save(testPost);
+        assertThat(testPost.getResonance()).isEqualTo(11); // Resonance count should be incremented
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(postId);
+    }
+    
+    @Test
+    void toggleResonance_ShouldRemoveResonance_WhenUserHasAlreadyResonanced() {
+        // Given
+        when(postRepository.findById(postId)).thenReturn(Optional.of(testPost));
+        when(postResonanceRepository.existsByUserIdAndPostId(userId, postId)).thenReturn(true);
+        
+        // When
+        PostDto result = postService.toggleResonance(postId, userId);
+        
+        // Then
+        verify(postResonanceRepository).deleteByUserIdAndPostId(userId, postId);
+        verify(postRepository).save(testPost);
+        assertThat(testPost.getResonance()).isEqualTo(9); // Resonance count should be decremented
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(postId);
+    }
+    
+    @Test
+    void toggleResonance_ShouldThrowException_WhenPostNotFound() {
+        // Given
+        when(postRepository.findById(postId)).thenReturn(Optional.empty());
+        
+        // When/Then
+        assertThatThrownBy(() -> postService.toggleResonance(postId, userId))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessageContaining("Post not found with id");
     }
 } 
