@@ -6,18 +6,37 @@ import lombok.NoArgsConstructor;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
+/**
+ * Post Data Transfer Object perfectly aligned with iOS Post model.
+ * 
+ * This DTO ensures seamless integration between backend and iOS frontend
+ * while maintaining backward compatibility and extensibility for future features.
+ * 
+ * iOS Post Model Fields (exact match):
+ * - id: UUID
+ * - resonance: Int (likes count)
+ * - view: Int (view count)
+ * - collect: Int (save count)
+ * - title: String
+ * - content: String
+ * - preImg: String (image URL)
+ * - isresonanced: Bool (user liked)
+ * - isCollected: Bool (user saved)
+ * - emotion: String (emotion tag)
+ * - date: Date (creation timestamp)
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Post data transfer object matching iOS Post model exactly")
+@Schema(description = "Post data transfer object perfectly aligned with iOS Post model")
 public class PostDto {
-    private UUID id;
     
-    // User ID for internal use
-    private UUID userId;
+    // ===== CORE FIELDS (iOS Model Alignment) =====
+    
+    @Schema(description = "Unique post identifier", example = "123e4567-e89b-12d3-a456-426614174000")
+    private UUID id;
     
     @Schema(description = "Number of likes/resonance", example = "15")
     private int resonance;
@@ -43,98 +62,145 @@ public class PostDto {
     @Schema(description = "Whether current user has collected/saved this post", example = "false")
     private boolean isCollected;
     
-    @Schema(description = "Emotion tag for the post", example = "happy")
+    @Schema(description = "Emotion tag for the post", example = "happy", allowableValues = {"angry", "sad", "happy", "conflicted", "surprised", "fear"})
     private String emotion;
     
     @Schema(description = "Timestamp when the post was created", example = "2024-01-15T10:30:00")
     private LocalDateTime date;
     
-    // Additional fields for backend compatibility
+    // ===== BACKEND ENHANCEMENT FIELDS =====
+    
+    @Schema(description = "User ID for internal backend operations", example = "123e4567-e89b-12d3-a456-426614174000")
+    private UUID userId;
+    
+    @Schema(description = "Post topics/tags for search and categorization", example = "mental health, anxiety, coping")
     private String topics;
+    
+    @Schema(description = "AI-generated metadata and analysis", example = "sentiment: positive, empathy: high")
     private String aiMetadata;
+    
+    @Schema(description = "Whether post has been flagged for moderation", example = "false")
     private boolean flagged;
+    
+    @Schema(description = "Reason for flagging if applicable", example = "inappropriate content")
     private String flagReason;
+    
+    @Schema(description = "Timestamp when post was flagged", example = "2024-01-15T11:00:00")
     private LocalDateTime flaggedAt;
+    
+    @Schema(description = "Author information for enhanced user experience")
     private UserDto author;
-    private boolean liked;
-    private boolean bookmarked;
+    
+    @Schema(description = "Number of comments on this post", example = "5")
     private int commentsCount;
     
-    // Explicit getters and setters for iOS compatibility
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
+    // ===== COMPATIBILITY ALIASES =====
     
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
-    
-    public int getResonance() { return resonance; }
-    public void setResonance(int resonance) { this.resonance = resonance; }
-    
-    public int getView() { return view; }
-    public void setView(int view) { this.view = view; }
-    
-    public int getCollect() { return collect; }
-    public void setCollect(int collect) { this.collect = collect; }
-    
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
-    
-    public String getPreImg() { return preImg; }
-    public void setPreImg(String preImg) { this.preImg = preImg; }
-    
-    public boolean isIsresonanced() { return isresonanced; }
-    public void setIsresonanced(boolean isresonanced) { this.isresonanced = isresonanced; }
-    
-    public boolean isCollected() { return isCollected; }
-    public void setIsCollected(boolean isCollected) { this.isCollected = isCollected; }
-    
-    public String getEmotion() { return emotion; }
-    public void setEmotion(String emotion) { this.emotion = emotion; }
-    
-    public LocalDateTime getDate() { return date; }
-    public void setDate(LocalDateTime date) { this.date = date; }
-    
-    // Additional getters and setters
-    public String getTopics() { return topics; }
-    public void setTopics(String topics) { this.topics = topics; }
-    
-    public String getAiMetadata() { return aiMetadata; }
-    public void setAiMetadata(String aiMetadata) { this.aiMetadata = aiMetadata; }
-    
-    public boolean isFlagged() { return flagged; }
-    public void setFlagged(boolean flagged) { this.flagged = flagged; }
-    
-    public String getFlagReason() { return flagReason; }
-    public void setFlagReason(String flagReason) { this.flagReason = flagReason; }
-    
-    public LocalDateTime getFlaggedAt() { return flaggedAt; }
-    public void setFlaggedAt(LocalDateTime flaggedAt) { this.flaggedAt = flaggedAt; }
-    
-    public LocalDateTime getCreatedAt() { return date; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.date = createdAt; }
-    
-    public UserDto getAuthor() { return author; }
-    public void setAuthor(UserDto author) { this.author = author; }
-    
-    public boolean isLiked() { return liked; }
-    public void setLiked(boolean liked) { this.liked = liked; }
-    
-    public boolean isBookmarked() { return bookmarked; }
-    public void setBookmarked(boolean bookmarked) { this.bookmarked = bookmarked; }
-    
-    public int getCommentsCount() { return commentsCount; }
-    public void setCommentsCount(int commentsCount) { this.commentsCount = commentsCount; }
-    
-    // Aliases for backend compatibility
+    /**
+     * Get likes count (alias for resonance)
+     * @return Number of likes
+     */
     public int getLikes() { return resonance; }
+    
+    /**
+     * Set likes count (alias for resonance)
+     * @param likes Number of likes
+     */
     public void setLikes(Integer likes) { this.resonance = likes != null ? likes : 0; }
     
+    /**
+     * Get views count (alias for view)
+     * @return Number of views
+     */
     public int getViews() { return view; }
+    
+    /**
+     * Set views count (alias for view)
+     * @param views Number of views
+     */
     public void setViews(Integer views) { this.view = views != null ? views : 0; }
     
+    /**
+     * Get bookmarks count (alias for collect)
+     * @return Number of bookmarks
+     */
     public int getBookmarks() { return collect; }
+    
+    /**
+     * Set bookmarks count (alias for collect)
+     * @param bookmarks Number of bookmarks
+     */
     public void setBookmarks(Integer bookmarks) { this.collect = bookmarks != null ? bookmarks : 0; }
+    
+    /**
+     * Get creation date (alias for date)
+     * @return Creation timestamp
+     */
+    public LocalDateTime getCreatedAt() { return date; }
+    
+    /**
+     * Set creation date (alias for date)
+     * @param createdAt Creation timestamp
+     */
+    public void setCreatedAt(LocalDateTime createdAt) { this.date = createdAt; }
+    
+    /**
+     * Check if user has liked the post (alias for isresonanced)
+     * @return True if user has liked
+     */
+    public boolean isLiked() { return isresonanced; }
+    
+    /**
+     * Set if user has liked the post (alias for isresonanced)
+     * @param liked True if user has liked
+     */
+    public void setLiked(boolean liked) { this.isresonanced = liked; }
+    
+    /**
+     * Check if user has bookmarked the post (alias for isCollected)
+     * @return True if user has bookmarked
+     */
+    public boolean isBookmarked() { return isCollected; }
+    
+    /**
+     * Set if user has bookmarked the post (alias for isCollected)
+     * @param bookmarked True if user has bookmarked
+     */
+    public void setBookmarked(boolean bookmarked) { this.isCollected = bookmarked; }
+    
+    // ===== VALIDATION AND UTILITY METHODS =====
+    
+    /**
+     * Check if this post has the required core fields for iOS compatibility
+     * @return True if all required fields are present
+     */
+    public boolean hasRequiredFields() {
+        return id != null && title != null && content != null && emotion != null && date != null;
+    }
+    
+    /**
+     * Get a summary of the post for display purposes
+     * @return Post summary
+     */
+    public String getSummary() {
+        if (content == null) return "";
+        return content.length() > 100 ? content.substring(0, 100) + "..." : content;
+    }
+    
+    /**
+     * Check if the post has an image
+     * @return True if preImg is not null or empty
+     */
+    public boolean hasImage() {
+        return preImg != null && !preImg.trim().isEmpty();
+    }
+    
+    /**
+     * Get the emotion as a standardized string
+     * @return Normalized emotion string
+     */
+    public String getNormalizedEmotion() {
+        if (emotion == null) return "";
+        return emotion.toLowerCase().trim();
+    }
 } 
