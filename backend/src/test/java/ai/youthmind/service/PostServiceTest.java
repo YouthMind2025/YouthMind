@@ -437,8 +437,8 @@ public class PostServiceTest {
         dto.setResonance(5);
         dto.setView(10);
         dto.setCollect(2);
-        dto.setIsresonanced(false);
-        dto.setIsCollected(false);
+        dto.setLiked(false);
+        dto.setBookmarked(false);
         return dto;
     }
 } 
