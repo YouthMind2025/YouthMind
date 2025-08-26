@@ -12,6 +12,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
+import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -31,9 +34,31 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
+            .headers(headers -> headers
+                    .frameOptions(frameOptions -> frameOptions.disable())
+                    .httpStrictTransportSecurity(hsts -> hsts
+                            .maxAgeInSeconds(31536000)
+                            .includeSubDomains(true)
+                    )
+                    .contentSecurityPolicy(csp -> csp
+                            .policyDirectives(buildCspPolicy())
+                    )
+                    .frameOptions(frameOptions -> frameOptions .deny())
+                    .contentTypeOptions(contentTypeOptions -> {})
+                    .xssProtection(xss -> xss
+                            .headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK)
+                    )
+                    .referrerPolicy(referrer -> referrer
+                            .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)
+                    )
+                    .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy",
+                            "geolocation=(), microphone=(), camera=(), payment=()")
+                    )
+            )
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .requiresChannel(channel -> channel.anyRequest().requiresSecure())
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints (must be first)
                 .requestMatchers("/").permitAll()
@@ -74,7 +99,7 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
@@ -84,4 +109,19 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-} 
+
+    private String buildCspPolicy() {
+        return """
+            default-src 'self';
+            script-src 'self';
+            style-src 'self' 'unsafe-inline';
+            img-src 'self';
+            font-src 'self';
+            connect-src 'self';
+            frame-src 'none';
+            object-src 'none';
+            base-uri 'self';
+            form-action 'self';
+            """.replace("\n", " ").trim();
+    }
+}

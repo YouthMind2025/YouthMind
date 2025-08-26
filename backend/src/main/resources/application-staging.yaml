@@ -1,6 +1,17 @@
 server:
   port: 8080
 
+  #ssl configs
+  ssl:
+    enabled: true
+    key-store: classpath:keystore.p12
+    key-store-type: PKCS12
+    key-store-password: ${SSL_PASSWORD:change_me_in_prod}
+    protocol: TLS
+    enabled-protocols: TLSv1.2
+    ciphers: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+    warn-before-days: 14
+
 spring:
   application:
     name: youthmind-backend
@@ -45,6 +56,7 @@ jwt:
   secret: ${JWT_SECRET:production_secret_key_here}
   expiration: ${JWT_EXPIRATION:86400000}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+  expiration_warning_threshold: ${JWT_EXPIRATION_WARNING_THRESHOLD:900000}
 
 # Actuator Configuration for Staging/Production Monitoring
 management:

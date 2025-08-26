@@ -63,8 +63,60 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        
-    - name: Run OWASP dependency check
+
+    - name: Set up Python and security tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq python3-pip
+        pip3 install sqlmap
+
+    - name: Build application
       run: |
         cd backend
-        mvn org.owasp:dependency-check-maven:check 
+        mvn clean package -DskipTests
+
+    - name: Start application
+      run: |
+        cd backend
+        # Start the application in the background
+        java -jar target/*.jar --spring.profiles.active=dev &
+        echo $! > app.pid
+
+        # Wait for application to start
+        for i in {1..30}; do
+          if curl -s https://localhost:8080/actuator/health > /dev/null 2>&1; then
+            echo "Application started successfully"
+            break
+          fi
+          echo "Waiting for application to start... ($i/30)"
+          sleep 5
+        done
+
+    - name: Run security scan
+      run: |
+        cd backend
+        # Make sure the security scan script is executable
+        chmod +x security-scan.sh
+        # Run the security scan
+        APPLICATION_URL="https://localhost:8080" ./security-scan.sh
+
+    - name: Stop application
+      run: |
+        if [ -f backend/app.pid ]; then
+          kill $(cat backend/app.pid) || true
+        fi
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: backend/scan/security-reports/
+
+    - name: Check for critical vulnerabilities
+      run: |
+        if [ -f backend/scan/security-reports/summary.txt ] && grep -q "CRITICAL" backend/scan/security-reports/summary.txt; then
+          echo "Critical vulnerabilities found! Failing security scan."
+          exit 1
+        fi
+

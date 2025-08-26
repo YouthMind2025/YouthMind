@@ -2,11 +2,13 @@ package ai.youthmind.controller;
 
 import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.service.RedisService;
+import ai.youthmind.service.SslService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,6 +26,9 @@ public class TestController {
 
     @Autowired
     private RedisService redisService;
+
+    @Autowired
+    private SslService sslService;
 
     @GetMapping("/hello")
     @Operation(
@@ -186,5 +191,23 @@ public class TestController {
         }
         
         return result;
+    }
+
+    @GetMapping("/ssl")
+    @Operation(
+            summary = "SSL health check",
+            description = "Check if ssl certificate is valid and not expired"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "SSL is healthy")
+    })
+    public ResponseEntity<String> testSsl() {
+        SslService.CertificateHealth health = sslService.checkCertificateHealth();
+        int status = switch (health.status()) {
+            case "UP" -> 200;
+            case "WARNING" -> 299;
+            default -> 503;
+        };
+        return ResponseEntity.status(status).body(health.message());
     }
 } 

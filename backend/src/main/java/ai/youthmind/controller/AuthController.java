@@ -1,16 +1,17 @@
 package ai.youthmind.controller;
 
+import ai.youthmind.dto.*;
 import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.dto.AuthResponse;
 import ai.youthmind.dto.LoginRequest;
 import ai.youthmind.dto.LogoutResponse;
-import ai.youthmind.dto.RefreshTokenResponse;
 import ai.youthmind.dto.RegisterRequest;
 import ai.youthmind.dto.RegisterResponse;
 import ai.youthmind.dto.SendOtpRequest;
 import ai.youthmind.dto.SendOtpResponse;
 import ai.youthmind.dto.UserDto;
 import ai.youthmind.entity.User;
+import ai.youthmind.service.AuditLogService;
 import ai.youthmind.service.JWTService;
 import ai.youthmind.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,20 +20,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/v1/auth")
@@ -46,6 +42,9 @@ public class AuthController {
 
     @Autowired
     private JWTService jwtService;
+
+    @Autowired
+    private AuditLogService auditLogService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -68,7 +67,7 @@ public class AuthController {
                 "Verification code sent to your email",
                 LocalDateTime.now().plusMinutes(10)
             );
-            
+
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
             SendOtpResponse errorResponse = new SendOtpResponse(
@@ -97,6 +96,8 @@ public class AuthController {
         if (!MOCK_OTP.equals(request.getOtp())) {
             RegisterResponse errorResponse = new RegisterResponse();
             errorResponse.setMessage("Invalid OTP. Please use '123456'");
+            auditLogService.logSecurityEvent("REGISTRATION_FAILED", request.getEmail(),
+                    "Registration failed - invalid OTP", false);
             return ResponseEntity.badRequest()
                 .body(ApiResponse.error(errorResponse, 400));
         }
@@ -105,6 +106,9 @@ public class AuthController {
         if (userService.existsByEmail(request.getEmail())) {
             RegisterResponse errorResponse = new RegisterResponse();
             errorResponse.setMessage("User with this email already exists");
+            auditLogService.logSecurityEvent("REGISTRATION_FAILED", request.getEmail(),
+                    "Registration failed - email already exists", false
+            );
             return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(errorResponse, 409));
         }
@@ -120,19 +124,22 @@ public class AuthController {
             User savedUser = userService.saveUser(user);
 
             // Generate JWT token
-            Pair<String, Timestamp> tokenPair = jwtService.generateToken(savedUser.getEmail());
+            TokenPair tokenPair = jwtService.generateTokenPair(savedUser.getEmail());
             
             // Convert Timestamp to LocalDateTime for response
-            LocalDateTime expiresAt = tokenPair.getSecond().toLocalDateTime();
-            
+            LocalDateTime expiresAt = tokenPair.getAccessTokenExpiry().toLocalDateTime();
+
             // Build RegisterResponse according to specification
             RegisterResponse response = new RegisterResponse(
                 savedUser.getId(),
-                tokenPair.getFirst(),
+                tokenPair.getAccessToken(),
                 expiresAt,
                 "Registration successful"
             );
-            
+
+            auditLogService.logSecurityEvent("REGISTRATION_SUCCESS", savedUser.getEmail(),
+                    "User registered successfully", true);
+
             return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response, 201));
             
@@ -140,6 +147,8 @@ public class AuthController {
             RegisterResponse errorResponse = new RegisterResponse(
                 null, null, null, "Registration failed: " + e.getMessage()
             );
+            auditLogService.logSecurityEvent("REGISTRATION_ERROR", request.getEmail(),
+                    "Registration failed with error: " + e.getMessage(), false);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(errorResponse, 500));
         }
@@ -163,6 +172,8 @@ public class AuthController {
             if (userOpt.isEmpty()) {
                 Map<String, Object> error = new HashMap<>();
                 error.put("error", "Invalid credentials");
+                auditLogService.logSecurityEvent("LOGIN_FAILED", request.getEmail(),
+                        "Login failed - user not found", false);
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(error, 401));
             }
 
@@ -172,20 +183,26 @@ public class AuthController {
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                 Map<String, Object> error = new HashMap<>();
                 error.put("error", "Invalid credentials");
+                auditLogService.logSecurityEvent("LOGIN_FAILED", request.getEmail(),
+                        "Login failed - invalid password", false);
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(error, 401));
             }
 
             // Generate JWT token (using same logic as register)
-            Pair<String, Timestamp> tokenPair = jwtService.generateToken(user.getEmail());
-            
+            TokenPair tokenPair = jwtService.generateTokenPair(user.getEmail());
+
             // Calculate expires in milliseconds
-            long expiresIn = tokenPair.getSecond().getTime() - System.currentTimeMillis();
+            LocalDateTime expiresAt = tokenPair.getAccessTokenExpiry().toLocalDateTime();
             
             // Build response according to API specification
             Map<String, Object> response = new HashMap<>();
-            response.put("token", tokenPair.getFirst());
+            response.put("token", tokenPair.getAccessToken());
+            response.put("refreshToken", tokenPair.getRefreshToken());
             response.put("userId", user.getId());
-            response.put("expiresAt", tokenPair.getSecond().toLocalDateTime());
+            response.put("expiresAt", expiresAt);
+
+            auditLogService.logSecurityEvent("LOGIN_SUCCESS", user.getEmail(),
+                    "User logged in successfully", true);
             
             return ResponseEntity.ok(ApiResponse.success(response));
             
@@ -196,68 +213,139 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/refresh-token")
+    @PostMapping("/logout")
     @Operation(
-        summary = "Refresh JWT token",
-        description = "Refresh the current JWT token to extend its validity"
+            summary = "Logout user and revoke tokens",
+            description = "Invalidates the provided access token and refresh token, effectively logging out the user"
     )
-    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Token refreshed successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid or expired token")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Logout successful, tokens revoked"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request - missing tokens"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or expired tokens")
     })
-    public ResponseEntity<ApiResponse<RefreshTokenResponse>> refreshToken() {
+    public ResponseEntity<LogoutResponse> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody(required = false) LogoutRequest logoutRequest) {
+
         try {
-            // Extract user from current authentication
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, HttpStatus.UNAUTHORIZED.value()));
+            String accessToken = null;
+            String refreshToken = null;
+            String email = null;
+
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                accessToken = authHeader.substring(7);
             }
 
-            UUID userId = (UUID) authentication.getPrincipal();
-            Optional<User> userOpt = userService.getUserById(userId);
-            
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, HttpStatus.UNAUTHORIZED.value()));
+            if (logoutRequest != null) {
+                refreshToken = logoutRequest.getRefreshToken();
             }
 
-            User user = userOpt.get();
-            
-            // Generate new token
-            Pair<String, Timestamp> tokenPair = jwtService.generateToken(user.getEmail());
-            
-            RefreshTokenResponse response = new RefreshTokenResponse(
-                tokenPair.getFirst(),
-                tokenPair.getSecond().toLocalDateTime()
-            );
-            
-            return ResponseEntity.ok(ApiResponse.success(response));
+            if (accessToken == null && refreshToken == null) {
+                auditLogService.logSecurityEvent("LOGOUT_FAILED", "unknown",
+                        "Logout failed - no tokens provided", false);
+                return ResponseEntity.badRequest().body(
+                        new LogoutResponse(false, "No tokens provided for revocation"));
+            }
+
+            if (accessToken != null) {
+                jwtService.blacklistToken(accessToken);
+                email = jwtService.extractEmail(accessToken);
+            }
+
+            if (refreshToken != null) {
+                jwtService.blacklistToken(refreshToken);
+                email = jwtService.extractEmail(refreshToken);
+            }
+
+            auditLogService.logSecurityEvent("LOGOUT_SUCCESS", email != null ? email : "unknown",
+                    "User logged out successfully", true);
+
+            return ResponseEntity.ok(
+                    new LogoutResponse(true, "Logout successful. Tokens have been revoked."));
+
         } catch (Exception e) {
+            auditLogService.logSecurityEvent("LOGOUT_ERROR", "unknown",
+                    "Logout failed with error: " + e.getMessage(), false);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(null, HttpStatus.INTERNAL_SERVER_ERROR.value()));
+                    .body(new LogoutResponse(false, "Logout failed: " + e.getMessage()));
         }
     }
 
-    @PostMapping("/logout")
+    @PostMapping("/refresh")
     @Operation(
-        summary = "Logout user",
-        description = "Logout the current user and invalidate their session"
+            summary = "Refresh access token",
+            description = "Use a valid refresh token to obtain a new access token and refresh token"
     )
-    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Logout successful"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid or missing token")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Tokens refreshed successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request - missing refresh token"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or expired refresh token")
     })
-    public ResponseEntity<ApiResponse<LogoutResponse>> logout() {
+    public ResponseEntity<?> refresh(@RequestBody RefreshTokenRequest refreshRequest) {
+
         try {
-            // In a real implementation, this would invalidate the token
-            // For now, we'll just return a success response
-            LogoutResponse response = new LogoutResponse(true, "Logged out successfully");
-            
-            return ResponseEntity.ok(ApiResponse.success(response));
+            if (refreshRequest.getRefreshToken() == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "Refresh token is required");
+
+                auditLogService.logSecurityEvent("TOKEN_REFRESH_FAILED", "unknown",
+                        "Token refresh failed - no refresh token provided", false);
+
+                return ResponseEntity.badRequest().body(error);
+            }
+
+            String email = jwtService.extractEmail(refreshRequest.getRefreshToken());
+
+            Optional<User> userOpt = userService.getUserByEmail(email);
+            if (userOpt.isEmpty()) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "Invalid refresh token");
+
+                auditLogService.logSecurityEvent("TOKEN_REFRESH_FAILED", email,
+                        "Token refresh failed - user not found", false);
+
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
+
+            User user = userOpt.get();
+            TokenPair tokenPair = jwtService.refreshTokens(refreshRequest.getRefreshToken(), user);
+
+            UserDto userDto = new UserDto();
+            userDto.setId(user.getId());
+            userDto.setEmail(user.getEmail());
+            userDto.setFirstName(user.getFirstName());
+            userDto.setLastName(user.getLastName());
+            userDto.setCreatedAt(user.getCreatedAt());
+            userDto.setUpdatedAt(user.getUpdatedAt());
+
+            long expiresIn = tokenPair.getAccessTokenExpiry().getTime() - System.currentTimeMillis();
+
+            // Build AuthResponse
+            AuthResponse response = new AuthResponse();
+            response.setAccessToken(tokenPair.getAccessToken());
+            response.setRefreshToken(tokenPair.getRefreshToken());
+            response.setTokenType("Bearer");
+            response.setExpiresIn(expiresIn);
+            response.setUser(userDto);
+
+            return ResponseEntity.ok(response);
+
+        } catch (SecurityException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Invalid refresh token: " + e.getMessage());
+
+            auditLogService.logSecurityEvent("TOKEN_REFRESH_FAILED", "unknown",
+                    "Token refresh failed - invalid refresh token: " + e.getMessage(), false);
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(null, HttpStatus.INTERNAL_SERVER_ERROR.value()));
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Token refresh failed: " + e.getMessage());
+
+            auditLogService.logSecurityEvent("TOKEN_REFRESH_ERROR", "unknown",
+                    "Token refresh failed with error: " + e.getMessage(), false);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 

@@ -2,6 +2,9 @@ package ai.youthmind.service;
 
 import ai.youthmind.dto.FeedResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -51,6 +54,22 @@ public class RedisService {
 
     public Long increment(String key) {
         return redisTemplate.opsForValue().increment(key);
+    }
+
+    public Boolean hasKey(String key) {
+        return redisTemplate.hasKey(key);
+    }
+
+    public void addToSet(String key, Object value) {
+        redisTemplate.opsForSet().add(key, value);
+    }
+
+    public void setExpiration(String key, long expiration, TimeUnit unit) {
+        redisTemplate.expire(key, expiration, unit);
+    }
+
+    public <T> T execute(RedisCallback<T> callback) {
+        return redisTemplate.execute(callback);
     }
 
     // Feed caching methods
