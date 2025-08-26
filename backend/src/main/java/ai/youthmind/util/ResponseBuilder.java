@@ -32,7 +32,7 @@ public class ResponseBuilder {
      * @return ResponseEntity with success status
      */
     public static <T> ResponseEntity<ApiResponse<T>> success(T data, String message) {
-        return ResponseEntity.ok(ApiResponse.success(data, message));
+        return ResponseEntity.ok(ApiResponse.success(data));
     }
     
     /**
@@ -45,7 +45,7 @@ public class ResponseBuilder {
      * @return ResponseEntity with specified status
      */
     public static <T> ResponseEntity<ApiResponse<T>> success(T data, String message, int statusCode) {
-        return ResponseEntity.status(statusCode).body(ApiResponse.success(data, message, statusCode));
+        return ResponseEntity.status(statusCode).body(ApiResponse.success(data, statusCode));
     }
     
     /**
@@ -57,7 +57,7 @@ public class ResponseBuilder {
      * @return ResponseEntity with error status
      */
     public static <T> ResponseEntity<ApiResponse<T>> error(String message, int statusCode) {
-        return ResponseEntity.status(statusCode).body(ApiResponse.error(null, message, statusCode));
+        return ResponseEntity.status(statusCode).body(ApiResponse.error(null, statusCode));
     }
     
     /**
@@ -70,7 +70,7 @@ public class ResponseBuilder {
      * @return ResponseEntity with error status
      */
     public static <T> ResponseEntity<ApiResponse<T>> error(T data, String message, int statusCode) {
-        return ResponseEntity.status(statusCode).body(ApiResponse.error(data, message, statusCode));
+        return ResponseEntity.status(statusCode).body(ApiResponse.error(data, statusCode));
     }
     
     /**

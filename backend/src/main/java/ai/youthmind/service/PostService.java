@@ -5,6 +5,8 @@ import ai.youthmind.dto.PostDto;
 import ai.youthmind.dto.PostDtoBuilder;
 import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.dto.FlaggedPostDto;
+import ai.youthmind.dto.PostViewStats;
+import ai.youthmind.dto.PostUpdateRequest;
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
 import ai.youthmind.entity.PostCollection;
@@ -16,6 +18,7 @@ import ai.youthmind.repository.PostCollectionRepository;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.PostResonanceRepository;
 import ai.youthmind.repository.PostViewRepository;
+import ai.youthmind.service.RedisService;
 import ai.youthmind.util.PerformanceMonitor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -126,14 +129,14 @@ public class PostService {
             String cacheKey = String.format("feed:page:%d:size:%d:sort:%s:emotion:%s:start:%s:end:%s:user:%s",
                 page, size, sortBy, emotion, startDate, endDate, userId);
             
-            FeedResponse cachedFeed = redisService.getFromCache(cacheKey, FeedResponse.class);
-            if (cachedFeed != null) {
-                return cachedFeed;
-            }
-            
-            // Create pageable with sorting
+            FeedResponse cachedFeed = redisService.getCachedFeed(cacheKey);
+        if (cachedFeed != null) {
+            return cachedFeed;
+        }
+
+        // Create pageable with sorting
             Pageable pageable = PageRequest.of(page, size, getSortFromString(sortBy));
-            
+
             // Get posts based on filters
             Page<Post> postsPage;
             if (emotion != null && startDate != null && endDate != null) {
@@ -142,24 +145,24 @@ public class PostService {
                 postsPage = postRepository.findByEmotionIgnoreCase(emotion, pageable);
             } else if (startDate != null && endDate != null) {
                 postsPage = postRepository.findByCreatedAtBetween(startDate, endDate, pageable);
-            } else {
+        } else {
                 postsPage = postRepository.findAll(pageable);
-            }
-            
+        }
+        
             // Convert to DTOs with batch user engagement lookup
             List<PostDto> postDtos = convertPostsToDtosWithBatchEngagement(postsPage.getContent(), userId);
-            
-            // Build response
+        
+        // Build response
             FeedResponse feedResponse = new FeedResponse();
             feedResponse.setPosts(postDtos);
             feedResponse.setCurrentPage(page);
             feedResponse.setTotalPages(postsPage.getTotalPages());
             feedResponse.setTotalElements(postsPage.getTotalElements());
             feedResponse.setHasNext(postsPage.hasNext());
-            feedResponse.setHasPrevious(postsPage.hasPrevious());
+            // Note: hasPrevious is not available in FeedResponse, removing this call
             
             // Cache for 2 minutes
-            redisService.setInCache(cacheKey, feedResponse, 120);
+            redisService.cacheFeed(cacheKey, feedResponse);
             
             return feedResponse;
         } finally {
@@ -186,8 +189,8 @@ public class PostService {
         return posts.stream()
             .map(post -> {
                 PostDto dto = convertToPostDto(post, null); // Don't track view here
-                dto.setIsresonanced(resonatedPostIds.contains(post.getId()));
-                dto.setIsCollected(collectedPostIds.contains(post.getId()));
+                dto.setLiked(resonatedPostIds.contains(post.getId()));
+                dto.setBookmarked(collectedPostIds.contains(post.getId()));
                 return dto;
             })
             .collect(Collectors.toList());
@@ -237,7 +240,7 @@ public class PostService {
     public PostDto getPostById(UUID postId, UUID userId) {
         // Try to get from cache first
         String cacheKey = "post:" + postId + ":user:" + userId;
-        PostDto cachedPost = redisService.getFromCache(cacheKey, PostDto.class);
+        PostDto cachedPost = (PostDto) redisService.getCachedPost(postId.toString());
         if (cachedPost != null) {
             return cachedPost;
         }
@@ -253,7 +256,7 @@ public class PostService {
         PostDto postDto = convertToPostDto(post, userId);
         
         // Cache the result for 5 minutes
-        redisService.setInCache(cacheKey, postDto, 300);
+        redisService.cachePost(postId.toString(), postDto);
         
         return postDto;
     }
