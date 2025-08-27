@@ -11,8 +11,8 @@ public class PaginationDto {
     private int page;
     private int limit;
     private int total;
+    private int totalItems;
+    private int totalPages;
     private boolean hasNext;
     private boolean hasPrevious;
-    private int totalPages;
-    private int totalItems;
 }
