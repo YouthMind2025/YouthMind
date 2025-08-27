@@ -302,7 +302,7 @@ public class CommentController {
     private CommentDto convertToCommentDto(Comment comment, UUID currentUserId) {
         // Get author info
         Optional<User> authorOpt = userService.getUserById(comment.getAuthorId());
-        String authorName = authorOpt.map(user -> 
+        String author = authorOpt.map(user -> 
             (user.getFirstName() + " " + user.getLastName()).trim()).orElse("Unknown User");
 
         // Check if current user liked this comment
@@ -318,16 +318,16 @@ public class CommentController {
         }
 
         return new CommentDto(
-            comment.getId(),
             comment.getPostId(),
             comment.getAuthorId(),
-            authorName,
-            comment.getContent(),
-            comment.getLikes(),
-            isLiked,
             comment.getParentId(),
+            comment.getId(),
+            author,
+            comment.getContent(),
+            comment.getCreatedAt(),
+            comment.getLikes(),
             replies,
-            comment.getCreatedAt()
+            isLiked
         );
     }
 }
