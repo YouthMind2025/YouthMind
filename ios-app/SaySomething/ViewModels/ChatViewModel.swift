@@ -33,6 +33,7 @@ class ChatViewModel: ObservableObject {
     private var messagePublisher = PassthroughSubject<Message, Never>()
     private var responseTimer: Timer?
     private let ai = AIChatAPI.shared
+    private let conversationAPI = ConversationAPI.shared
     
     // 安全地从环境变量或Keychain获取API Key
     private var openAIAPIKey: String {
@@ -123,29 +124,75 @@ class ChatViewModel: ObservableObject {
     func sendMessage() {
         guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
-        // If no active conversation, create one now (only on first send)
-        if currentConversationId == nil {
-            let conv = Conversation(title: "New Chat",
-                                    createdAt: Date(),
-                                    updatedAt: Date(),
-                                    messages: [])
-            conversations.insert(conv, at: 0)
-            currentConversationId = conv.id
-            messages = []
-            store.saveConversations(conversations)
-        }
-
-        let userMessage = Message.userMessage(inputText)
         let userInput = inputText
         inputText = ""
         showSuggestions = false
         
-        // Add user message immediately
+        // If no active conversation, create one now (only on first send)
+        if currentConversationId == nil {
+            createNewConversation()
+        }
+        
+        let userMessage = Message.userMessage(userInput)
+        
+        // Add user message immediately to UI
         messagePublisher.send(userMessage)
+        
+        // Send user message to backend
+        Task {
+            await sendMessageToBackend(text: userInput, sender: "user")
+        }
         
         // Request AI response
         let context = messages + [userMessage]
         requestAIResponse(context: context, userInput: userInput)
+    }
+    
+    private func createNewConversation() {
+        let conv = Conversation(title: "New Chat",
+                                createdAt: Date(),
+                                updatedAt: Date(),
+                                messages: [])
+        conversations.insert(conv, at: 0)
+        currentConversationId = conv.id
+        messages = []
+        
+        // Save locally
+        store.saveConversations(conversations)
+        
+        // Create conversation in backend
+        Task {
+            await createConversationInBackend(title: "New Chat")
+        }
+    }
+    
+    private func createConversationInBackend(title: String) async {
+        do {
+            let conversation = try await ConversationAPI.shared.createConversation(title: title)
+            await MainActor.run {
+                if let index = conversations.firstIndex(where: { $0.id == conversation.id }) {
+                    conversations[index] = conversation
+                    currentConversationId = conversation.id
+                }
+            }
+        } catch {
+            print("[ChatViewModel] Failed to create conversation in backend: \(error)")
+        }
+    }
+    
+    private func sendMessageToBackend(text: String, sender: String) async {
+        guard let conversationId = currentConversationId else { return }
+        
+        do {
+            let message = try await ConversationAPI.shared.addMessage(
+                conversationId: conversationId,
+                text: text,
+                sender: sender
+            )
+            print("[ChatViewModel] Message sent to backend: \(message.text)")
+        } catch {
+            print("[ChatViewModel] Failed to send message to backend: \(error)")
+        }
     }
     
     // send suggestion as message
@@ -168,6 +215,10 @@ class ChatViewModel: ObservableObject {
                     self.isLoading = false
                     self.messagePublisher.send(aiMessage)
                 }
+                
+                // Send AI message to backend
+                await self.sendMessageToBackend(text: responseText, sender: "ai")
+                
             } catch {
                 // Fallback to local response to avoid disrupting UX
                 let fallback = self.generateAIResponse(to: userInput)
@@ -180,6 +231,9 @@ class ChatViewModel: ObservableObject {
                     print("[ChatViewModel] AI request failed: \(error.localizedDescription)")
                     #endif
                 }
+                
+                // Send fallback AI message to backend as well
+                await self.sendMessageToBackend(text: fallback, sender: "ai")
             }
         }
     }
