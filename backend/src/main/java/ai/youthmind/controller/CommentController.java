@@ -260,7 +260,7 @@ public class CommentController {
         }
     }
 
-    @PostMapping("/comments/{commentId}/like")
+    @PutMapping("/comments/{commentId}/like")
     @Operation(
         summary = "Like/Unlike comment",
         description = "Toggle like status for a comment"
