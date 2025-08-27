@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/v1")
+@RequestMapping("/api")
 @Tag(name = "Comments", description = "Comment management operations")
 @SecurityRequirement(name = "bearer-jwt")
 public class CommentController {
@@ -142,6 +142,68 @@ public class CommentController {
             
             return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(commentDto, 201));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(null, 500));
+        }
+    }
+
+    @PostMapping("/comments/{commentId}/replies")
+    @Operation(
+        summary = "Add reply to a comment",
+        description = "Create a new reply to a specific comment"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Reply created successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Comment not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request - cannot reply to a reply")
+    })
+    public ResponseEntity<ApiResponse<CommentDto>> addReply(
+            @PathVariable UUID commentId,
+            @Valid @RequestBody CommentCreateRequest request) {
+        
+        try {
+            // Get current user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(null, 401));
+            }
+            UUID currentUserId = (UUID) authentication.getPrincipal();
+
+            // Check if parent comment exists
+            Optional<Comment> parentCommentOpt = commentService.getCommentById(commentId);
+            if (parentCommentOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(null, 404));
+            }
+
+            Comment parentComment = parentCommentOpt.get();
+            
+            // Check if parent comment is not already a reply (prevent nested replies beyond 2 levels)
+            if (parentComment.getParentId() != null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(null, 400));
+            }
+
+            // Create reply comment
+            Comment reply = new Comment();
+            reply.setPostId(parentComment.getPostId());
+            reply.setAuthorId(currentUserId);
+            reply.setContent(request.getContent());
+            reply.setParentId(commentId); // Set this comment as parent
+            reply.setLikes(0);
+            reply.setCreatedAt(LocalDateTime.now());
+
+            Comment savedReply = commentService.saveComment(reply);
+            
+            // Convert to DTO
+            CommentDto replyDto = convertToCommentDto(savedReply, currentUserId);
+            
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(replyDto, 201));
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
