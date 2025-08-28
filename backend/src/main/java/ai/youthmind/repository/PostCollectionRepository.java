@@ -92,4 +92,14 @@ public interface PostCollectionRepository extends JpaRepository<PostCollection, 
      * @return The number of collections deleted
      */
     long deleteByUserIdAndPostId(UUID userId, UUID postId);
+    
+    /**
+     * Find all collections by a user for multiple posts (batch operation).
+     * This method is optimized for bulk operations to reduce database queries.
+     *
+     * @param userId The user ID
+     * @param postIds List of post IDs to check
+     * @return List of collections for the specified posts
+     */
+    List<PostCollection> findByUserIdAndPostIdIn(UUID userId, List<UUID> postIds);
 } 
