@@ -148,6 +148,14 @@ public class RedisService {
         redisTemplate.convertAndSend(aiProcessedChannel, event);
     }
 
+    public void setExpiration(String key, long timeout, TimeUnit unit) {
+        redisTemplate.expire(key, timeout, unit);
+    }
+
+    public Boolean hasKey(String key) {
+        return redisTemplate.hasKey(key);
+    }
+
     // Event classes for structured pub/sub
     public static class PostCreatedEvent {
         private String postId;
