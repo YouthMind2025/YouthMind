@@ -229,7 +229,7 @@ public class PostManagementController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, "Authentication required", HttpStatus.UNAUTHORIZED.value()));
+                    .body(ApiResponse.error(null, /*"Authentication required", */HttpStatus.UNAUTHORIZED.value()));
             }
             
             UUID currentUserId = (UUID) authentication.getPrincipal();
@@ -237,13 +237,13 @@ public class PostManagementController {
             // Track the view using PostService
             PostDto updatedPost = postService.trackPostView(postId, currentUserId);
             
-            return ResponseEntity.ok(ApiResponse.success(updatedPost, "View tracked successfully"));
+            return ResponseEntity.ok(ApiResponse.success(updatedPost/*, "View tracked successfully"*/));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error(null, e.getMessage(), HttpStatus.NOT_FOUND.value()));
+                .body(ApiResponse.error(null/*, e.getMessage()*/, HttpStatus.NOT_FOUND.value()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(null, "Failed to track view", HttpStatus.INTERNAL_SERVER_ERROR.value()));
+                .body(ApiResponse.error(null/*, "Failed to track view"*/, HttpStatus.INTERNAL_SERVER_ERROR.value()));
         }
     }
     
@@ -263,19 +263,19 @@ public class PostManagementController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, "Authentication required", HttpStatus.UNAUTHORIZED.value()));
+                    .body(ApiResponse.error(null/*, "Authentication required"*/, HttpStatus.UNAUTHORIZED.value()));
             }
             
             // Get view statistics using PostService
             PostViewStats viewStats = postService.getPostViewStats(postId);
             
-            return ResponseEntity.ok(ApiResponse.success(viewStats, "View statistics retrieved successfully"));
+            return ResponseEntity.ok(ApiResponse.success(viewStats/*, "View statistics retrieved successfully"*/));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error(null, e.getMessage(), HttpStatus.NOT_FOUND.value()));
+                .body(ApiResponse.error(null/*, e.getMessage()*/, HttpStatus.NOT_FOUND.value()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(null, "Failed to retrieve view statistics", HttpStatus.INTERNAL_SERVER_ERROR.value()));
+                .body(ApiResponse.error(null/*, "Failed to retrieve view statistics"*/, HttpStatus.INTERNAL_SERVER_ERROR.value()));
         }
     }
 }

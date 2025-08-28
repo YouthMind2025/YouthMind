@@ -1,10 +1,6 @@
 package ai.youthmind.service;
 
-import ai.youthmind.dto.PostCreateRequest;
-import ai.youthmind.dto.PostDto;
-import ai.youthmind.dto.PostDtoBuilder;
-import ai.youthmind.dto.FeedResponse;
-import ai.youthmind.dto.FlaggedPostDto;
+import ai.youthmind.dto.*;
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
 import ai.youthmind.entity.PostCollection;
