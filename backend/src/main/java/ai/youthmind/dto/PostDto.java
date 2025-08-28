@@ -203,4 +203,8 @@ public class PostDto {
         if (emotion == null) return "";
         return emotion.toLowerCase().trim();
     }
+
+    public void setIsCollected(boolean isCollected) {
+        this.isCollected = isCollected;
+    }
 } 

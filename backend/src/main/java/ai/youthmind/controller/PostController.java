@@ -287,7 +287,7 @@ public class PostController {
         @Parameter(description = "Number of posts per page", example = "20")
         @RequestParam(defaultValue = "20") int size,
         
-        @Parameter(description = "Sort order", example = "relevance", allowableValues = {"newest", "oldest", "relevance", "popular", "most_viewed", "most_collected"})
+        @Parameter(description = "Sort order", example = "relevance"/*, allowableValues = {"newest", "oldest", "relevance", "popular", "most_viewed", "most_collected"}*/)
         @RequestParam(defaultValue = "relevance") String sortBy
     ) {
         // Extract user ID from JWT token
