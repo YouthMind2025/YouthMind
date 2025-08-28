@@ -178,9 +178,6 @@ public class AuthController {
             // Generate JWT token (using same logic as register)
             Pair<String, Timestamp> tokenPair = jwtService.generateToken(user.getEmail());
             
-            // Calculate expires in milliseconds
-            long expiresIn = tokenPair.getSecond().getTime() - System.currentTimeMillis();
-            
             // Build response according to API specification
             Map<String, Object> response = new HashMap<>();
             response.put("token", tokenPair.getFirst());
@@ -205,27 +202,24 @@ public class AuthController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Token refreshed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid or expired token")
     })
-    public ResponseEntity<ApiResponse<RefreshTokenResponse>> refreshToken() {
+    public ResponseEntity<ApiResponse<RefreshTokenResponse>> refreshToken(@RequestHeader(value = "Authorization") String authHeader) {
         try {
-            // Extract user from current authentication
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, HttpStatus.UNAUTHORIZED.value()));
+                        .body(ApiResponse.error(null, HttpStatus.UNAUTHORIZED.value()));
             }
 
-            UUID userId = (UUID) authentication.getPrincipal();
-            Optional<User> userOpt = userService.getUserById(userId);
-            
-            if (userOpt.isEmpty()) {
+            String token = authHeader.substring(7);
+            if (!jwtService.validateToken(token)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, HttpStatus.UNAUTHORIZED.value()));
+                        .body(ApiResponse.error(null, HttpStatus.UNAUTHORIZED.value()));
             }
 
-            User user = userOpt.get();
+            String email = jwtService.extractEmail(token);
+            jwtService.blacklistToken(token);
             
             // Generate new token
-            Pair<String, Timestamp> tokenPair = jwtService.generateToken(user.getEmail());
+            Pair<String, Timestamp> tokenPair = jwtService.generateToken(email);
             
             RefreshTokenResponse response = new RefreshTokenResponse(
                 tokenPair.getFirst(),
@@ -248,10 +242,22 @@ public class AuthController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Logout successful"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid or missing token")
     })
-    public ResponseEntity<ApiResponse<LogoutResponse>> logout() {
+    public ResponseEntity<ApiResponse<LogoutResponse>> logout(@RequestHeader(value = "Authorization") String authHeader) {
         try {
-            // In a real implementation, this would invalidate the token
-            // For now, we'll just return a success response
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                LogoutResponse response = new LogoutResponse(false, "Authorization header not found or invalid");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error(response, HttpStatus.UNAUTHORIZED.value()));
+            }
+
+            String token = authHeader.substring(7);
+            if (!jwtService.validateToken(token)) {
+                LogoutResponse response = new LogoutResponse(false, "JWT token invalid");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error(response, HttpStatus.UNAUTHORIZED.value()));
+            }
+
+            jwtService.blacklistToken(token);
             LogoutResponse response = new LogoutResponse(true, "Logged out successfully");
             
             return ResponseEntity.ok(ApiResponse.success(response));

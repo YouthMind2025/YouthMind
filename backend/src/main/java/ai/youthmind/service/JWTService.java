@@ -6,25 +6,28 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.security.Key;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 @Service
 public class JWTService {
 
+    @Autowired
     private JwtConfig jwtConfig;
 
-    public JWTService(JwtConfig jwtConfig) {
-        this.jwtConfig = jwtConfig;
-    }
+    @Autowired
+    private RedisService redisService;
+
+    private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
     public Pair<String, Timestamp> generateToken(String email) {
 
@@ -68,7 +71,11 @@ public class JWTService {
 
     public boolean validateToken(String token, User user) {
         final String email = extractEmail(token);
-        return (email.equals(user.getEmail()) && !isTokenExpired(token));
+        return (email.equals(user.getEmail()) && !isTokenExpired(token) && !isTokenBlacklisted(token));
+    }
+
+    public boolean validateToken(String token) {
+        return !isTokenExpired(token) && !isTokenBlacklisted(token);
     }
 
     private boolean isTokenExpired(String token) {
@@ -78,4 +85,19 @@ public class JWTService {
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
+
+    public void blacklistToken(String token) {
+        String blacklistKey = BLACKLIST_PREFIX + token;
+        long ttl = extractExpiration(token).getTime() - System.currentTimeMillis();
+
+        if (ttl > 0) {
+            redisService.setValue(blacklistKey, "true");
+            redisService.setExpiration(blacklistKey, ttl, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    public boolean isTokenBlacklisted(String token) {
+        return Boolean.TRUE.equals(redisService.hasKey(BLACKLIST_PREFIX + token));
+    }
+
 }
