@@ -7,6 +7,7 @@ import ai.youthmind.dto.ConversationListResponse;
 import ai.youthmind.dto.ConversationUpdateRequest;
 import ai.youthmind.dto.MessageCreateRequest;
 import ai.youthmind.dto.MessageDto;
+import ai.youthmind.dto.MessageListResponse;
 import ai.youthmind.dto.PaginationDto;
 import ai.youthmind.entity.Conversation;
 import ai.youthmind.entity.Message;
@@ -277,6 +278,75 @@ public class ConversationController {
             ConversationDto conversationDto = convertToConversationDto(updatedConversation);
             
             return ResponseEntity.ok(ApiResponse.success(conversationDto));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(null, 500));
+        }
+    }
+
+    @GetMapping("/{conversationId}/messages")
+    @Operation(
+        summary = "Get messages for conversation",
+        description = "Get all messages for a specific conversation with pagination"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Messages retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Conversation not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Not authorized to access this conversation")
+    })
+    public ResponseEntity<ApiResponse<MessageListResponse>> getMessages(
+            @PathVariable UUID conversationId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "50") int limit) {
+        
+        try {
+            // Get current user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(null, 401));
+            }
+            UUID currentUserId = (UUID) authentication.getPrincipal();
+
+            // Check if conversation exists
+            Optional<Conversation> conversationOpt = conversationService.getConversationById(conversationId);
+            if (conversationOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(null, 404));
+            }
+
+            Conversation conversation = conversationOpt.get();
+            
+            // Check if user owns the conversation
+            if (!conversation.getUserId().equals(currentUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(null, 403));
+            }
+
+            // Get messages with pagination
+            Pageable pageable = PageRequest.of(page - 1, limit);
+            Page<Message> messagePage = conversationService.getMessagesByConversationIdWithPagination(conversationId, pageable);
+            
+            // Convert to DTOs
+            List<MessageDto> messageDtos = messagePage.getContent().stream()
+                .map(this::convertToMessageDto)
+                .collect(Collectors.toList());
+            
+            // Create pagination info
+            PaginationDto pagination = new PaginationDto(
+                page,
+                limit,
+                (int) messagePage.getTotalElements(),
+                (int) messagePage.getTotalElements(),
+                messagePage.getTotalPages(),
+                messagePage.hasNext(),
+                messagePage.hasPrevious()
+            );
+            
+            MessageListResponse response = new MessageListResponse(messageDtos, pagination);
+            
+            return ResponseEntity.ok(ApiResponse.success(response));
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -84,6 +84,13 @@ public class ConversationService {
     }
 
     /**
+     * Get messages by conversation ID with pagination
+     */
+    public Page<Message> getMessagesByConversationIdWithPagination(UUID conversationId, Pageable pageable) {
+        return messageRepository.findByConversationIdOrderByTimestampAsc(conversationId, pageable);
+    }
+
+    /**
      * Get user's conversations with pagination
      */
     public ConversationListResponse getConversations(UUID userId, int page, int limit) {
