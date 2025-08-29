@@ -217,6 +217,26 @@ public class PostService {
     }
 
     /**
+     * Get liked-posts by user
+     */
+    public List<PostDto> getLikedPostsByUser(UUID userId) {
+        List<PostResonance> resonances = postResonanceRepository.findByUserId(userId);
+        return resonances.stream()
+                .map(resonance -> getPostById(resonance.getPostId(), userId))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get bookmarked posts by user
+     */
+    public List<PostDto> getBookmarkedPostsByUser(UUID userId) {
+        List<PostCollection> collections = postCollectionRepository.findByUserId(userId);
+        return collections.stream()
+                .map(collection -> getPostById(collection.getPostId(), userId))
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Get all posts that have been flagged for moderation
      */
     public List<FlaggedPostDto> getFlaggedPosts() {
