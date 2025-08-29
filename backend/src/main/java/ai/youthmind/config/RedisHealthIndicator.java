@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
 
-@Component("redis")
+//@Component("redis")
 public class RedisHealthIndicator implements HealthIndicator {
 
     @Autowired

@@ -9,13 +9,13 @@ import redis.embedded.RedisServer;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
-@Configuration
-@Profile({"dev", "test"})
+// @Configuration - temporarily disabled to fix Redis connection issue
+// @Profile({"dev", "test"})
 public class EmbeddedRedisConfig {
 
     private RedisServer redisServer;
 
-    @PostConstruct
+    // @PostConstruct - temporarily disabled
     public void startRedis() {
         try {
             redisServer = new RedisServer(6379);
@@ -26,7 +26,7 @@ public class EmbeddedRedisConfig {
         }
     }
 
-    @PreDestroy
+    // @PreDestroy - temporarily disabled
     public void stopRedis() {
         if (redisServer != null && redisServer.isActive()) {
             redisServer.stop();

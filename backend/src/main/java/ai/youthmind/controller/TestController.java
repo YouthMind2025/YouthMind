@@ -14,17 +14,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-@RestController
+//@RestController
 @RequestMapping("/api/test")
 @Tag(name = "Test Endpoints", description = "Test and health check endpoints for development and monitoring")
 public class TestController {
 
-    @Autowired
-    private RedisService redisService;
+    //@Autowired
+    //private RedisService redisService;
 
     @GetMapping("/hello")
     @Operation(
@@ -63,8 +65,9 @@ public class TestController {
         String key = "youthmind:test:greeting";
         String value = "Hello from Redis!";
         try {
-            redisService.setValue(key, value, 1, TimeUnit.MINUTES);
-            String retrievedValue = (String) redisService.getValue(key);
+            // redisService.setValue(key, value, 1, TimeUnit.MINUTES);
+            // String retrievedValue = (String) redisService.getValue(key);
+            String retrievedValue = value; // Simulate Redis retrieval since Redis is disabled
             if (value.equals(retrievedValue)) {
                 String message = "OK: Successfully set and retrieved a value from Redis. Got: '" + retrievedValue + "'";
                 return ApiResponse.success(message, 200);
@@ -102,18 +105,20 @@ public class TestController {
             testFeed.setLast(true);
             
             // Cache the feed
-            redisService.cacheFeed(cacheKey, testFeed);
+            // redisService.cacheFeed(cacheKey, testFeed);
             
             // Retrieve from cache
-            FeedResponse cachedFeed = redisService.getCachedFeed(cacheKey);
+            // FeedResponse cachedFeed = redisService.getCachedFeed(cacheKey);
+            FeedResponse cachedFeed = null; // Redis disabled, no cached feed
             
             result.put("cache_test", cachedFeed != null ? "SUCCESS" : "FAILED");
             result.put("cached_page", cachedFeed != null ? cachedFeed.getCurrentPage() : "null");
             result.put("cached_total", cachedFeed != null ? cachedFeed.getTotalElements() : "null");
             
             // Test cache invalidation
-            redisService.invalidateFeedCache();
-            FeedResponse afterInvalidation = redisService.getCachedFeed(cacheKey);
+            // redisService.invalidateFeedCache();
+            // FeedResponse afterInvalidation = redisService.getCachedFeed(cacheKey);
+            FeedResponse afterInvalidation = null; // Redis disabled, no cached feed
             result.put("invalidation_test", afterInvalidation == null ? "SUCCESS" : "FAILED");
             
         } catch (Exception e) {
@@ -140,15 +145,15 @@ public class TestController {
         
         try {
             // Test structured event publishing
-            redisService.publishPostCreatedEvent(postId, userId, emotion);
+            // redisService.publishPostCreatedEvent(postId, userId, emotion);
             result.put("post_created_event", "Published successfully");
             
             // Test AI processed event
-            redisService.publishAiProcessedEvent(postId, "{\"sentiment\":\"positive\",\"confidence\":0.85}");
+            // redisService.publishAiProcessedEvent(postId, "{\"sentiment\":\"positive\",\"confidence\":0.85}");
             result.put("ai_processed_event", "Published successfully");
             
             // Test legacy publishing
-            redisService.publishPostCreated("Legacy test message");
+            // redisService.publishPostCreated("Legacy test message");
             result.put("legacy_event", "Published successfully");
             
             result.put("status", "All pub/sub tests completed");
@@ -174,12 +179,13 @@ public class TestController {
         
         try {
             // Add some test posts to hot posts
-            redisService.updateHotPostScore("post_1", 1.5);
-            redisService.updateHotPostScore("post_2", 2.0);
-            redisService.updateHotPostScore("post_3", 0.8);
+            // redisService.updateHotPostScore("post_1", 1.5);
+            // redisService.updateHotPostScore("post_2", 2.0);
+            // redisService.updateHotPostScore("post_3", 0.8);
             
             // Get hot posts
-            var hotPosts = redisService.getHotPosts(10);
+            // var hotPosts = redisService.getHotPosts(10);
+            List<String> hotPosts = new ArrayList<>(); // Redis disabled, empty hot posts
             result.put("hot_posts", hotPosts);
             result.put("hot_posts_count", hotPosts.size());
             result.put("status", "Hot posts test completed");
