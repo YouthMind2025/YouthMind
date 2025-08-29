@@ -102,4 +102,12 @@ public interface PostCollectionRepository extends JpaRepository<PostCollection, 
      * @return List of collections for the specified posts
      */
     List<PostCollection> findByUserIdAndPostIdIn(UUID userId, List<UUID> postIds);
+    
+    /**
+     * Delete all collections by a specific user.
+     * This method is used when deleting a user account.
+     *
+     * @param userId The user ID
+     */
+    void deleteByUserId(UUID userId);
 } 

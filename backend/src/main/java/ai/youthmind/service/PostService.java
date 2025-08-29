@@ -129,7 +129,7 @@ public class PostService {
             String cacheKey = String.format("feed:page:%d:size:%d:sort:%s:emotion:%s:start:%s:end:%s:user:%s",
                 page, size, sortBy, emotion, startDate, endDate, userId);
             
-            FeedResponse cachedFeed = redisService.getCachedFeed(cacheKey);
+        FeedResponse cachedFeed = redisService.getCachedFeed(cacheKey);
         if (cachedFeed != null) {
             return cachedFeed;
         }
