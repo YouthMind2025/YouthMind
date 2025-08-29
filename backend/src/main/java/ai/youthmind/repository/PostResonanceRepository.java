@@ -94,4 +94,12 @@ public interface PostResonanceRepository extends JpaRepository<PostResonance, UU
      * @return List of resonances for the specified posts
      */
     List<PostResonance> findByUserIdAndPostIdIn(UUID userId, List<UUID> postIds);
+    
+    /**
+     * Delete all resonances by a specific user.
+     * This method is used when deleting a user account.
+     *
+     * @param userId The user ID
+     */
+    void deleteByUserId(UUID userId);
 } 

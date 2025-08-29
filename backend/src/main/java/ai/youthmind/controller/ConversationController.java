@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/v1/conversations")
@@ -357,49 +358,66 @@ public class ConversationController {
     @DeleteMapping("/{conversationId}")
     @Operation(
         summary = "Delete conversation",
-        description = "Delete a specific conversation"
+        description = "Delete a specific conversation and all its messages"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Conversation deleted successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Conversation not found"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Not authorized to delete this conversation")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Not authorized to delete this conversation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error during deletion")
     })
-    public ResponseEntity<ApiResponse<Object>> deleteConversation(@PathVariable UUID conversationId) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> deleteConversation(@PathVariable UUID conversationId) {
         
         try {
             // Get current user
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
+                Map<String, Object> errorData = new HashMap<>();
+                errorData.put("error", "Unauthorized access");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, 401));
+                    .body(ApiResponse.error(errorData, 401));
             }
             UUID currentUserId = (UUID) authentication.getPrincipal();
 
             // Check if conversation exists
             Optional<Conversation> conversationOpt = conversationService.getConversationById(conversationId);
             if (conversationOpt.isEmpty()) {
+                Map<String, Object> errorData = new HashMap<>();
+                errorData.put("error", "Conversation not found");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error(null, 404));
+                    .body(ApiResponse.error(errorData, 404));
             }
 
             Conversation conversation = conversationOpt.get();
             
             // Check if user owns the conversation
             if (!conversation.getUserId().equals(currentUserId)) {
+                Map<String, Object> errorData = new HashMap<>();
+                errorData.put("error", "Not authorized to delete this conversation");
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error(null, 403));
+                    .body(ApiResponse.error(errorData, 403));
             }
 
             // Delete conversation
             conversationService.deleteConversation(conversationId, currentUserId);
 
-            return ResponseEntity.ok(ApiResponse.success(
-                Map.of("success", true, "message", "Conversation deleted successfully")
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Conversation and all messages deleted successfully");
+            response.put("deletedAt", java.time.LocalDateTime.now());
+
+            return ResponseEntity.ok(ApiResponse.success(response));
             
         } catch (Exception e) {
+            // Log the error for debugging
+            System.err.println("Error deleting conversation: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorData = new HashMap<>();
+            errorData.put("error", "Failed to delete conversation. Please try again later.");
+            
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(null, 500));
+                .body(ApiResponse.error(errorData, 500));
         }
     }
 
