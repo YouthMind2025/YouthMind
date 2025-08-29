@@ -212,19 +212,8 @@ public class UserProfileController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             UUID currentUserId = (UUID) authentication.getPrincipal();
 
-            // TODO: Implement actual liked posts retrieval
-            // This requires implementing PostResonance entity and repository
-            List<PostDto> posts = List.of(); // Empty list for now
-            
-            PaginationDto pagination = new PaginationDto();
-            pagination.setPage(page);
-            pagination.setLimit(limit);
-            pagination.setTotal(0);
-            pagination.setTotalItems(0);
-            pagination.setTotalPages(0);
-            pagination.setHasNext(false);
-            pagination.setHasPrevious(false);
-
+            List<PostDto> posts = postService.getLikedPostsByUser(currentUserId);
+            PaginationDto pagination = new PaginationDto(page, limit, 0, 0, 0, false, false);
             UserPostsResponse response = new UserPostsResponse(posts, pagination);
 
             return ResponseEntity.ok(ApiResponse.success(response));
@@ -255,19 +244,8 @@ public class UserProfileController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             UUID currentUserId = (UUID) authentication.getPrincipal();
 
-            // TODO: Implement actual bookmarked posts retrieval
-            // This requires implementing PostCollection entity and repository
-            List<PostDto> posts = List.of(); // Empty list for now
-            
-            PaginationDto pagination = new PaginationDto();
-            pagination.setPage(page);
-            pagination.setLimit(limit);
-            pagination.setTotal(0);
-            pagination.setTotalItems(0);
-            pagination.setTotalPages(0);
-            pagination.setHasNext(false);
-            pagination.setHasPrevious(false);
-
+            List<PostDto> posts = postService.getBookmarkedPostsByUser(currentUserId);
+            PaginationDto pagination = new PaginationDto(page, limit, 0, 0, 0, false, false);
             UserPostsResponse response = new UserPostsResponse(posts, pagination);
 
             return ResponseEntity.ok(ApiResponse.success(response));
