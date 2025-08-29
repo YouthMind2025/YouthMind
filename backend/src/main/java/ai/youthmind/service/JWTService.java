@@ -24,8 +24,8 @@ public class JWTService {
     @Autowired
     private JwtConfig jwtConfig;
 
-    @Autowired
-    private RedisService redisService;
+    //@Autowired
+    //private RedisService redisService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
@@ -91,13 +91,15 @@ public class JWTService {
         long ttl = extractExpiration(token).getTime() - System.currentTimeMillis();
 
         if (ttl > 0) {
-            redisService.setValue(blacklistKey, "true");
-            redisService.setExpiration(blacklistKey, ttl, TimeUnit.MILLISECONDS);
+            // redisService.setValue(blacklistKey, "true");
+            // redisService.setExpiration(blacklistKey, ttl, TimeUnit.MILLISECONDS);
         }
     }
 
     public boolean isTokenBlacklisted(String token) {
-        return Boolean.TRUE.equals(redisService.hasKey(BLACKLIST_PREFIX + token));
+        // Since Redis is temporarily disabled, always return false (no tokens are blacklisted)
+        return false;
+        // return Boolean.TRUE.equals(redisService.hasKey(BLACKLIST_PREFIX + token));
     }
 
 }

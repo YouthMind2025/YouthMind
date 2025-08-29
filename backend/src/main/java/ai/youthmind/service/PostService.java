@@ -56,8 +56,8 @@ public class PostService {
     @Autowired
     private PostCollectionRepository postCollectionRepository;
     
-    @Autowired
-    private RedisService redisService;
+    //@Autowired
+    //private RedisService redisService;
     
     /**
      * Update or insert AI analysis result for a post
@@ -113,7 +113,7 @@ public class PostService {
         Post savedPost = postRepository.save(post);
         
         // Invalidate feed cache after creating a post
-        redisService.invalidateFeedCache();
+        // // redisService.invalidateFeedCache();
         
         return savedPost;
     }
@@ -129,7 +129,7 @@ public class PostService {
             String cacheKey = String.format("feed:page:%d:size:%d:sort:%s:emotion:%s:start:%s:end:%s:user:%s",
                 page, size, sortBy, emotion, startDate, endDate, userId);
             
-            FeedResponse cachedFeed = redisService.getCachedFeed(cacheKey);
+            FeedResponse cachedFeed = null; // // redisService.getCachedFeed(cacheKey);
         if (cachedFeed != null) {
             return cachedFeed;
         }
@@ -161,8 +161,8 @@ public class PostService {
             feedResponse.setHasNext(postsPage.hasNext());
             // Note: hasPrevious is not available in FeedResponse, removing this call
             
-            // Cache for 2 minutes
-            redisService.cacheFeed(cacheKey, feedResponse);
+            // Cache for 2 minutes - temporarily disabled to fix Redis connection issue
+            // // redisService.cacheFeed(cacheKey, feedResponse);
             
             return feedResponse;
         } finally {
@@ -240,7 +240,7 @@ public class PostService {
     public PostDto getPostById(UUID postId, UUID userId) {
         // Try to get from cache first
         String cacheKey = "post:" + postId + ":user:" + userId;
-        PostDto cachedPost = (PostDto) redisService.getCachedPost(postId.toString());
+        PostDto cachedPost = null; // (PostDto) // redisService.getCachedPost(postId.toString());
         if (cachedPost != null) {
             return cachedPost;
         }
@@ -256,7 +256,7 @@ public class PostService {
         PostDto postDto = convertToPostDto(post, userId);
         
         // Cache the result for 5 minutes
-        redisService.cachePost(postId.toString(), postDto);
+        // // redisService.cachePost(postId.toString(), postDto);
         
         return postDto;
     }
@@ -315,7 +315,7 @@ public class PostService {
         postRepository.save(post);
         
         // Invalidate cache
-        redisService.invalidateFeedCache();
+        // redisService.invalidateFeedCache();
         
         // Return updated post DTO
         return convertToPostDto(post, userId);
@@ -356,7 +356,7 @@ public class PostService {
         postRepository.save(post);
         
         // Invalidate cache
-        redisService.invalidateFeedCache();
+        // redisService.invalidateFeedCache();
         
         // Return updated post DTO
         return convertToPostDto(post, userId);
@@ -389,7 +389,7 @@ public class PostService {
             postRepository.save(post);
             
             // Invalidate cache if needed
-            redisService.invalidateFeedCache();
+            // redisService.invalidateFeedCache();
         }
         
         // Convert to DTO and return
@@ -443,7 +443,8 @@ public class PostService {
             query.toLowerCase(), 
             emotion != null ? emotion.toLowerCase() : "all", 
             page, size, sortBy);
-        FeedResponse cachedResults = redisService.getCachedFeed(cacheKey);
+        // FeedResponse cachedResults = redisService.getCachedFeed(cacheKey);
+        FeedResponse cachedResults = null; // Redis disabled, no cached results
         if (cachedResults != null) {
             return cachedResults;
         }
@@ -479,7 +480,7 @@ public class PostService {
         response.setLast(postPage.isLast());
         
         // Cache the search results (shorter TTL for search results)
-        redisService.cacheFeed(cacheKey, response);
+        // redisService.cacheFeed(cacheKey, response);
         
         return response;
     }
@@ -505,7 +506,8 @@ public class PostService {
             query.toLowerCase(), 
             emotion != null ? emotion.toLowerCase() : "all", 
             page, size);
-        FeedResponse cachedResults = redisService.getCachedFeed(cacheKey);
+        // FeedResponse cachedResults = redisService.getCachedFeed(cacheKey);
+        FeedResponse cachedResults = null; // Redis disabled, no cached results
         if (cachedResults != null) {
             return cachedResults;
         }
@@ -533,7 +535,7 @@ public class PostService {
         response.setLast(postPage.isLast());
         
         // Cache the relevance search results
-        redisService.cacheFeed(cacheKey, response);
+        // redisService.cacheFeed(cacheKey, response);
         
         return response;
     }
@@ -598,7 +600,7 @@ public class PostService {
     public void deletePost(UUID postId) {
         postRepository.deleteById(postId);
         // Invalidate cache if needed
-        redisService.invalidateFeedCache();
+        // redisService.invalidateFeedCache();
     }
     
     /**
@@ -657,7 +659,7 @@ public class PostService {
         Post savedPost = postRepository.save(post);
         
         // Invalidate cache
-        redisService.invalidateFeedCache();
+        // redisService.invalidateFeedCache();
         
         // Return updated post DTO
         return convertToPostDto(savedPost, userId);

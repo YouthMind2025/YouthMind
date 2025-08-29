@@ -71,8 +71,8 @@ public class PostController {
     @Autowired
     private PostService postService;
 
-    @Autowired
-    private RedisService redisService;
+    //@Autowired
+    //private RedisService redisService;
 
     @PostMapping("/create")
     @Operation(
@@ -110,13 +110,43 @@ public class PostController {
         PostCreateResponse response = new PostCreateResponse(postDto, "Post created successfully");
 
         // Publish enhanced event with structured data
-        redisService.publishPostCreatedEvent(
-            savedPost.getId().toString(), 
-            userId.toString(), 
-            savedPost.getEmotion()
-        );
+        // redisService.publishPostCreatedEvent(
+        //     savedPost.getId().toString(), 
+        //     userId.toString(), 
+        //     savedPost.getEmotion()
+        // );
         
         return ResponseBuilder.created(response, "Post created successfully");
+    }
+
+    @GetMapping
+    @Operation(
+        summary = "Get all posts",
+        description = "Retrieve all posts with pagination"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Posts retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<FeedResponse>> getAllPosts(
+        @Parameter(description = "Page number (0-based)", example = "0")
+        @RequestParam(defaultValue = "0") int page,
+        
+        @Parameter(description = "Number of posts per page", example = "20")
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        // Extract user ID from JWT token
+        UUID userId = AuthenticationUtils.getCurrentUserId();
+        
+        // Validate pagination parameters
+        if (page < 0) page = 0;
+        if (size < 1) size = 20;
+        if (size > 100) size = 100; // Limit max page size
+        
+        // Get all posts (using feed with no filters)
+        FeedResponse feedResponse = postService.getFeed(page, size, "newest", null, null, null, userId);
+        
+        return ResponseBuilder.success(feedResponse);
     }
 
     @GetMapping("/feed")
