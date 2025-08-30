@@ -10,7 +10,7 @@ import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;
 
-@Component
+//@Component
 public class AiProcessedMessageListener implements MessageListener {
     
     private static final Logger log = LoggerFactory.getLogger(AiProcessedMessageListener.class);

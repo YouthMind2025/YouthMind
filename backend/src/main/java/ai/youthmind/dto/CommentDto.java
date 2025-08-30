@@ -12,14 +12,17 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CommentDto {
-    private UUID id;
+    // Backend fields (required for functionality)
     private UUID postId;
     private UUID authorId;
-    private String authorName;
-    private String content;
-    private int likes;
-    private boolean isLiked;
     private UUID parentId;
-    private List<CommentDto> replies;
+    
+    // iOS-aligned fields (sent to frontend)
+    private UUID id;
+    private String author;  // Maps to iOS 'author' field
+    private String content;
     private LocalDateTime createdAt;
+    private int likes;
+    private List<CommentDto> replies;
+    private boolean isLiked;
 }

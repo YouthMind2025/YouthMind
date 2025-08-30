@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-@Service
+//@Service
 public class RedisService {
 
     @Autowired
@@ -146,6 +146,14 @@ public class RedisService {
     public void publishAiProcessedEvent(String postId, String analysisResult) {
         AiProcessedEvent event = new AiProcessedEvent(postId, analysisResult, System.currentTimeMillis());
         redisTemplate.convertAndSend(aiProcessedChannel, event);
+    }
+
+    public void setExpiration(String key, long timeout, TimeUnit unit) {
+        redisTemplate.expire(key, timeout, unit);
+    }
+
+    public Boolean hasKey(String key) {
+        return redisTemplate.hasKey(key);
     }
 
     // Event classes for structured pub/sub

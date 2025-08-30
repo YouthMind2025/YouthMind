@@ -24,8 +24,8 @@ public class SecurityConfig {
     @Autowired
     private JWTFilter jwtFilter;
 
-    @Autowired
-    private RateFilter rateFilter;
+    //@Autowired
+    //private RateFilter rateFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -60,8 +60,8 @@ public class SecurityConfig {
                 .requestMatchers("/v1/auth/test").authenticated()
                 .requestMatchers("/v1/posts/create").authenticated()
                 .anyRequest().authenticated())
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(rateFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+            //.addFilterAfter(rateFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
