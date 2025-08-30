@@ -30,8 +30,12 @@ public class JWTService {
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
     public Pair<String, Timestamp> generateToken(String email) {
+        return generateToken(email, "USER");
+    }
 
+    public Pair<String, Timestamp> generateToken(String email, String role) {
         Map<String, Object> claims = new HashMap<>();
+        claims.put("role", role);
         long currentTime = System.currentTimeMillis();
         Timestamp expiration = new Timestamp(currentTime + jwtConfig.getExpiration());
 
@@ -54,6 +58,10 @@ public class JWTService {
 
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
     private <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
