@@ -42,6 +42,8 @@ public class SecurityConfig {
                 .requestMatchers("/v1/auth/register").permitAll()
                 .requestMatchers("/v1/auth/login").permitAll()
                 .requestMatchers("/v1/auth/refresh").permitAll()
+                .requestMatchers("/v1/auth/admin/register").permitAll()
+                .requestMatchers("/v1/auth/admin/login").permitAll()
                 .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/docs/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/favicon.ico").permitAll()

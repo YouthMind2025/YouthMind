@@ -1,5 +1,9 @@
 package ai.youthmind.controller;
 
+import ai.youthmind.dto.AdminLoginRequest;
+import ai.youthmind.dto.AdminLoginResponse;
+import ai.youthmind.dto.AdminRegisterRequest;
+import ai.youthmind.dto.AdminRegisterResponse;
 import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.dto.AuthResponse;
 import ai.youthmind.dto.LoginRequest;
@@ -40,6 +44,7 @@ import java.util.UUID;
 public class AuthController {
 
     private static final String MOCK_OTP = "123456";
+    private static final String ADMIN_SECRET_KEY = "YOUTHMIND_ADMIN_2024";
 
     @Autowired
     private UserService userService;
@@ -119,8 +124,8 @@ public class AuthController {
             
         User savedUser = userService.saveUser(user);
 
-            // Generate JWT token
-            Pair<String, Timestamp> tokenPair = jwtService.generateToken(savedUser.getEmail());
+            // Generate JWT token with role
+            Pair<String, Timestamp> tokenPair = jwtService.generateToken(savedUser.getEmail(), savedUser.getRole().toString());
             
             // Convert Timestamp to LocalDateTime for response
             LocalDateTime expiresAt = tokenPair.getSecond().toLocalDateTime();
@@ -175,14 +180,15 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(error, 401));
             }
 
-            // Generate JWT token (using same logic as register)
-            Pair<String, Timestamp> tokenPair = jwtService.generateToken(user.getEmail());
+            // Generate JWT token with role
+            Pair<String, Timestamp> tokenPair = jwtService.generateToken(user.getEmail(), user.getRole().toString());
             
             // Build response according to API specification
             Map<String, Object> response = new HashMap<>();
             response.put("token", tokenPair.getFirst());
             response.put("userId", user.getId());
             response.put("expiresAt", tokenPair.getSecond().toLocalDateTime());
+            response.put("role", user.getRole().toString());
             
             return ResponseEntity.ok(ApiResponse.success(response));
             
@@ -264,6 +270,132 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(null, HttpStatus.INTERNAL_SERVER_ERROR.value()));
+        }
+    }
+
+    @PostMapping("/admin/register")
+    @Operation(
+        summary = "Register a new admin user",
+        description = "Register a new admin user with admin secret key validation"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Admin registered successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid admin secret key or validation error"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "User with this email already exists")
+    })
+    public ResponseEntity<ApiResponse<AdminRegisterResponse>> registerAdmin(@Valid @RequestBody AdminRegisterRequest request) {
+        
+        // Validate admin secret key
+        if (!ADMIN_SECRET_KEY.equals(request.getAdminSecretKey())) {
+            AdminRegisterResponse errorResponse = new AdminRegisterResponse();
+            errorResponse.setMessage("Invalid admin secret key");
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error(errorResponse, 400));
+        }
+        
+        // Check if user already exists
+        if (userService.existsByEmail(request.getEmail())) {
+            AdminRegisterResponse errorResponse = new AdminRegisterResponse();
+            errorResponse.setMessage("User with this email already exists");
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(errorResponse, 409));
+        }
+        
+        try {
+            // Create new admin user
+            User user = new User();
+            user.setEmail(request.getEmail());
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.setFirstName(request.getFirstName());
+            user.setLastName(request.getLastName());
+            user.setUsername(request.getUsername());
+            user.setRole(User.Role.ADMIN);
+            
+            User savedUser = userService.saveUser(user);
+
+            // Generate JWT token with admin role
+            Pair<String, Timestamp> tokenPair = jwtService.generateToken(savedUser.getEmail(), "ADMIN");
+            
+            // Convert Timestamp to LocalDateTime for response
+            LocalDateTime expiresAt = tokenPair.getSecond().toLocalDateTime();
+            
+            // Build AdminRegisterResponse
+            AdminRegisterResponse response = new AdminRegisterResponse(
+                savedUser.getId(),
+                tokenPair.getFirst(),
+                expiresAt,
+                "ADMIN",
+                "Admin registration successful"
+            );
+            
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(response, 201));
+            
+        } catch (Exception e) {
+            AdminRegisterResponse errorResponse = new AdminRegisterResponse(
+                null, null, null, null, "Admin registration failed: " + e.getMessage()
+            );
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(errorResponse, 500));
+        }
+    }
+
+    @PostMapping("/admin/login")
+    @Operation(
+        summary = "Login admin user",
+        description = "Authenticate admin user with email and password, return JWT tokens with admin privileges"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Admin login successful"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid credentials or not an admin user"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "User is not an admin")
+    })
+    public ResponseEntity<ApiResponse<AdminLoginResponse>> loginAdmin(@Valid @RequestBody @Parameter(description = "Admin login credentials", required = true) AdminLoginRequest request) {
+        
+        try {
+            // Find user by email
+            Optional<User> userOpt = userService.getUserByEmail(request.getEmail());
+            if (userOpt.isEmpty()) {
+                AdminLoginResponse error = new AdminLoginResponse();
+                error.setMessage("Invalid credentials");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(error, 401));
+            }
+
+            User user = userOpt.get();
+            
+            // Check if user is admin
+            if (user.getRole() != User.Role.ADMIN) {
+                AdminLoginResponse error = new AdminLoginResponse();
+                error.setMessage("Access denied: Admin privileges required");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(error, 403));
+            }
+            
+            // Verify password
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                AdminLoginResponse error = new AdminLoginResponse();
+                error.setMessage("Invalid credentials");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(error, 401));
+            }
+
+            // Generate JWT token with admin role
+            Pair<String, Timestamp> tokenPair = jwtService.generateToken(user.getEmail(), "ADMIN");
+            
+            // Build response
+            AdminLoginResponse response = new AdminLoginResponse(
+                tokenPair.getFirst(),
+                user.getId(),
+                tokenPair.getSecond().toLocalDateTime(),
+                "ADMIN",
+                "Admin login successful"
+            );
+            
+            return ResponseEntity.ok(ApiResponse.success(response));
+            
+        } catch (Exception e) {
+            AdminLoginResponse error = new AdminLoginResponse();
+            error.setMessage("Admin login failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(error, 500));
         }
     }
 

@@ -40,8 +40,18 @@ public class DataInitializer implements CommandLineRunner {
     
     @Override
     public void run(String... args) throws Exception {
-        // Only initialize if no data exists
-        if (userRepository.count() == 0) {
+        // Ensure admin user exists
+        if (!userRepository.existsByEmail("admin@youthmind.ai")) {
+            logger.info("Creating admin user...");
+            User adminUser = createAdminUser();
+            userRepository.save(adminUser);
+            logger.info("Admin user created: {}", adminUser.getEmail());
+        } else {
+            logger.info("Admin user already exists");
+        }
+        
+        // Only initialize sample data if no other data exists
+        if (userRepository.count() <= 1) { // Only admin user exists
             logger.info("Initializing sample data...");
             initializeSampleData();
             logger.info("Sample data initialization completed");
@@ -63,6 +73,20 @@ public class DataInitializer implements CommandLineRunner {
                    sampleUsers.size(), samplePosts.size());
     }
     
+    private User createAdminUser() {
+        User admin = new User();
+        admin.setId(UUID.randomUUID());
+        admin.setEmail("admin@youthmind.ai");
+        admin.setPassword(passwordEncoder.encode("admin123"));
+        admin.setFirstName("Admin");
+        admin.setLastName("User");
+        admin.setUsername("admin");
+        admin.setRole(User.Role.ADMIN); // Set admin role
+        admin.setCreatedAt(LocalDateTime.now());
+        admin.setUpdatedAt(LocalDateTime.now());
+        return admin;
+    }
+
     private List<User> createSampleUsers() {
         return Arrays.asList(
             createUser("alice@youthmind.ai", "Alice Johnson"),
