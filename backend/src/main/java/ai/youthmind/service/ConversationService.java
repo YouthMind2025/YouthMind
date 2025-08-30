@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -81,6 +82,13 @@ public class ConversationService {
         return messages.stream()
             .map(this::convertToMessageDto)
             .collect(Collectors.toList());
+    }
+
+    /**
+     * Get messages by conversation ID with pagination
+     */
+    public Page<Message> getMessagesByConversationIdWithPagination(UUID conversationId, Pageable pageable) {
+        return messageRepository.findByConversationIdOrderByTimestampAsc(conversationId, pageable);
     }
 
     /**
@@ -196,6 +204,7 @@ public class ConversationService {
     /**
      * Delete a conversation
      */
+    @Transactional
     public void deleteConversation(UUID conversationId, UUID userId) {
         Optional<Conversation> conversationOpt = conversationRepository.findById(conversationId);
         if (conversationOpt.isEmpty()) {
@@ -207,9 +216,8 @@ public class ConversationService {
             throw new RuntimeException("Not authorized to delete this conversation");
         }
 
-        // Delete all messages first
-        List<Message> messages = messageRepository.findByConversationIdOrderByTimestampAsc(conversationId);
-        messageRepository.deleteAll(messages);
+        // Delete all messages first (using repository method for better performance)
+        messageRepository.deleteByConversationId(conversationId);
 
         // Delete the conversation
         conversationRepository.delete(conversation);

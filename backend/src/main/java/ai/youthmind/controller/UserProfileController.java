@@ -212,19 +212,8 @@ public class UserProfileController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             UUID currentUserId = (UUID) authentication.getPrincipal();
 
-            // TODO: Implement actual liked posts retrieval
-            // This requires implementing PostResonance entity and repository
-            List<PostDto> posts = List.of(); // Empty list for now
-            
-            PaginationDto pagination = new PaginationDto();
-            pagination.setPage(page);
-            pagination.setLimit(limit);
-            pagination.setTotal(0);
-            pagination.setTotalItems(0);
-            pagination.setTotalPages(0);
-            pagination.setHasNext(false);
-            pagination.setHasPrevious(false);
-
+            List<PostDto> posts = postService.getLikedPostsByUser(currentUserId);
+            PaginationDto pagination = new PaginationDto(page, limit, 0, 0, 0, false, false);
             UserPostsResponse response = new UserPostsResponse(posts, pagination);
 
             return ResponseEntity.ok(ApiResponse.success(response));
@@ -255,19 +244,8 @@ public class UserProfileController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             UUID currentUserId = (UUID) authentication.getPrincipal();
 
-            // TODO: Implement actual bookmarked posts retrieval
-            // This requires implementing PostCollection entity and repository
-            List<PostDto> posts = List.of(); // Empty list for now
-            
-            PaginationDto pagination = new PaginationDto();
-            pagination.setPage(page);
-            pagination.setLimit(limit);
-            pagination.setTotal(0);
-            pagination.setTotalItems(0);
-            pagination.setTotalPages(0);
-            pagination.setHasNext(false);
-            pagination.setHasPrevious(false);
-
+            List<PostDto> posts = postService.getBookmarkedPostsByUser(currentUserId);
+            PaginationDto pagination = new PaginationDto(page, limit, 0, 0, 0, false, false);
             UserPostsResponse response = new UserPostsResponse(posts, pagination);
 
             return ResponseEntity.ok(ApiResponse.success(response));
@@ -280,11 +258,12 @@ public class UserProfileController {
     @DeleteMapping("/account")
     @Operation(
         summary = "Delete user account",
-        description = "Delete the current user's account"
+        description = "Delete the current user's account and all associated data"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Account deleted successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error during account deletion")
     })
     public ResponseEntity<ApiResponse<Map<String, Object>>> deleteAccount() {
         try {
@@ -292,29 +271,35 @@ public class UserProfileController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             UUID currentUserId = (UUID) authentication.getPrincipal();
 
-            // TODO: Implement comprehensive account deletion
-            // This should include:
-            // 1. Soft delete or hard delete user account
-            // 2. Delete or anonymize user's posts
-            // 3. Delete user's resonances and collections
-            // 4. Delete user's follows/followers relationships
-            // 5. Delete user's notifications
-            // 6. Delete user's chat messages or anonymize them
-            // 7. Delete user's feed preferences
-            // 8. Invalidate all user sessions/tokens
-            // 9. Remove user from any group chats
-            // 10. Delete user's uploaded media files
-            
-            // For production, this would call userService.deleteAccount(currentUserId)
+            // Verify user exists before deletion
+            Optional<User> userOpt = userService.getUserById(currentUserId);
+            if (userOpt.isEmpty()) {
+                Map<String, Object> errorData = new HashMap<>();
+                errorData.put("error", "User not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(errorData, HttpStatus.NOT_FOUND.value()));
+            }
+
+            // Perform comprehensive account deletion
+            userService.deleteAccount(currentUserId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Account deleted successfully");
+            response.put("message", "Account and all associated data deleted successfully");
+            response.put("deletedAt", java.time.LocalDateTime.now());
 
             return ResponseEntity.ok(ApiResponse.success(response));
+            
         } catch (Exception e) {
+            // Log the error for debugging
+            System.err.println("Error deleting user account: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorData = new HashMap<>();
+            errorData.put("error", "Failed to delete account. Please try again later.");
+            
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(null, HttpStatus.INTERNAL_SERVER_ERROR.value()));
+                .body(ApiResponse.error(errorData, HttpStatus.INTERNAL_SERVER_ERROR.value()));
         }
     }
 }

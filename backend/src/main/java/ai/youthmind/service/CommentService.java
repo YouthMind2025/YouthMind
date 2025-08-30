@@ -243,7 +243,7 @@ public class CommentService {
 
         // Set author information
         userRepository.findById(comment.getAuthorId()).ifPresent(user -> {
-            dto.setAuthorName(user.getFirstName() + " " + user.getLastName());
+            dto.setAuthor(user.getFirstName() + " " + user.getLastName());
         });
 
         // Set engagement flags
