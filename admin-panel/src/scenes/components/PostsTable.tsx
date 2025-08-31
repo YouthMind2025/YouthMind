@@ -1,17 +1,6 @@
 import React, { useState } from 'react';
 import { postsApi } from '../../services/api';
-
-// Updated interface to match backend Post entity
-interface Post {
-  id: string;
-  content: string;
-  emotionTag: string;
-  aiMetadata?: string;
-  createdAt: string;
-  anonymousUserId?: string;
-  understandingCount?: number;
-  hasUserUnderstood?: boolean;
-}
+import { Post } from '../../types';
 
 interface PostsTableProps {
   posts: Post[];
@@ -53,14 +42,14 @@ const PostsTable: React.FC<PostsTableProps> = ({
   };
 
   const getUserDisplayName = (post: Post) => {
-    if (post.anonymousUserId) {
-      return truncateId(post.anonymousUserId);
+    if (post.userId) {
+      return truncateId(post.userId);
     }
     return 'Anonymous';
   };
 
   const getUserIdentifier = (post: Post) => {
-    return post.anonymousUserId || '';
+    return post.userId || '';
   };
 
   const toggleExpanded = (postId: string) => {
@@ -78,14 +67,9 @@ const PostsTable: React.FC<PostsTableProps> = ({
   const handleDelete = async (postId: string) => {
     if (window.confirm('Are you sure you want to delete this post?')) {
       try {
-        // Note: postsApi.deletePost() is commented out until backend implements the endpoint
-        // When backend is ready, uncomment the API call below:
-        // await postsApi.deletePost(postId);
-        // alert('Post deleted successfully');
-        // window.location.reload();
-        
-        console.log('Delete post:', postId);
-        alert('Delete functionality will be available when backend endpoint is implemented');
+        await postsApi.deletePost(postId);
+        alert('Post deleted successfully');
+        window.location.reload();
       } catch (error) {
         console.error('Error deleting post:', error);
         alert('Error deleting post');
@@ -138,10 +122,16 @@ const PostsTable: React.FC<PostsTableProps> = ({
                 User
               </th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Title
+              </th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Content
               </th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                 Emotion
+              </th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                Stats
               </th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                 Created
@@ -162,20 +152,31 @@ const PostsTable: React.FC<PostsTableProps> = ({
                     {getUserDisplayName(post)}
                   </td>
                   <td className="px-3 py-2 text-xs text-gray-900 max-w-xs">
+                    {truncateContent(post.title || 'No title', 40)}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-gray-900 max-w-xs">
                     {truncateContent(post.content)}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     <span className={`inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-full ${
-                      post.emotionTag === 'joy' ? 'bg-green-100 text-green-800' :
-                      post.emotionTag === 'sadness' ? 'bg-blue-100 text-blue-800' :
-                      post.emotionTag === 'anger' ? 'bg-red-100 text-red-800' :
-                      post.emotionTag === 'fear' ? 'bg-purple-100 text-purple-800' :
-                      post.emotionTag === 'surprise' ? 'bg-yellow-100 text-yellow-800' :
-                      post.emotionTag === 'disgust' ? 'bg-orange-100 text-orange-800' :
+                      post.emotion === 'happy' ? 'bg-green-100 text-green-800' :
+                      post.emotion === 'sad' ? 'bg-blue-100 text-blue-800' :
+                      post.emotion === 'angry' ? 'bg-red-100 text-red-800' :
+                      post.emotion === 'fear' ? 'bg-purple-100 text-purple-800' :
+                      post.emotion === 'surprised' ? 'bg-yellow-100 text-yellow-800' :
+                      post.emotion === 'disgusted' ? 'bg-orange-100 text-orange-800' :
+                      post.emotion === 'conflicted' ? 'bg-gray-100 text-gray-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {post.emotionTag}
+                      {post.emotion}
                     </span>
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
+                    <div className="space-y-1">
+                      <div>👍 {post.resonance}</div>
+                      <div>👁 {post.view}</div>
+                      <div>🔖 {post.collect}</div>
+                    </div>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                     {formatDate(post.createdAt)}
@@ -204,22 +205,39 @@ const PostsTable: React.FC<PostsTableProps> = ({
                 </tr>
                 {isExpanded(post.id) && (
                   <tr className="bg-gray-50">
-                    <td colSpan={6} className="px-3 py-3 text-xs">
+                    <td colSpan={8} className="px-3 py-3 text-xs">
                       <div className="space-y-2">
                         <div>
-                          <span className="font-semibold text-gray-700">Content:</span>
+                          <span className="font-semibold text-gray-700">Full Title:</span>
+                          <p className="mt-1 text-gray-900">{post.title || 'No title'}</p>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-700">Full Content:</span>
                           <p className="mt-1 text-gray-900 whitespace-pre-wrap">{post.content}</p>
                         </div>
-                        {post.anonymousUserId && (
+                        <div>
+                          <span className="font-semibold text-gray-700">User ID:</span>
+                          <p className="mt-1 font-mono text-gray-900">{post.userId}</p>
+                        </div>
+                        {post.topics && (
                           <div>
-                            <span className="font-semibold text-gray-700">User ID:</span>
-                            <p className="mt-1 font-mono text-gray-900">{post.anonymousUserId}</p>
+                            <span className="font-semibold text-gray-700">Topics:</span>
+                            <p className="mt-1 text-gray-900">{post.topics}</p>
                           </div>
                         )}
                         {post.aiMetadata && (
                           <div>
                             <span className="font-semibold text-gray-700">AI Metadata:</span>
                             <p className="mt-1 text-gray-900">{post.aiMetadata}</p>
+                          </div>
+                        )}
+                        {post.flagged && (
+                          <div>
+                            <span className="font-semibold text-red-700">⚠️ Flagged:</span>
+                            <p className="mt-1 text-red-900">{post.flagReason || 'No reason provided'}</p>
+                            {post.flaggedAt && (
+                              <p className="text-red-700 text-xs">Flagged at: {formatDate(post.flaggedAt)}</p>
+                            )}
                           </div>
                         )}
                       </div>

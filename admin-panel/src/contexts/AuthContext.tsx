@@ -15,6 +15,7 @@ interface JWTPayload {
   sub: string; // user's email stored in subject claim
   exp: number; // expiration timestamp
   iat: number; // issued at timestamp
+  role: string; // user role (USER or ADMIN)
 }
 
 interface AuthContextType {
@@ -72,6 +73,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const decoded = jwtDecode<JWTPayload>(token);
 
+      // Verify this is an admin token
+      if (decoded.role !== 'ADMIN') {
+        console.error('Token does not have admin role');
+        return null;
+      }
+
       return {
         id: '', // ID not present in token; you can fetch by email if needed
         email: decoded.sub,
@@ -117,22 +124,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       setIsAuthenticated(false);
       setUser(null);
-      // Call backend login API
+      // Call backend admin login API
       const response = await authApi.adminLogin(email, password);
       const data = response.data;
-      if (data && data.accessToken) {
-        localStorage.setItem('admin_token', data.accessToken);
-        // Use user info from backend response
-        setUser({
-          id: data.user.id,
-          email: data.user.email,
-          firstName: data.user.firstName,
-          lastName: data.user.lastName,
-          createdAt: data.user.createdAt,
-          updatedAt: data.user.updatedAt,
-        });
-        setIsAuthenticated(true);
-        return true;
+      
+      // Backend returns data structure: { success: true, data: { token, userId, expiresAt, role, message } }
+      if (data && data.success && data.data && data.data.token) {
+        const authData = data.data;
+        localStorage.setItem('admin_token', authData.token);
+        
+        // Decode token to get user info
+        const userData = decodeToken(authData.token);
+        if (userData) {
+          setUser({
+            id: authData.userId || userData.id,
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+          });
+          setIsAuthenticated(true);
+          return true;
+        } else {
+          return false;
+        }
       } else {
         return false;
       }

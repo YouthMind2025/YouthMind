@@ -1,27 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { postsApi } from '../../services/api';
-
-interface FlaggedPost {
-  post_id: string;
-  flag_reason: string;
-  flagged_at: string;
-  ai_confidence: number;
-  content_preview: string;
-  status: string;
-}
+import { FlaggedPost } from '../../types';
 
 const FlaggedPostsTable: React.FC = () => {
   const [flaggedPosts, setFlaggedPosts] = useState<FlaggedPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchFlaggedPosts = async () => {
       setLoading(true);
       try {
         const response = await postsApi.getFlaggedPosts();
-        setFlaggedPosts(response.data.flagged_posts);
-      } catch (error) {
-        console.error('Error fetching flagged posts:', error);
+        console.log('Flagged posts response:', response.data); // Debug log
+        
+        // Handle different possible response structures
+        let flaggedPostsData: FlaggedPost[] = [];
+        
+        if (response.data && response.data.success && Array.isArray(response.data.data)) {
+          // Backend returns ApiResponse format: { success: true, data: [...] }
+          flaggedPostsData = response.data.data.filter((post: any) => post.flagged === true);
+        } else if (Array.isArray(response.data)) {
+          // Direct array response
+          flaggedPostsData = response.data.filter((post: any) => post.flagged === true);
+        } else if (response.data && response.data.flagged_posts) {
+          // Expected format with flagged_posts property
+          flaggedPostsData = response.data.flagged_posts;
+        }
+        
+        // Convert posts to FlaggedPost format if needed
+        const convertedFlaggedPosts: FlaggedPost[] = (flaggedPostsData || []).map((post: any) => ({
+          post_id: post.id || post.post_id || 'unknown',
+          flag_reason: post.flagReason || post.flag_reason || 'Content flagged for review',
+          flagged_at: post.flaggedAt || post.flagged_at || post.createdAt || new Date().toISOString(),
+          ai_confidence: 0.85, // Mock confidence since backend doesn't provide this yet
+          content_preview: (post.content || post.content_preview || '').substring(0, 100),
+          status: post.status || 'pending_review'
+        }));
+        
+        setFlaggedPosts(convertedFlaggedPosts);
+      } catch (err) {
+        console.error('Error fetching flagged posts:', err);
+        setError('Failed to load flagged posts. Please try again.');
+        // Set empty array on error to prevent undefined access
+        setFlaggedPosts([]);
       } finally {
         setLoading(false);
       }
@@ -48,14 +70,9 @@ const FlaggedPostsTable: React.FC = () => {
   const handleDelete = async (postId: string) => {
     if (window.confirm('Are you sure you want to delete this flagged post?')) {
       try {
-        // Note: postsApi.deletePost() is commented out until backend implements the endpoint
-        // When backend is ready, uncomment the API call below:
-        // await postsApi.deletePost(postId);
-        // alert('Post deleted successfully');
-        // setFlaggedPosts(prev => prev.filter(post => post.post_id !== postId));
-        
-        console.log('Delete flagged post:', postId);
-        alert('Delete functionality will be available when backend endpoint is implemented');
+        await postsApi.deletePost(postId);
+        alert('Post deleted successfully');
+        setFlaggedPosts(prev => prev.filter(post => post.post_id !== postId));
       } catch (error) {
         console.error('Error deleting post:', error);
         alert('Error deleting post');
@@ -72,7 +89,22 @@ const FlaggedPostsTable: React.FC = () => {
     );
   }
 
-  if (flaggedPosts.length === 0) {
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow p-8 text-center">
+        <div className="text-red-600 text-lg font-semibold mb-2">⚠️ Error</div>
+        <p className="text-gray-500 mb-4">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!flaggedPosts || flaggedPosts.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-8 text-center">
         <div className="text-green-600 text-lg font-semibold mb-2">🎉 All Clear!</div>

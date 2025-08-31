@@ -2,8 +2,9 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  // Always use backend on port 8080 unless overridden by environment variable
-  baseURL: process.env.REACT_APP_API_URL || '/',
+  // Use proxy configuration from package.json when in development
+  // In production, set REACT_APP_API_URL environment variable
+  baseURL: process.env.REACT_APP_API_URL || '',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -45,7 +46,7 @@ api.interceptors.response.use(
 // Auth API methods for admin login using backend auth system
 export const authApi = {
   adminLogin: (email: string, password: string) => 
-    api.post('/v1/auth/login', { email, password }),
+    api.post('/v1/auth/admin/login', { email, password }),
   // Test auth endpoint for health checks
   testAuth: () => api.get('/v1/auth/test'),
 };
@@ -65,42 +66,42 @@ export const usersApi = {
   deleteUser: (id: string) => api.delete(`/api/users/${id}`),
 };
 
-// Posts API methods - adapting to available backend endpoints
+// Posts API methods - using actual backend endpoints
 export const postsApi = {
-  // Note: Backend doesn't have GET posts endpoint, only POST create
-  // Uncomment when backend implements these endpoints:
-    
-  // deletePost: (id: string) => api.delete(`/v1/admin/posts/${id}`),
-  
-  // flagPost: (id: string) => api.post(`/v1/admin/posts/${id}/flag`),
+  // Get posts with pagination and filters (backend endpoint: GET /v1/posts)
+  getPosts: (
+    page: number = 1,
+    limit: number = 20,
+    emotion?: string,
+    sort: string = 'newest'
+  ) => {
+    // Backend uses 0-based pagination and 'size' parameter
+    const params: any = { 
+      page: page - 1, // Convert to 0-based
+      size: limit     // Use 'size' instead of 'limit'
+    };
+    if (emotion) params.emotion = emotion;
+    if (sort) params.sort = sort;
+    return api.get('/v1/posts', { params });
+  },
+
+  // Get single post by ID
+  getPost: (postId: string) => api.get(`/v1/posts/${postId}`),
   
   // Create post (maps to existing backend endpoint)
   createPost: (data: {
+    title: string;
     content: string;
-    emotionTag?: string;
-    aiMetadata?: string;
+    emotion?: string;
+    preImg?: string;
   }) => api.post('/v1/posts/create', data),
 
-  // Get paginated feed of posts with optional server-side filters (backend /v1/posts/feed)
-  getFeed: (
-    page: number = 0,
-    size: number = 20,
-    sortBy: string = 'newest',
-    filters: {
-      emotionTag?: string;
-      startDate?: string; // ISO string
-      endDate?: string;   // ISO string
-    } = {}
-  ) => {
-    const params: any = { page, size, sortBy };
-    if (filters.emotionTag) params.emotionTag = filters.emotionTag;
-    if (filters.startDate) params.startDate = filters.startDate;
-    if (filters.endDate) params.endDate = filters.endDate;
-    return api.get('/v1/posts/feed', { params });
-  },
+  // Delete post (admin functionality)
+  deletePost: (postId: string) => api.delete(`/v1/posts/${postId}`),
 
   // Get flagged posts for moderation queue
-  getFlaggedPosts: () => api.get('/admin/v1/posts/flagged'),
+  // Using general posts endpoint and filtering on frontend since specific flagged endpoint doesn't exist yet
+  getFlaggedPosts: () => api.get('/v1/posts?page=1&limit=100'),
 };
 
 // System health and monitoring
@@ -109,8 +110,11 @@ export const systemApi = {
    * Retrieve system health information from Spring Boot Actuator endpoint.
    * This endpoint is publicly accessible as per backend SecurityConfig.
    */
-  //getHealth: () => api.get('/actuator/health'),
-  getHealth: () => api.get('/v1/auth/test'),
+  getHealth: () => api.get('/actuator/health'),
+  // Fallback health check using auth test endpoint
+  getHealthFallback: () => api.get('/v1/auth/test'),
+  // Direct backend connection test (bypasses proxy)
+  testBackendDirect: () => axios.get('http://localhost:8080/actuator/health'),
 };
 
 export default api; 
