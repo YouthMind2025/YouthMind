@@ -38,22 +38,64 @@ const SystemHealth: React.FC = () => {
     const fetchHealthData = async () => {
       setLoading(true);
       try {
+        console.log('Fetching system health data...');
         
-        // Test backend connectivity
-        const healthResponse = await systemApi.getHealth();
+        // Test backend connectivity using actuator health endpoint
+        console.log('Calling health endpoint...');
+        let healthResponse;
+        try {
+          // First try direct backend connection to test if backend is running
+          console.log('Testing direct backend connection...');
+          healthResponse = await systemApi.testBackendDirect();
+          console.log('✅ Backend is running! Direct connection successful:', healthResponse);
+        } catch (directError) {
+          console.error('❌ Backend direct connection failed:', directError);
+          console.log('This means either:');
+          console.log('1. Backend is not running on port 8080');
+          console.log('2. CORS is blocking the request');
+          console.log('3. Backend health endpoint is not available');
+          
+          try {
+            // Try through proxy
+            healthResponse = await systemApi.getHealth();
+            console.log('Health response from proxy /actuator/health:', healthResponse);
+          } catch (healthError) {
+            console.warn('Actuator health endpoint failed, trying fallback:', healthError);
+            // Try fallback endpoint
+            healthResponse = await systemApi.getHealthFallback();
+            console.log('Health response from fallback:', healthResponse);
+          }
+        }
+        
         // Get user count as a metric
         let userCount = 0;
         try {
+          console.log('Fetching user count...');
           const usersResponse = await usersApi.getAllUsers();
-          userCount = usersResponse.data.length;
+          console.log('Users response:', usersResponse);
+          
+          // Backend /api/users returns direct array of UserDto objects (not wrapped in ApiResponse)
+          if (Array.isArray(usersResponse.data)) {
+            userCount = usersResponse.data.length;
+            console.log('User count from direct array:', userCount);
+          } else if (usersResponse.data && usersResponse.data.success && Array.isArray(usersResponse.data.data)) {
+            userCount = usersResponse.data.data.length;
+            console.log('User count from API response:', userCount);
+          } else {
+            console.log('Unexpected users response format:', usersResponse.data);
+          }
         } catch (userError) {
-          console.warn('Could not fetch user count:', userError);
+          console.error('Could not fetch user count:', userError);
         }
 
         
 
         const actuatorPayload = (healthResponse.data ?? {}) as any;
         const isActuator = actuatorPayload && typeof actuatorPayload.status === 'string';
+        
+        console.log('Actuator payload:', actuatorPayload);
+        console.log('Is actuator response:', isActuator);
+        console.log('Health response status:', healthResponse.status);
 
         const mapStatus = (value?: string): string => {
           if (!value) return 'unknown';
@@ -71,6 +113,8 @@ const SystemHealth: React.FC = () => {
           : healthResponse.status === 200
           ? 'healthy'
           : 'unhealthy';
+          
+        console.log('Calculated overall health:', overallHealth);
 
         // Pull component details if available (Actuator) otherwise fall back to overall
         const dbComponent = actuatorPayload.components?.database;
@@ -90,12 +134,15 @@ const SystemHealth: React.FC = () => {
           },
         };
 
+        console.log('Final health data:', updatedHealthData);
         setHealthData(updatedHealthData);
     
-        
         setLastUpdated(new Date());
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch health data:', error);
+        console.error('Error response:', error.response?.data);
+        console.error('Error status:', error.response?.status);
+        
         // Set services as down if we can't reach backend
         setHealthData({
           status: 'DOWN',

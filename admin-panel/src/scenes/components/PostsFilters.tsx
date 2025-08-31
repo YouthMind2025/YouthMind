@@ -1,20 +1,15 @@
 import React from 'react';
-
-interface Filters {
-  emotionTag: string;
-  startDate: string;
-  endDate: string;
-}
+import { PostFilters } from '../../types';
 
 interface PostsFiltersProps {
-  filters: Filters;
-  onFiltersChange: (filters: Filters) => void;
+  filters: PostFilters;
+  onFiltersChange: (filters: PostFilters) => void;
 }
 
 const PostsFilters: React.FC<PostsFiltersProps> = ({ filters, onFiltersChange }) => {
-  const emotionTags = ['joy', 'sadness', 'anger', 'fear', 'surprise', 'disgust'];
+  const emotions = ['happy', 'sad', 'angry', 'fear', 'surprised', 'disgusted', 'conflicted'];
 
-  const handleFilterChange = (key: keyof Filters, value: string) => {
+  const handleFilterChange = (key: keyof PostFilters, value: string) => {
     onFiltersChange({
       ...filters,
       [key]: value
@@ -23,7 +18,7 @@ const PostsFilters: React.FC<PostsFiltersProps> = ({ filters, onFiltersChange })
 
   const clearFilters = () => {
     onFiltersChange({
-      emotionTag: '',
+      emotion: '',
       startDate: '',
       endDate: ''
     });
@@ -42,19 +37,19 @@ const PostsFilters: React.FC<PostsFiltersProps> = ({ filters, onFiltersChange })
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label htmlFor="emotionTag" className="block text-sm font-medium text-gray-700 mb-1">
-            Emotion Tag
+          <label htmlFor="emotion" className="block text-sm font-medium text-gray-700 mb-1">
+            Emotion
           </label>
           <select
-            id="emotionTag"
-            value={filters.emotionTag}
-            onChange={(e) => handleFilterChange('emotionTag', e.target.value)}
+            id="emotion"
+            value={filters.emotion}
+            onChange={(e) => handleFilterChange('emotion', e.target.value)}
             className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
           >
             <option value="">All Emotions</option>
-            {emotionTags.map(tag => (
-              <option key={tag} value={tag}>
-                {tag.charAt(0).toUpperCase() + tag.slice(1)}
+            {emotions.map(emotion => (
+              <option key={emotion} value={emotion}>
+                {emotion.charAt(0).toUpperCase() + emotion.slice(1)}
               </option>
             ))}
           </select>

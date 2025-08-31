@@ -2,60 +2,86 @@ import React, { useState, useEffect } from 'react';
 import PostsTable from '../components/PostsTable';
 import PostsFilters from '../components/PostsFilters';
 import { postsApi } from '../../services/api';
+import { Post, PostFilters } from '../../types';
 import './Posts.css';
-
-//interface to match backend Post entity
-interface Post {
-  id: string;
-  content: string;
-  emotionTag: string;
-  aiMetadata?: string;
-  createdAt: string;
-  anonymousUserId?: string;
-  understandingCount?: number;
-  hasUserUnderstood?: boolean;
-}
-
-interface Filters {
-  emotionTag: string;
-  startDate: string;
-  endDate: string;
-}
 
 const Posts: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [filters, setFilters] = useState<Filters>({
-    emotionTag: '',
+  const [filters, setFilters] = useState<PostFilters>({
+    emotion: '',
     startDate: '',
     endDate: ''
   });
 
   const postsPerPage = 10;
 
-  // Fetch posts from backend feed endpoint
+  // Fetch posts from backend endpoint
   useEffect(() => {
     const fetchPosts = async () => {
       setLoading(true);
       try {
-        const response = await postsApi.getFeed(currentPage, postsPerPage, 'newest', {
-          emotionTag: filters.emotionTag || undefined,
-          startDate: filters.startDate || undefined,
-          endDate: filters.endDate || undefined,
+        console.log('Fetching posts with params:', {
+          page: currentPage + 1,
+          limit: postsPerPage,
+          emotion: filters.emotion || undefined,
+          sort: 'newest'
         });
-        const feedData = response.data;
-        if (feedData && feedData.posts) {
-          setPosts(feedData.posts);
-          setTotalPages(feedData.totalPages || 0);
+        
+        const response = await postsApi.getPosts(
+          currentPage + 1, // Will be converted to 0-based in API call
+          postsPerPage,
+          filters.emotion || undefined,
+          'newest'
+        );
+        
+        console.log('Raw API response:', response);
+        console.log('Response data:', response.data);
+        
+        const data = response.data;
+        
+        // Handle different possible response structures
+        if (data && data.success && data.data) {
+          // Backend returns ApiResponse<FeedResponse> format
+          const feedData = data.data;
+          console.log('Feed data:', feedData);
+          
+          if (feedData.posts && Array.isArray(feedData.posts)) {
+            console.log('Found posts in FeedResponse format:', feedData.posts.length);
+            setPosts(feedData.posts);
+            // Use pagination info from FeedResponse if available
+            if (feedData.pagination) {
+              setTotalPages(feedData.pagination.totalPages || 1);
+            } else {
+              setTotalPages(Math.ceil(feedData.posts.length / postsPerPage) + 1);
+            }
+          } else if (Array.isArray(feedData)) {
+            // Fallback: direct array in data
+            console.log('Found posts as direct array in data:', feedData.length);
+            setPosts(feedData);
+            setTotalPages(Math.ceil(feedData.length / postsPerPage) + 1);
+          } else {
+            console.log('No posts found in feed data:', feedData);
+            setPosts([]);
+            setTotalPages(0);
+          }
+        } else if (Array.isArray(data)) {
+          // Direct array response (fallback)
+          console.log('Found posts in direct array format:', data.length);
+          setPosts(data);
+          setTotalPages(Math.ceil(data.length / postsPerPage) + 1);
         } else {
+          console.log('No posts found or unexpected format:', data);
           setPosts([]);
           setTotalPages(0);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching posts:', error);
+        console.error('Error details:', error.response?.data);
         setPosts([]);
+        setTotalPages(0);
       } finally {
         setLoading(false);
       }
@@ -101,7 +127,7 @@ const Posts: React.FC = () => {
     setCurrentPage(0);
   }, [filters]);
 
-  const handleFiltersChange = (newFilters: Filters) => {
+  const handleFiltersChange = (newFilters: PostFilters) => {
     setFilters(newFilters);
   };
 
