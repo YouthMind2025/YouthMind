@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { articlesApi } from '../../services/api';
-import { Article, ArticleListResponse, ArticleRequest } from '../../types';
+import { Article, ArticleListResponse, ArticleRequest, DocumentParseResponse } from '../../types';
 import './Articles.css';
 
 const Articles: React.FC = () => {
@@ -15,7 +15,7 @@ const Articles: React.FC = () => {
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadSuccess, setUploadSuccess] = useState<string>('');
   const [hasUploadedDocx, setHasUploadedDocx] = useState<boolean>(false);
-  const [extractedContent, setExtractedContent] = useState<{title?: string, content?: string, intro?: string}>({});
+  const [extractedContent, setExtractedContent] = useState<Partial<DocumentParseResponse>>({});
 
   // Form state
   const [formData, setFormData] = useState<ArticleRequest>({
@@ -202,6 +202,9 @@ const Articles: React.FC = () => {
         if (extractedData.title) extractedItems.push('title');
         if (extractedData.content) extractedItems.push('content');
         if (extractedData.intro) extractedItems.push('introduction');
+        if (extractedData.images && extractedData.images.length > 0) {
+          extractedItems.push(`${extractedData.images.length} image${extractedData.images.length > 1 ? 's' : ''}`);
+        }
         
         if (extractedItems.length > 0) {
           setUploadSuccess(`Successfully extracted: ${extractedItems.join(', ')}. You can edit the fields below or create the article as-is.`);
