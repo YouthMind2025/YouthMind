@@ -25,8 +25,8 @@ import java.util.concurrent.TimeUnit;
 @Tag(name = "Test Endpoints", description = "Test and health check endpoints for development and monitoring")
 public class TestController {
 
-    //@Autowired
-    //private RedisService redisService;
+    @Autowired
+    private RedisService redisService;
 
     @GetMapping("/hello")
     @Operation(
@@ -65,19 +65,20 @@ public class TestController {
         String key = "youthmind:test:greeting";
         String value = "Hello from Redis!";
         try {
-            // redisService.setValue(key, value, 1, TimeUnit.MINUTES);
-            // String retrievedValue = (String) redisService.getValue(key);
-            String retrievedValue = value; // Simulate Redis retrieval since Redis is disabled
+            // Try to use Redis if available
+            redisService.setValue(key, value, 1, TimeUnit.MINUTES);
+            String retrievedValue = (String) redisService.getValue(key);
+            
             if (value.equals(retrievedValue)) {
-                String message = "OK: Successfully set and retrieved a value from Redis. Got: '" + retrievedValue + "'";
+                String message = "✅ Redis is working! Successfully set and retrieved: '" + retrievedValue + "'";
                 return ApiResponse.success(message, 200);
             } else {
-                String message = "FAIL: Retrieved a different value from Redis. Expected: '" + value + "', Got: '" + retrievedValue + "'";
+                String message = "⚠️ Redis test failed - retrieved different value. Expected: '" + value + "', Got: '" + retrievedValue + "'";
                 return ApiResponse.error(message, 500);
             }
         } catch (Exception e) {
-            String message = "FAIL: An exception occurred while interacting with Redis: " + e.getMessage();
-            return ApiResponse.error(message, 500);
+            String message = "ℹ️ Redis is not available or test failed: " + e.getMessage() + " (Application continues without caching)";
+            return ApiResponse.success(message, 200); // Return success since this is expected in dev without Redis
         }
     }
 

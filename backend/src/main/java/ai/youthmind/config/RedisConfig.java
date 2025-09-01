@@ -2,6 +2,8 @@ package ai.youthmind.config;
 
 import ai.youthmind.listener.AiProcessedMessageListener;
 import ai.youthmind.listener.PostCreatedMessageListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -11,7 +13,8 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-//@Configuration
+@Configuration
+@ConditionalOnProperty(name = "spring.data.redis.host", havingValue = "localhost", matchIfMissing = true)
 public class RedisConfig {
 
     @Bean
@@ -32,6 +35,7 @@ public class RedisConfig {
     }
 
     @Bean
+    @ConditionalOnBean({PostCreatedMessageListener.class, AiProcessedMessageListener.class})
     public RedisMessageListenerContainer container(RedisConnectionFactory factory,
                                                    PostCreatedMessageListener postCreatedListener,
                                                    AiProcessedMessageListener aiProcessedListener) {
