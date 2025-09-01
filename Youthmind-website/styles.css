@@ -167,14 +167,19 @@ body::before {
     flex: 1;
     display: flex;
     justify-content: center;
+    align-items: center;
 }
 
 .nav-menu ul {
     display: flex;
     list-style: none;
-    gap: 40px;
+    gap: 120px;
     margin: 0;
     padding: 0;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 600px;
 }
 
 .nav-menu li {
@@ -185,8 +190,8 @@ body::before {
     text-decoration: none;
     color: #4C1D95;
     font-weight: 600;
-    font-size: 16px;
-    padding: 10px 16px;
+    font-size: 18px;
+    padding: 12px 20px;
     border-radius: 20px;
     transition: all 0.3s ease;
     position: relative;
@@ -224,61 +229,7 @@ body::before {
     display: flex;
     gap: 15px;
     align-items: center;
-}
-
-.btn-signin {
-    background: rgba(75, 29, 149, 0.1);
-    border: 2px solid #4C1D95;
-    color: #4C1D95;
-    padding: 8px 20px;
-    border-radius: 25px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-}
-
-.btn-signin:hover {
-    background: #4C1D95;
-    border-color: #4C1D95;
-    color: var(--white);
-    box-shadow: 0 4px 20px rgba(75, 29, 149, 0.3);
-    transform: translateY(-2px);
-}
-
-.btn-join {
-    background: linear-gradient(135deg, #4C1D95 0%, #5B21B6 100%);
-    border: none;
-    color: var(--white);
-    padding: 10px 24px;
-    border-radius: 25px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(75, 29, 149, 0.3);
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-join::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s ease;
-}
-
-.btn-join:hover::before {
-    left: 100%;
-}
-
-.btn-join:hover {
-    background: linear-gradient(135deg, #5B21B6 0%, #6D28D9 100%);
-    box-shadow: 0 6px 25px rgba(75, 29, 149, 0.5);
-    transform: translateY(-2px);
+    /* Login and signup buttons removed */
 }
 
 /* 主要内容区域 */
@@ -1546,14 +1497,20 @@ main {
     
     .nav-menu ul {
         flex-direction: column;
-        gap: 10px;
+        gap: 20px;
         text-align: center;
+        justify-content: center;
+        align-items: center;
+        max-width: none;
+        width: auto;
     }
     
-    .auth-buttons {
-        order: 2;
-        margin-top: 15px;
+    .nav-link {
+        font-size: 16px;
+        padding: 10px 16px;
     }
+    
+    /* Auth buttons mobile styles removed */
     
     main {
         margin-top: 120px;
@@ -1620,285 +1577,9 @@ main {
     }
 }
 
-/* 登录注册弹窗样式 */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 10000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(5px);
-    animation: modalFadeIn 0.3s ease;
-}
+/* Login and register modal styles removed */
 
-.modal.show {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-@keyframes modalFadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-.modal-content {
-    background: linear-gradient(135deg, var(--white) 0%, var(--lightest-purple) 100%);
-    border-radius: 25px;
-    width: 90%;
-    max-width: 450px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 
-        0 30px 100px var(--glow-purple),
-        0 0 0 1px rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(102, 126, 234, 0.2);
-    backdrop-filter: blur(20px);
-    transform: scale(0.7);
-    animation: modalSlideIn 0.4s ease forwards;
-    position: relative;
-}
-
-.modal-content::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--gradient-primary);
-    border-radius: 25px 25px 0 0;
-}
-
-@keyframes modalSlideIn {
-    to {
-        transform: scale(1);
-    }
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 25px 30px 0;
-    border-bottom: none;
-}
-
-.modal-header h2 {
-    color: var(--text-dark);
-    font-size: 1.8rem;
-    font-weight: 600;
-    margin: 0;
-}
-
-.close {
-    color: var(--text-gray);
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: color 0.3s ease;
-    line-height: 1;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: all 0.3s ease;
-}
-
-.close:hover {
-    color: var(--primary-purple);
-    background-color: var(--lightest-purple);
-}
-
-.modal-body {
-    padding: 20px 30px 30px;
-}
-
-.auth-form {
-    margin-bottom: 20px;
-}
-
-.auth-form .form-group {
-    margin-bottom: 20px;
-}
-
-.auth-form label {
-    display: block;
-    margin-bottom: 8px;
-    color: var(--text-dark);
-    font-weight: 500;
-    font-size: 0.9rem;
-}
-
-.auth-form input[type="text"],
-.auth-form input[type="email"],
-.auth-form input[type="password"] {
-    width: 100%;
-    padding: 12px 16px;
-    border: 2px solid var(--border-gray);
-    border-radius: 10px;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    background-color: var(--light-gray);
-}
-
-.auth-form input:focus {
-    outline: none;
-    border-color: var(--primary-purple);
-    background-color: var(--white);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
-}
-
-.form-options {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    margin-bottom: 25px;
-    font-size: 0.9rem;
-}
-
-.remember-me,
-.terms-agree {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    color: var(--text-gray);
-}
-
-.remember-me input[type="checkbox"],
-.terms-agree input[type="checkbox"] {
-    display: none;
-}
-
-.checkmark {
-    width: 18px;
-    height: 18px;
-    border: 2px solid var(--border-gray);
-    border-radius: 4px;
-    margin-right: 8px;
-    position: relative;
-    transition: all 0.3s ease;
-    background-color: var(--white);
-}
-
-.remember-me input:checked + .checkmark,
-.terms-agree input:checked + .checkmark {
-    background-color: var(--primary-purple);
-    border-color: var(--primary-purple);
-}
-
-.remember-me input:checked + .checkmark::after,
-.terms-agree input:checked + .checkmark::after {
-    content: '✓';
-    position: absolute;
-    color: white;
-    font-size: 12px;
-    font-weight: bold;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-}
-
-.forgot-password {
-    color: var(--primary-purple);
-    text-decoration: none;
-    font-size: 0.9rem;
-    transition: color 0.3s ease;
-}
-
-.forgot-password:hover {
-    color: var(--secondary-purple);
-}
-
-.terms-link,
-.privacy-link {
-    color: var(--primary-purple);
-    text-decoration: none;
-    transition: color 0.3s ease;
-}
-
-.terms-link:hover,
-.privacy-link:hover {
-    color: var(--secondary-purple);
-}
-
-.btn-auth {
-    width: 100%;
-    background: linear-gradient(135deg, var(--primary-purple), var(--light-purple));
-    color: var(--white);
-    border: none;
-    padding: 14px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-}
-
-.btn-auth:hover {
-    background: linear-gradient(135deg, var(--secondary-purple), var(--primary-purple));
-    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
-    transform: translateY(-2px);
-}
-
-.btn-auth:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.auth-divider {
-    text-align: center;
-    margin: 20px 0;
-    position: relative;
-}
-
-.auth-divider::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background-color: var(--border-gray);
-}
-
-.auth-divider span {
-    background-color: var(--white);
-    color: var(--text-gray);
-    padding: 0 15px;
-    font-size: 0.9rem;
-    position: relative;
-    z-index: 1;
-}
-
-.btn-switch {
-    width: 100%;
-    background: transparent;
-    color: var(--primary-purple);
-    border: 2px solid var(--primary-purple);
-    padding: 12px;
-    font-size: 1rem;
-    font-weight: 500;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-switch:hover {
-    background-color: var(--primary-purple);
-    color: var(--white);
-}
+/* Auth form styles removed */
 
 /* 文章详情弹窗样式 */
 .article-modal-content {

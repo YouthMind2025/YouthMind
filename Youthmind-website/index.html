@@ -33,8 +33,7 @@
             
             <!-- 右侧按钮组 -->
             <div class="auth-buttons">
-                <button class="btn-signin">Log in</button>
-                <button class="btn-join">Join for free</button>
+                <!-- Login and signup buttons removed -->
             </div>
         </div>
     </header>
@@ -274,81 +273,9 @@
         </div>
     </footer>
 
-    <!-- 登录弹窗 -->
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Log In</h2>
-                <span class="close" data-modal="loginModal">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="loginForm" class="auth-form">
-                    <div class="form-group">
-                        <label for="loginEmail">Email Address</label>
-                        <input type="email" id="loginEmail" name="email" placeholder="Enter your email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="loginPassword">Password</label>
-                        <input type="password" id="loginPassword" name="password" placeholder="Enter your password" required>
-                    </div>
-                    <div class="form-options">
-                        <label class="remember-me">
-                            <input type="checkbox" name="remember">
-                            <span class="checkmark"></span>
-                            Remember me
-                        </label>
-                    </div>
-                    <button type="submit" class="btn-auth">Log In</button>
-                </form>
-                <div class="auth-divider">
-                    <span>Don't have an account?</span>
-                </div>
-                <button class="btn-switch" onclick="switchToRegister()">Sign Up Now</button>
-            </div>
-        </div>
-    </div>
+    <!-- Login modal removed -->
 
-    <!-- 注册弹窗 -->
-    <div id="registerModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Sign Up</h2>
-                <span class="close" data-modal="registerModal">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="registerForm" class="auth-form">
-                    <div class="form-group">
-                        <label for="registerName">Name</label>
-                        <input type="text" id="registerName" name="name" placeholder="Enter your name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="registerEmail">Email Address</label>
-                        <input type="email" id="registerEmail" name="email" placeholder="Enter your email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="registerPassword">Password</label>
-                        <input type="password" id="registerPassword" name="password" placeholder="Enter password (at least 6 characters)" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="confirmPassword">Confirm Password</label>
-                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter password" required>
-                    </div>
-                    <div class="form-options">
-                        <label class="terms-agree">
-                            <input type="checkbox" name="terms" required>
-                            <span class="checkmark"></span>
-                            I agree to the <a href="#" class="terms-link">Terms of Service</a> and <a href="#" class="privacy-link">Privacy Policy</a>
-                        </label>
-                    </div>
-                    <button type="submit" class="btn-auth">Sign Up</button>
-                </form>
-                <div class="auth-divider">
-                    <span>Already have an account?</span>
-                </div>
-                <button class="btn-switch" onclick="switchToLogin()">Log In Now</button>
-                         </div>
-         </div>
-     </div>
+    <!-- Register modal removed -->
 
     <!-- 文章详情弹窗 -->
     <div id="articleModal" class="modal article-modal">
