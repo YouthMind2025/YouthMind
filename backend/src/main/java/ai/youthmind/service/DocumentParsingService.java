@@ -21,7 +21,8 @@ public class DocumentParsingService {
             throw new IllegalArgumentException("File is empty");
         }
         
-        if (!file.getOriginalFilename().toLowerCase().endsWith(".docx")) {
+        String filename = file.getOriginalFilename();
+        if (filename == null || !filename.toLowerCase().endsWith(".docx")) {
             throw new IllegalArgumentException("Only .docx files are supported");
         }
         
@@ -46,8 +47,8 @@ public class DocumentParsingService {
                 if (!titleExtracted && (!firstParagraphProcessed || isHeading(paragraph))) {
                     title = text;
                     titleExtracted = true;
-                    htmlContent.append("<h1>").append(escapeHtml(text)).append("</h1>\n");
                     firstParagraphProcessed = true;
+                    // Don't add title to content - it will be displayed separately
                     continue;
                 }
                 
@@ -86,15 +87,37 @@ public class DocumentParsingService {
             }
             
             // If no title was extracted, use filename
-            if (title.isEmpty() && file.getOriginalFilename() != null) {
-                title = file.getOriginalFilename().replace(".docx", "");
+            if (title.isEmpty() && filename != null) {
+                title = filename.replace(".docx", "").replace(".DOCX", "");
+            }
+            
+            // If still no intro, try to extract from content
+            if (intro.isEmpty() && htmlContent.length() > 0) {
+                String plainText = htmlContent.toString().replaceAll("<[^>]*>", "").trim();
+                if (plainText.length() > 0) {
+                    intro = plainText.length() > 200 ? plainText.substring(0, 200) + "..." : plainText;
+                }
+            }
+            
+            // Ensure we have some content
+            String finalContent = htmlContent.toString().trim();
+            if (finalContent.isEmpty() && !paragraphs.isEmpty()) {
+                // Fallback: just extract all text as paragraphs
+                StringBuilder fallbackContent = new StringBuilder();
+                for (XWPFParagraph paragraph : paragraphs) {
+                    String text = paragraph.getText().trim();
+                    if (!text.isEmpty()) {
+                        fallbackContent.append("<p>").append(escapeHtml(text)).append("</p>\n");
+                    }
+                }
+                finalContent = fallbackContent.toString();
             }
             
             return new DocumentParseResponse(
                 title,
-                htmlContent.toString(),
+                finalContent,
                 intro,
-                file.getOriginalFilename(),
+                filename,
                 file.getSize()
             );
         }
