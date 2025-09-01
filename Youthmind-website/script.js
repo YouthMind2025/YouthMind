@@ -300,15 +300,24 @@ document.addEventListener('DOMContentLoaded', function() {
     /* Spinning globe removed */
     
     // 初始化文章功能
-    // Load articles manifest
-    fetch('assets/Articles/articles.json')
-        .then(r=>r.json())
-        .then(articlesArr=>{
+    // Load articles from backend API, with fallback to static files
+    loadArticlesFromBackend()
+        .then(articlesArr => {
             window.__articlesManifest = articlesArr;
             initArticleFeatures(articlesArr);
         })
-        .catch(err=>{
-            console.error('Failed to load articles manifest', err);
+        .catch(err => {
+            console.error('Failed to load articles from backend, trying static fallback', err);
+            // Fallback to static articles.json
+            fetch('assets/Articles/articles.json')
+                .then(r=>r.json())
+                .then(articlesArr=>{
+                    window.__articlesManifest = articlesArr;
+                    initArticleFeatures(articlesArr);
+                })
+                .catch(staticErr=>{
+                    console.error('Failed to load articles from both sources', staticErr);
+                });
         });
     
     // 初始化帖子滑动功能
@@ -318,6 +327,41 @@ document.addEventListener('DOMContentLoaded', function() {
     initWorldMap();
     
 });
+
+// Load articles from backend API
+async function loadArticlesFromBackend() {
+    try {
+        // Try to detect if we're running in development (localhost) or production
+        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const baseUrl = isDevelopment ? 'http://localhost:8080' : ''; // Use relative path in production
+        
+        const response = await fetch(`${baseUrl}/v1/articles`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        // Backend returns { success: true, data: [...], message: "..." }
+        const articles = data.data || data;
+        
+        // Convert backend article format to website format
+        return articles.map((article, index) => ({
+            id: article.id || String(index + 1),
+            title: article.title,
+            date: article.date || new Date(article.createdAt).getFullYear().toString(),
+            file: article.file || `${article.title.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim()}.html`,
+            cover: article.cover || article.coverImage || `cover${index + 1}.jpg`,
+            intro: article.intro || article.getSummary?.() || '',
+            // Store the full content for direct use
+            content: article.content,
+            // Flag to indicate this is from backend
+            isFromBackend: true
+        }));
+    } catch (error) {
+        console.error('Error loading articles from backend:', error);
+        throw error;
+    }
+}
 
 // 文章功能初始化
 function initArticleFeatures(articlesArr) {
@@ -390,6 +434,37 @@ function initArticleFeatures(articlesArr) {
         const info = (window.__articlesManifest||[]).find(a=>a.id===articleId);
         if(!info) return Promise.reject('Article not configured');
 
+        // If article is from backend, use the stored content directly
+        if(info.isFromBackend && info.content) {
+            // Try to pull first image src from HTML content
+            let imgSrc='';
+            const tmp=document.createElement('div');
+            tmp.innerHTML=info.content||'';
+            const imgEl=tmp.querySelector('img');
+            if(imgEl){
+                imgSrc=imgEl.getAttribute('src')||'';
+                imgEl.remove(); // remove to avoid duplicate image in popup
+            }
+            if(!imgSrc && info.cover){
+                imgSrc=info.cover; // fallback
+            }
+
+            const data={
+                title:info.title,
+                date:info.date,
+                image:imgSrc,
+                content:tmp.innerHTML // content without first image
+            };
+            articleCache[articleId]=data;
+
+            // 更新预览封面图
+            if(data.image){
+                updateArticleCoverImage(articleId, data);
+            }
+            return Promise.resolve(data);
+        }
+
+        // Fallback to original Word document loading for static articles
         const filePath = `assets/Articles/${info.file}`;
         return fetch(filePath)
             .then(r=>r.arrayBuffer())
@@ -418,25 +493,30 @@ function initArticleFeatures(articlesArr) {
 
                 // 更新预览封面图
                 if(data.image){
-                    const coverHolder=document.querySelector(`.article-item[data-article="${articleId}"] .article-cover`);
-                    if(coverHolder){
-                        let imgEl=coverHolder.querySelector('img');
-                        if(!imgEl){
-                            imgEl=document.createElement('img');
-                            imgEl.style.width='100%';
-                            imgEl.style.height='100%';
-                            imgEl.style.objectFit='cover';
-                            imgEl.style.borderRadius='15px';
-                            coverHolder.innerHTML='';
-                            coverHolder.appendChild(imgEl);
-                        }
-                        const src=/^(data:|https?:)/.test(data.image)?data.image:`assets/Articles/${data.image}`;
-                        imgEl.src=src;
-                        imgEl.alt=data.title;
-                    }
+                    updateArticleCoverImage(articleId, data);
                 }
                 return data;
             });
+    }
+
+    // Helper function to update article cover image
+    function updateArticleCoverImage(articleId, data) {
+        const coverHolder=document.querySelector(`.article-item[data-article="${articleId}"] .article-cover`);
+        if(coverHolder){
+            let imgEl=coverHolder.querySelector('img');
+            if(!imgEl){
+                imgEl=document.createElement('img');
+                imgEl.style.width='100%';
+                imgEl.style.height='100%';
+                imgEl.style.objectFit='cover';
+                imgEl.style.borderRadius='15px';
+                coverHolder.innerHTML='';
+                coverHolder.appendChild(imgEl);
+            }
+            const src=/^(data:|https?:)/.test(data.image)?data.image:`assets/Articles/${data.image}`;
+            imgEl.src=src;
+            imgEl.alt=data.title;
+        }
     }
     
     // 文章菜单切换功能

@@ -46,3 +46,44 @@ export interface FlaggedPost {
   content_preview: string;
   status: string;
 }
+
+// Article interface to match backend Article entity
+export interface Article {
+  id: string;
+  title: string;
+  content: string;
+  intro?: string;
+  coverImage?: string;
+  published: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  // Website compatibility fields
+  date?: string;
+  file?: string;
+  cover?: string;
+}
+
+// Article creation/update request
+export interface ArticleRequest {
+  title: string;
+  content: string;
+  intro?: string;
+  coverImage?: string;
+  published?: boolean;
+}
+
+// API response with pagination
+export interface ArticleListResponse {
+  articles: Article[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalItems: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+  totalElements: number;
+  last: boolean;
+}
