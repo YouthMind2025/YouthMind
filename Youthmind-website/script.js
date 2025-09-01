@@ -392,62 +392,60 @@ function initArticleFeatures(articlesArr) {
     preloadArticleImages(articlesArr);
 
     function preloadArticleImages(arr){
-        console.log('Preloading images for articles:', arr.length);
         arr.forEach(a=>{
             // If cover already exists skip
             const itemEl=document.querySelector(`.article-item[data-article="${a.id}"] .article-cover`);
             if(!itemEl) {
-                console.log('No cover element found for article:', a.id);
                 return;
             }
             // If an img already present, skip
             if(itemEl.querySelector('img')) {
-                console.log('Image already present for article:', a.id);
                 return;
             }
 
             // For backend articles, extract first image from content
             if(a.isFromBackend && a.content) {
-                console.log('Processing backend article:', a.id, 'with content length:', a.content.length);
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = a.content;
                 const firstImg = tempDiv.querySelector('img');
                 
                 if(firstImg) {
                     const imgSrc = firstImg.getAttribute('src');
-                    console.log('Found image in content:', imgSrc);
+                    // Preserve the date element
+                    const dateEl = itemEl.querySelector('.article-date');
                     let img = itemEl.querySelector('img');
                     if(!img){
                         img = document.createElement('img');
                         img.style.width='100%';
                         img.style.height='100%';
-                        img.style.objectFit='cover';
+                        img.style.objectFit='contain';
                         img.style.objectPosition='center';
                         img.style.borderRadius='15px';
                         itemEl.innerHTML='';
                         itemEl.appendChild(img);
+                        if(dateEl) itemEl.appendChild(dateEl);
                     }
                     img.src = imgSrc;
                     img.alt = a.title;
                 } else if(a.cover || a.coverImage) {
-                    console.log('Using cover image:', a.cover || a.coverImage);
                     // Fallback to cover image if no image in content
+                    const dateEl = itemEl.querySelector('.article-date');
                     let img = itemEl.querySelector('img');
                     if(!img){
                         img = document.createElement('img');
                         img.style.width='100%';
                         img.style.height='100%';
-                        img.style.objectFit='cover';
+                        img.style.objectFit='contain';
                         img.style.objectPosition='center';
                         img.style.borderRadius='15px';
                         itemEl.innerHTML='';
                         itemEl.appendChild(img);
+                        if(dateEl) itemEl.appendChild(dateEl);
                     }
                     const src = /^(data:|https?:)/.test(a.cover || a.coverImage) ? (a.cover || a.coverImage) : `assets/Articles/${a.cover || a.coverImage}`;
                     img.src = src;
                     img.alt = a.title;
                 } else {
-                    console.log('No image found for article:', a.id);
                     // No image found, show placeholder
                     itemEl.innerHTML = `<div class="article-date">${a.date}</div><div class="article-image-placeholder">No Image</div>`;
                 }
@@ -461,7 +459,7 @@ function initArticleFeatures(articlesArr) {
                               img=document.createElement('img');
                               img.style.width='100%';
                               img.style.height='100%';
-                              img.style.objectFit='cover';
+                              img.style.objectFit='contain';
                               img.style.objectPosition='center';
                               img.style.borderRadius='15px';
                               itemEl.innerHTML='';
@@ -564,7 +562,7 @@ function initArticleFeatures(articlesArr) {
                  imgEl=document.createElement('img');
                  imgEl.style.width='100%';
                  imgEl.style.height='100%';
-                 imgEl.style.objectFit='cover';
+                 imgEl.style.objectFit='contain';
                  imgEl.style.objectPosition='center';
                  imgEl.style.borderRadius='15px';
                  coverHolder.innerHTML='';
