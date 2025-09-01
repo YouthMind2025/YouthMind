@@ -104,6 +104,60 @@ export const postsApi = {
   getFlaggedPosts: () => api.get('/v1/posts?page=1&limit=100'),
 };
 
+// Articles API methods - using actual backend endpoints
+export const articlesApi = {
+  // Get all published articles (for website)
+  getPublishedArticles: () => api.get('/v1/articles'),
+  
+  // Get articles with pagination (admin panel)
+  getArticles: (page: number = 0, limit: number = 20, publishedOnly: boolean = false) => {
+    const params = { page, limit, publishedOnly };
+    return api.get('/v1/articles/admin', { params });
+  },
+  
+  // Get single article by ID
+  getArticle: (id: string) => api.get(`/v1/articles/view/${id}`),
+  
+  // Create new article (admin functionality)
+  createArticle: (data: {
+    title: string;
+    content: string;
+    intro?: string;
+    coverImage?: string;
+    published?: boolean;
+  }) => api.post('/v1/articles/create', data),
+  
+  // Update article (admin functionality)
+  updateArticle: (id: string, data: {
+    title: string;
+    content: string;
+    intro?: string;
+    coverImage?: string;
+    published?: boolean;
+  }) => api.put(`/v1/articles/edit/${id}`, data),
+  
+  // Delete article (admin functionality)
+  deleteArticle: (id: string) => api.delete(`/v1/articles/delete/${id}`),
+  
+  // Toggle publish status
+  togglePublishStatus: (id: string) => api.post(`/v1/articles/manage/${id}/toggle-publish`),
+  
+  // Search articles
+  searchArticles: (query: string, page: number = 0, limit: number = 20, publishedOnly: boolean = true) => {
+    const params = { query, page, limit, publishedOnly };
+    return api.get('/v1/articles/search', { params });
+  },
+
+  // Upload .docx file for parsing
+  uploadDocx: (formData: FormData) => {
+    return api.post('/v1/articles/upload-docx', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+};
+
 // System health and monitoring
 export const systemApi = {
   /**

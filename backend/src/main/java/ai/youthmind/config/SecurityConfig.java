@@ -52,6 +52,10 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/info").permitAll()
                 .requestMatchers("/actuator/metrics", "/actuator/metrics/**").permitAll()
                 .requestMatchers("/actuator/prometheus").permitAll()
+                // Public article endpoints for website
+                .requestMatchers("/v1/articles").permitAll()
+                .requestMatchers("/v1/articles/view/**").permitAll()
+                .requestMatchers("/v1/articles/search").permitAll()
                 .requestMatchers("/actuator/env", "/actuator/env/**").hasRole("ADMIN")
                 .requestMatchers("/actuator/beans").hasRole("ADMIN")
                 .requestMatchers("/actuator/configprops").hasRole("ADMIN")

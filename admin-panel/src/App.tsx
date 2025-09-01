@@ -6,6 +6,7 @@ import ProtectedRoute from './scenes/global/ProtectedRoute';
 import Sidebar from './scenes/global/Sidebar';
 import FlaggedPosts from './scenes/pages/FlaggedPosts';
 import Posts from './scenes/pages/Posts';
+import Articles from './scenes/pages/Articles';
 import SystemHealth from './scenes/pages/SystemHealth';
 import JWTDecoder from './scenes/pages/JWTDecoder';
 import Login from './scenes/pages/Login';
@@ -31,6 +32,7 @@ function App() {
                     <Routes>
                       <Route path="/posts" element={<Posts />} />
                       <Route path="/flagged-posts" element={<FlaggedPosts />} />
+                      <Route path="/articles" element={<Articles />} />
                       <Route path="/system-health" element={<SystemHealth />} />
                       <Route path="/jwt-decoder" element={<JWTDecoder />} />
                       <Route path="/" element={<FlaggedPosts />} />
