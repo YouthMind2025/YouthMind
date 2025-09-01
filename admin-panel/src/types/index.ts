@@ -47,6 +47,22 @@ export interface FlaggedPost {
   status: string;
 }
 
+// Document parsing response interface
+export interface DocumentParseResponse {
+  title: string;
+  content: string;
+  intro: string;
+  filename: string;
+  fileSize: number;
+  images: string[]; // Base64 data URLs
+  imageMetadata: Record<string, {
+    size: number;
+    type: string;
+    mimeType: string;
+    filename: string;
+  }>;
+}
+
 // Article interface to match backend Article entity
 export interface Article {
   id: string;
