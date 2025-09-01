@@ -13,6 +13,9 @@ const Articles: React.FC = () => {
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [publishedOnly, setPublishedOnly] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadSuccess, setUploadSuccess] = useState<string>('');
+  const [hasUploadedDocx, setHasUploadedDocx] = useState<boolean>(false);
+  const [extractedContent, setExtractedContent] = useState<{title?: string, content?: string, intro?: string}>({});
 
   // Form state
   const [formData, setFormData] = useState<ArticleRequest>({
@@ -46,12 +49,24 @@ const Articles: React.FC = () => {
 
   const handleCreateArticle = async () => {
     try {
-      if (!formData.title.trim() || !formData.content.trim()) {
-        setError('Title and content are required');
+      // Check if we have content either from form or from extracted .docx
+      const finalTitle = formData.title.trim() || extractedContent.title || '';
+      const finalContent = formData.content.trim() || extractedContent.content || '';
+      
+      if (!finalTitle || !finalContent) {
+        setError('Title and content are required. Please fill them manually or upload a .docx file.');
         return;
       }
 
-      await articlesApi.createArticle(formData);
+      // Create article with final content (form data takes precedence, extracted as fallback)
+      const articleData = {
+        ...formData,
+        title: finalTitle,
+        content: finalContent,
+        intro: (formData.intro || '').trim() || extractedContent.intro || ''
+      };
+      
+      await articlesApi.createArticle(articleData);
       setShowCreateModal(false);
       resetForm();
       fetchArticles();
@@ -110,6 +125,9 @@ const Articles: React.FC = () => {
       coverImage: '',
       published: true
     });
+    setUploadSuccess('');
+    setHasUploadedDocx(false);
+    setExtractedContent({});
   };
 
   const openCreateModal = () => {
@@ -155,13 +173,44 @@ const Articles: React.FC = () => {
       const response = await articlesApi.uploadDocx(formDataUpload);
       const extractedData = response.data.data;
 
-      // Update form with extracted content
+      // Store extracted content separately
+      const cleanExtracted = {
+        title: extractedData.title && extractedData.title.trim() ? extractedData.title : undefined,
+        content: extractedData.content && extractedData.content.trim() ? extractedData.content : undefined,
+        intro: extractedData.intro && extractedData.intro.trim() ? extractedData.intro : undefined
+      };
+      
+      setExtractedContent(cleanExtracted);
+      setHasUploadedDocx(true);
+      
+      // Optionally populate form fields for preview (user can still edit)
       setFormData(prev => ({
         ...prev,
-        title: extractedData.title || prev.title,
-        content: extractedData.content || prev.content,
-        intro: extractedData.intro || prev.intro
+        title: cleanExtracted.title || prev.title,
+        content: cleanExtracted.content || prev.content,
+        intro: cleanExtracted.intro || prev.intro
       }));
+
+      // Show success message and debug info
+      if (extractedData.title || extractedData.content) {
+        // Clear any previous errors since we got some content
+        setError('');
+        console.log('Extracted data:', extractedData);
+        
+        // Show a success message to user
+        const extractedItems = [];
+        if (extractedData.title) extractedItems.push('title');
+        if (extractedData.content) extractedItems.push('content');
+        if (extractedData.intro) extractedItems.push('introduction');
+        
+        if (extractedItems.length > 0) {
+          setUploadSuccess(`Successfully extracted: ${extractedItems.join(', ')}. You can edit the fields below or create the article as-is.`);
+          // Clear success message after 8 seconds (longer message)
+          setTimeout(() => setUploadSuccess(''), 8000);
+        }
+      } else {
+        setError('No content could be extracted from the file. Please check the file format.');
+      }
 
     } catch (err) {
       setError('Failed to process .docx file. Please try again.');
@@ -297,7 +346,7 @@ const Articles: React.FC = () => {
             
             <div className="modal-body">
               <div className="form-group">
-                <label>Title*</label>
+                <label>Title{hasUploadedDocx && extractedContent.title ? ' (optional - extracted from file)' : '*'}</label>
                 <input
                   type="text"
                   value={formData.title}
@@ -338,10 +387,15 @@ const Articles: React.FC = () => {
                 <small className="file-help">
                   {uploading ? 'Processing file...' : 'Upload a .docx file to automatically extract content'}
                 </small>
+                {uploadSuccess && (
+                  <div className="upload-success">
+                    ✅ {uploadSuccess}
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
-                <label>Content*</label>
+                <label>Content{hasUploadedDocx && extractedContent.content ? ' (optional - extracted from file)' : '*'}</label>
                 <textarea
                   value={formData.content}
                   onChange={(e) => setFormData({...formData, content: e.target.value})}

@@ -56,6 +56,14 @@ public class SecurityConfig {
                 .requestMatchers("/v1/articles").permitAll()
                 .requestMatchers("/v1/articles/view/**").permitAll()
                 .requestMatchers("/v1/articles/search").permitAll()
+                // Admin-only article endpoints
+                .requestMatchers("/v1/articles/admin/**").hasRole("ADMIN")
+                .requestMatchers("/v1/articles/create").hasRole("ADMIN")
+                .requestMatchers("/v1/articles/edit/**").hasRole("ADMIN")
+                .requestMatchers("/v1/articles/delete/**").hasRole("ADMIN")
+                .requestMatchers("/v1/articles/manage/**").hasRole("ADMIN")
+                .requestMatchers("/v1/articles/upload-docx").hasRole("ADMIN")
+                // Admin actuator endpoints
                 .requestMatchers("/actuator/env", "/actuator/env/**").hasRole("ADMIN")
                 .requestMatchers("/actuator/beans").hasRole("ADMIN")
                 .requestMatchers("/actuator/configprops").hasRole("ADMIN")

@@ -84,11 +84,16 @@ public class ArticleController {
             @RequestParam("file") MultipartFile file
     ) {
         try {
+            System.out.println("Received file: " + file.getOriginalFilename() + ", size: " + file.getSize());
             DocumentParseResponse parseResult = documentParsingService.parseDocxFile(file);
+            System.out.println("File parsed successfully: " + parseResult.getTitle());
             return ResponseBuilder.success(parseResult, "File parsed successfully");
         } catch (IllegalArgumentException e) {
+            System.err.println("Bad request error: " + e.getMessage());
             return ResponseBuilder.badRequest(e.getMessage());
         } catch (Exception e) {
+            System.err.println("Internal server error: " + e.getMessage());
+            e.printStackTrace();
             return ResponseBuilder.internalServerError("Failed to parse file: " + e.getMessage());
         }
     }

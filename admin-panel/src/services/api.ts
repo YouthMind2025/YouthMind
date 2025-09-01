@@ -21,6 +21,12 @@ api.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
+    
+    // Handle FormData - remove default Content-Type to let browser set multipart boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+    
     return config;
   },
   (error) => {
@@ -150,11 +156,7 @@ export const articlesApi = {
 
   // Upload .docx file for parsing
   uploadDocx: (formData: FormData) => {
-    return api.post('/v1/articles/upload-docx', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post('/v1/articles/upload-docx', formData);
   },
 };
 
