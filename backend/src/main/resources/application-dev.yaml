@@ -25,13 +25,20 @@ spring:
   flyway:
     enabled: false  # Disable Flyway for H2 development
   
-  # Redis configuration - will use embedded Redis
+  # Redis configuration - will use embedded Redis if available
   data:
     redis:
       host: localhost
       port: 6379
       timeout: 2000ms
       connect-timeout: 2000ms
+      # Graceful handling - don't fail startup if Redis is unavailable
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+        shutdown-timeout: 100ms
 
   # CORS configuration
   web:
@@ -53,4 +60,6 @@ logging:
   level:
     ai.youthmind: DEBUG
     org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG 
+    org.hibernate.SQL: DEBUG
+    # Redis logging - only show errors to avoid noise
+    org.springframework.data.redis: WARN 

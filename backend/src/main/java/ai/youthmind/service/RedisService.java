@@ -2,13 +2,15 @@ package ai.youthmind.service;
 
 import ai.youthmind.dto.FeedResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-//@Service
+@Service
+@ConditionalOnProperty(name = "spring.data.redis.host", havingValue = "localhost", matchIfMissing = true)
 public class RedisService {
 
     @Autowired
@@ -34,29 +36,52 @@ public class RedisService {
 
     // Basic operations
     public void setValue(String key, Object value) {
-        redisTemplate.opsForValue().set(key, value);
+        try {
+            redisTemplate.opsForValue().set(key, value);
+        } catch (Exception e) {
+            System.err.println("⚠️ Redis SET operation failed: " + e.getMessage());
+        }
     }
 
     public void setValue(String key, Object value, long timeout, TimeUnit unit) {
-        redisTemplate.opsForValue().set(key, value, timeout, unit);
+        try {
+            redisTemplate.opsForValue().set(key, value, timeout, unit);
+        } catch (Exception e) {
+            System.err.println("⚠️ Redis SET with TTL operation failed: " + e.getMessage());
+        }
     }
 
     public Object getValue(String key) {
-        return redisTemplate.opsForValue().get(key);
+        try {
+            return redisTemplate.opsForValue().get(key);
+        } catch (Exception e) {
+            System.err.println("⚠️ Redis GET operation failed: " + e.getMessage());
+            return null;
+        }
     }
 
     public Boolean deleteValue(String key) {
-        return redisTemplate.delete(key);
+        try {
+            return redisTemplate.delete(key);
+        } catch (Exception e) {
+            System.err.println("⚠️ Redis DELETE operation failed: " + e.getMessage());
+            return false;
+        }
     }
 
     public Long increment(String key) {
-        return redisTemplate.opsForValue().increment(key);
+        try {
+            return redisTemplate.opsForValue().increment(key);
+        } catch (Exception e) {
+            System.err.println("⚠️ Redis INCREMENT operation failed: " + e.getMessage());
+            return 0L;
+        }
     }
 
     // Feed caching methods
     public void cacheFeed(String cacheKey, FeedResponse feedResponse) {
         String key = FEED_KEY_PREFIX + cacheKey;
-        redisTemplate.opsForValue().set(key, feedResponse, FEED_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+        setValue(key, feedResponse, FEED_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
     }
 
     public FeedResponse getCachedFeed(String cacheKey) {
@@ -76,84 +101,110 @@ public class RedisService {
     // Post caching methods
     public void cachePost(String postId, Object post) {
         String key = POST_KEY_PREFIX + postId;
-        redisTemplate.opsForValue().set(key, post, POST_CACHE_TTL_HOURS, TimeUnit.HOURS);
+        setValue(key, post, POST_CACHE_TTL_HOURS, TimeUnit.HOURS);
     }
 
     public Object getCachedPost(String postId) {
         String key = POST_KEY_PREFIX + postId;
-        return redisTemplate.opsForValue().get(key);
+        return getValue(key);
     }
 
     public void invalidatePostCache(String postId) {
         String key = POST_KEY_PREFIX + postId;
-        redisTemplate.delete(key);
+        deleteValue(key);
     }
 
     // User session caching
     public void cacheUserSession(String userId, Object sessionData) {
         String key = USER_KEY_PREFIX + userId;
-        redisTemplate.opsForValue().set(key, sessionData, USER_SESSION_TTL_HOURS, TimeUnit.HOURS);
+        setValue(key, sessionData, USER_SESSION_TTL_HOURS, TimeUnit.HOURS);
     }
 
     public Object getCachedUserSession(String userId) {
         String key = USER_KEY_PREFIX + userId;
-        return redisTemplate.opsForValue().get(key);
+        return getValue(key);
     }
 
     // Rate limiting (coordinated with Harley)
     public void setRateLimit(String identifier, int count) {
         String key = RATE_KEY_PREFIX + identifier;
-        redisTemplate.opsForValue().set(key, count, RATE_LIMIT_TTL_MINUTES, TimeUnit.MINUTES);
+        setValue(key, count, RATE_LIMIT_TTL_MINUTES, TimeUnit.MINUTES);
     }
 
     public Integer getRateLimit(String identifier) {
         String key = RATE_KEY_PREFIX + identifier;
-        Object value = redisTemplate.opsForValue().get(key);
+        Object value = getValue(key);
         return value instanceof Integer ? (Integer) value : null;
     }
 
     public void incrementRateLimit(String identifier) {
         String key = RATE_KEY_PREFIX + identifier;
-        redisTemplate.opsForValue().increment(key);
+        increment(key);
     }
 
     // Hot post scoring (coordinated with Harley)
     public void updateHotPostScore(String postId, double score) {
         String key = "youthmind:hot_posts";
-        redisTemplate.opsForZSet().add(key, postId, score);
+        try {
+            redisTemplate.opsForZSet().add(key, postId, score);
+        } catch (Exception e) {
+            System.err.println("⚠️ Redis ZSET operation failed: " + e.getMessage());
+        }
     }
 
     public Set<Object> getHotPosts(int limit) {
         String key = "youthmind:hot_posts";
-        return redisTemplate.opsForZSet().reverseRange(key, 0, limit - 1);
+        try {
+            return redisTemplate.opsForZSet().reverseRange(key, 0, limit - 1);
+        } catch (Exception e) {
+            System.err.println("⚠️ Redis ZSET operation failed: " + e.getMessage());
+            return null;
+        }
     }
 
     // Pub/Sub messaging
     public void publishPostCreated(Object message) {
-        redisTemplate.convertAndSend(postCreatedChannel, message);
+        try {
+            redisTemplate.convertAndSend(postCreatedChannel, message);
+        } catch (Exception e) {
+            System.err.println("⚠️ Redis PUBLISH operation failed: " + e.getMessage());
+        }
     }
 
     public void publishAiProcessed(Object message) {
-        redisTemplate.convertAndSend(aiProcessedChannel, message);
+        try {
+            redisTemplate.convertAndSend(aiProcessedChannel, message);
+        } catch (Exception e) {
+            System.err.println("⚠️ Redis PUBLISH operation failed: " + e.getMessage());
+        }
     }
 
     // Enhanced event publishing with structured data
     public void publishPostCreatedEvent(String postId, String userId, String emotion) {
         PostCreatedEvent event = new PostCreatedEvent(postId, userId, emotion, System.currentTimeMillis());
-        redisTemplate.convertAndSend(postCreatedChannel, event);
+        publishPostCreated(event);
     }
 
     public void publishAiProcessedEvent(String postId, String analysisResult) {
         AiProcessedEvent event = new AiProcessedEvent(postId, analysisResult, System.currentTimeMillis());
-        redisTemplate.convertAndSend(aiProcessedChannel, event);
+        publishAiProcessed(event);
     }
 
     public void setExpiration(String key, long timeout, TimeUnit unit) {
-        redisTemplate.expire(key, timeout, unit);
+        try {
+            redisTemplate.expire(key, timeout, unit);
+        } catch (Exception e) {
+            System.err.println("⚠️ Redis EXPIRE operation failed: " + e.getMessage());
+        }
     }
 
     public Boolean hasKey(String key) {
-        return redisTemplate.hasKey(key);
+        try {
+            return redisTemplate.hasKey(key);
+        } catch (Exception e) {
+            System.err.println("⚠️ Redis EXISTS operation failed: " + e.getMessage());
+            return false;
+        }
     }
 
     // Event classes for structured pub/sub

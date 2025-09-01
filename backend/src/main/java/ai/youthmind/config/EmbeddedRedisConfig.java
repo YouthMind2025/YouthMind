@@ -9,28 +9,30 @@ import redis.embedded.RedisServer;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
-// @Configuration - temporarily disabled to fix Redis connection issue
-// @Profile({"dev", "test"})
+@Configuration
+@Profile({"dev", "test"})
+@ConditionalOnProperty(name = "spring.data.redis.host", havingValue = "localhost", matchIfMissing = true)
 public class EmbeddedRedisConfig {
 
     private RedisServer redisServer;
 
-    // @PostConstruct - temporarily disabled
+    @PostConstruct
     public void startRedis() {
         try {
             redisServer = new RedisServer(6379);
             redisServer.start();
-            System.out.println("Embedded Redis server started on port 6379");
+            System.out.println("✅ Embedded Redis server started on port 6379");
         } catch (Exception e) {
-            System.err.println("Failed to start embedded Redis server: " + e.getMessage());
+            System.err.println("⚠️ Failed to start embedded Redis server: " + e.getMessage());
+            System.err.println("ℹ️ Application will continue without Redis caching");
         }
     }
 
-    // @PreDestroy - temporarily disabled
+    @PreDestroy
     public void stopRedis() {
         if (redisServer != null && redisServer.isActive()) {
             redisServer.stop();
-            System.out.println("Embedded Redis server stopped");
+            System.out.println("🛑 Embedded Redis server stopped");
         }
     }
 } 
