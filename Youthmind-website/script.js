@@ -384,7 +384,7 @@ function initArticleFeatures(articlesArr) {
         const item=document.createElement('div');
         item.className=`article-item${index===0?' active':''}`;
         item.dataset.article=art.id;
-        item.innerHTML=`<div class="article-cover"><div class="article-date">${art.date}</div>${art.cover ? `<img src=\"assets/Articles/${art.cover}\" class=\"article-image\" alt=\"${art.title}\">` : `<div class=\"article-image-placeholder\">Cover</div>`}</div><div class="article-content"><h3 class="article-title">${art.title}</h3><p class="article-intro">${art.intro||''}</p><button class="btn-read-article" data-article="${art.id}">Read this article</button></div>`;
+        item.innerHTML=`<div class="article-cover"><div class="article-date">${art.date}</div><div class="article-image-placeholder">Loading...</div></div><div class="article-content"><h3 class="article-title">${art.title}</h3><p class="article-intro">${art.intro||''}</p><button class="btn-read-article" data-article="${art.id}">Read this article</button></div>`;
         displayContainer.appendChild(item);
     });
 
@@ -392,31 +392,87 @@ function initArticleFeatures(articlesArr) {
     preloadArticleImages(articlesArr);
 
     function preloadArticleImages(arr){
+        console.log('Preloading images for articles:', arr.length);
         arr.forEach(a=>{
             // If cover already exists skip
             const itemEl=document.querySelector(`.article-item[data-article="${a.id}"] .article-cover`);
-            if(!itemEl) return;
+            if(!itemEl) {
+                console.log('No cover element found for article:', a.id);
+                return;
+            }
             // If an img already present, skip
-            if(itemEl.querySelector('img')) return;
+            if(itemEl.querySelector('img')) {
+                console.log('Image already present for article:', a.id);
+                return;
+            }
 
-            loadArticleData(a.id)
-              .then(data=>{
-                  if(data.image){
-                      let img=itemEl.querySelector('img');
-                      if(!img){
-                          img=document.createElement('img');
-                          img.style.width='100%';
-                          img.style.height='100%';
-                          img.style.objectFit='cover';
-                          img.style.borderRadius='15px';
-                          itemEl.innerHTML='';
-                          itemEl.appendChild(img);
+            // For backend articles, extract first image from content
+            if(a.isFromBackend && a.content) {
+                console.log('Processing backend article:', a.id, 'with content length:', a.content.length);
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = a.content;
+                const firstImg = tempDiv.querySelector('img');
+                
+                if(firstImg) {
+                    const imgSrc = firstImg.getAttribute('src');
+                    console.log('Found image in content:', imgSrc);
+                    let img = itemEl.querySelector('img');
+                    if(!img){
+                        img = document.createElement('img');
+                        img.style.width='100%';
+                        img.style.height='100%';
+                        img.style.objectFit='cover';
+                        img.style.objectPosition='center';
+                        img.style.borderRadius='15px';
+                        itemEl.innerHTML='';
+                        itemEl.appendChild(img);
+                    }
+                    img.src = imgSrc;
+                    img.alt = a.title;
+                } else if(a.cover || a.coverImage) {
+                    console.log('Using cover image:', a.cover || a.coverImage);
+                    // Fallback to cover image if no image in content
+                    let img = itemEl.querySelector('img');
+                    if(!img){
+                        img = document.createElement('img');
+                        img.style.width='100%';
+                        img.style.height='100%';
+                        img.style.objectFit='cover';
+                        img.style.objectPosition='center';
+                        img.style.borderRadius='15px';
+                        itemEl.innerHTML='';
+                        itemEl.appendChild(img);
+                    }
+                    const src = /^(data:|https?:)/.test(a.cover || a.coverImage) ? (a.cover || a.coverImage) : `assets/Articles/${a.cover || a.coverImage}`;
+                    img.src = src;
+                    img.alt = a.title;
+                } else {
+                    console.log('No image found for article:', a.id);
+                    // No image found, show placeholder
+                    itemEl.innerHTML = `<div class="article-date">${a.date}</div><div class="article-image-placeholder">No Image</div>`;
+                }
+            } else {
+                // For static articles, use existing logic
+                loadArticleData(a.id)
+                  .then(data=>{
+                      if(data.image){
+                          let img=itemEl.querySelector('img');
+                          if(!img){
+                              img=document.createElement('img');
+                              img.style.width='100%';
+                              img.style.height='100%';
+                              img.style.objectFit='cover';
+                              img.style.objectPosition='center';
+                              img.style.borderRadius='15px';
+                              itemEl.innerHTML='';
+                              itemEl.appendChild(img);
+                          }
+                          img.src=/^(data:|https?:)/.test(data.image)?data.image:`assets/Articles/${data.image}`;
+                          img.alt=data.title;
                       }
-                      img.src=/^(data:|https?:)/.test(data.image)?data.image:`assets/Articles/${data.image}`;
-                      img.alt=data.title;
-                  }
-              })
-              .catch(()=>{});
+                  })
+                  .catch(()=>{});
+            }
         });
     }
 
@@ -503,16 +559,17 @@ function initArticleFeatures(articlesArr) {
     function updateArticleCoverImage(articleId, data) {
         const coverHolder=document.querySelector(`.article-item[data-article="${articleId}"] .article-cover`);
         if(coverHolder){
-            let imgEl=coverHolder.querySelector('img');
-            if(!imgEl){
-                imgEl=document.createElement('img');
-                imgEl.style.width='100%';
-                imgEl.style.height='100%';
-                imgEl.style.objectFit='cover';
-                imgEl.style.borderRadius='15px';
-                coverHolder.innerHTML='';
-                coverHolder.appendChild(imgEl);
-            }
+                         let imgEl=coverHolder.querySelector('img');
+             if(!imgEl){
+                 imgEl=document.createElement('img');
+                 imgEl.style.width='100%';
+                 imgEl.style.height='100%';
+                 imgEl.style.objectFit='cover';
+                 imgEl.style.objectPosition='center';
+                 imgEl.style.borderRadius='15px';
+                 coverHolder.innerHTML='';
+                 coverHolder.appendChild(imgEl);
+             }
             const src=/^(data:|https?:)/.test(data.image)?data.image:`assets/Articles/${data.image}`;
             imgEl.src=src;
             imgEl.alt=data.title;
@@ -540,29 +597,14 @@ function initArticleFeatures(articlesArr) {
         });
     });
     
-    // 文章详情弹窗功能
+    // 文章详情新标签页功能
     readArticleButtons.forEach(button => {
         button.addEventListener('click', function() {
             const articleId = this.getAttribute('data-article');
-
-            loadArticleData(articleId)
-                .then(articleData => {
-                    document.getElementById('articleModalTitle').textContent = articleData.title;
-                    document.getElementById('articleModalDate').textContent = articleData.date;
-                    const imgHolder = document.getElementById('articleModalImage');
-                    if(imgHolder){
-                        if(articleData.image){
-                            const src = /^(data:|https?:)/.test(articleData.image) ? articleData.image : `assets/Articles/${articleData.image}`;
-                            imgHolder.innerHTML=`<img src="${src}" alt="${articleData.title}" style="width:100%;height:auto;border-radius:10px;">`;
-                        } else {
-                            imgHolder.innerHTML='';
-                        }
-                    }
-                    document.getElementById('articleModalContent').innerHTML = articleData.content;
-
-                    showModal('articleModal');
-                })
-                .catch(err => console.error('Failed to load article', err));
+            
+            // Open article in new tab instead of modal
+            const articleUrl = `articles/article-template.html?id=${articleId}`;
+            window.open(articleUrl, '_blank');
         });
     });
 }
