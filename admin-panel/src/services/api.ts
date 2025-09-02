@@ -167,10 +167,19 @@ export const systemApi = {
    * This endpoint is publicly accessible as per backend SecurityConfig.
    */
   getHealth: () => api.get('/actuator/health'),
-  // Fallback health check using auth test endpoint
-  getHealthFallback: () => api.get('/v1/auth/test'),
   // Direct backend connection test (bypasses proxy)
   testBackendDirect: () => axios.get('http://localhost:8080/actuator/health'),
+  
+  // Individual component health checks
+  getDatabaseHealth: () => api.get('/actuator/health/database'),
+  getRedisHealth: () => api.get('/actuator/health/redis'),
+  
+  // Health groups for Kubernetes probes
+  getLivenessHealth: () => api.get('/actuator/health/liveness'),
+  getReadinessHealth: () => api.get('/actuator/health/readiness'),
+  
+  // Test backend connectivity with timeout
+  testConnectivity: () => axios.get('http://localhost:8080/actuator/health', { timeout: 5000 }),
 };
 
 export default api; 
