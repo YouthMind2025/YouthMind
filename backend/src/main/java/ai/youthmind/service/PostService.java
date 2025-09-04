@@ -705,4 +705,47 @@ public class PostService {
             default -> Sort.by(Sort.Direction.DESC, "createdAt");
         };
     }
+    
+    /**
+     * Flag a post for moderation
+     * 
+     * @param postId The post ID to flag
+     * @param reason The reason for flagging (optional)
+     */
+    @Transactional
+    public void flagPost(UUID postId, String reason) {
+        Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new ResourceNotFoundException("Post", "id", postId));
+        
+        post.setFlagged(true);
+        post.setFlagReason(reason != null ? reason : "Flagged by admin");
+        post.setFlaggedAt(LocalDateTime.now());
+        post.setUpdatedAt(LocalDateTime.now());
+        
+        postRepository.save(post);
+        
+        // Invalidate cache if needed
+        // redisService.invalidateFeedCache();
+    }
+    
+    /**
+     * Unflag a post (remove flag)
+     * 
+     * @param postId The post ID to unflag
+     */
+    @Transactional
+    public void unflagPost(UUID postId) {
+        Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new ResourceNotFoundException("Post", "id", postId));
+        
+        post.setFlagged(false);
+        post.setFlagReason(null);
+        post.setFlaggedAt(null);
+        post.setUpdatedAt(LocalDateTime.now());
+        
+        postRepository.save(post);
+        
+        // Invalidate cache if needed
+        // redisService.invalidateFeedCache();
+    }
 } 

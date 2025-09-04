@@ -107,6 +107,14 @@ export const postsApi = {
 
   // Get flagged posts for moderation queue
   getFlaggedPosts: () => api.get('/admin/v1/posts/flagged'),
+
+  // Flag a post for moderation
+  flagPost: (postId: string, reason?: string) => 
+    api.post(`/admin/v1/posts/flag/${postId}`, reason ? { reason } : {}),
+
+  // Unflag a post
+  unflagPost: (postId: string) => 
+    api.post(`/admin/v1/posts/unflag/${postId}`),
 };
 
 // Articles API methods - using actual backend endpoints
