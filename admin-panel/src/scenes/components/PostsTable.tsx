@@ -78,18 +78,29 @@ const PostsTable: React.FC<PostsTableProps> = ({
   };
 
   const handleFlag = async (postId: string) => {
+    const reason = window.prompt('Enter reason for flagging this post (optional):');
+    if (reason === null) return; // User cancelled
+    
     try {
-      // Note: postsApi.flagPost() is commented out until backend implements the endpoint
-      // When backend is ready, uncomment the API call below:
-      // await postsApi.flagPost(postId);
-      // alert('Post flagged successfully');
-      // window.location.reload();
-      
-      console.log('Flag post:', postId);
-      alert('Flag functionality will be available when backend endpoint is implemented');
+      await postsApi.flagPost(postId, reason || undefined);
+      alert('Post flagged successfully');
+      window.location.reload();
     } catch (error) {
       console.error('Error flagging post:', error);
       alert('Error flagging post');
+    }
+  };
+
+  const handleUnflag = async (postId: string) => {
+    if (window.confirm('Are you sure you want to unflag this post?')) {
+      try {
+        await postsApi.unflagPost(postId);
+        alert('Post unflagged successfully');
+        window.location.reload();
+      } catch (error) {
+        console.error('Error unflagging post:', error);
+        alert('Error unflagging post');
+      }
     }
   };
 
@@ -144,9 +155,14 @@ const PostsTable: React.FC<PostsTableProps> = ({
           <tbody className="bg-white divide-y divide-gray-200">
             {posts.map((post) => (
               <React.Fragment key={post.id}>
-                <tr className="hover:bg-gray-50">
+                <tr className={`hover:bg-gray-50 ${post.flagged ? 'bg-red-50' : ''}`}>
                   <td className="px-3 py-2 whitespace-nowrap text-xs font-mono text-gray-900">
-                    {truncateId(post.id)}
+                    <div className="flex items-center space-x-1">
+                      {post.flagged && (
+                        <span className="text-red-500" title="Flagged post">🚩</span>
+                      )}
+                      <span>{truncateId(post.id)}</span>
+                    </div>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900" title={getUserIdentifier(post)}>
                     {getUserDisplayName(post)}
@@ -195,12 +211,23 @@ const PostsTable: React.FC<PostsTableProps> = ({
                     >
                       Delete
                     </button>
-                    <button
-                      onClick={() => handleFlag(post.id)}
-                      className="text-yellow-600 hover:text-yellow-900 bg-yellow-50 hover:bg-yellow-100 px-2 py-1 rounded text-xs transition-colors"
-                    >
-                      Flag
-                    </button>
+                    {post.flagged ? (
+                      <button
+                        onClick={() => handleUnflag(post.id)}
+                        className="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 px-2 py-1 rounded text-xs transition-colors"
+                        title="Remove flag from this post"
+                      >
+                        Unflag
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleFlag(post.id)}
+                        className="text-yellow-600 hover:text-yellow-900 bg-yellow-50 hover:bg-yellow-100 px-2 py-1 rounded text-xs transition-colors"
+                        title="Flag this post for moderation"
+                      >
+                        Flag
+                      </button>
+                    )}
                   </td>
                 </tr>
                 {isExpanded(post.id) && (

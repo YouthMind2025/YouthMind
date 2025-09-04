@@ -52,17 +52,16 @@ const FlaggedPostsTable: React.FC = () => {
     fetchFlaggedPosts();
   }, []);
 
-  const handleResolve = async (postId: string) => {
-    if (window.confirm('Mark this flagged post as resolved?')) {
+  const handleUnflag = async (postId: string) => {
+    if (window.confirm('Are you sure you want to unflag this post? This will remove it from the moderation queue.')) {
       try {
-        // In a real system, this would call an API endpoint
-        console.log('Resolving flagged post:', postId);
-        alert('Post marked as resolved (mock operation)');
-        // Update local state to remove the resolved post
+        await postsApi.unflagPost(postId);
+        alert('Post unflagged successfully');
+        // Remove the unflagged post from the flagged posts list
         setFlaggedPosts(prev => prev.filter(post => post.post_id !== postId));
       } catch (error) {
-        console.error('Error resolving flagged post:', error);
-        alert('Error resolving post');
+        console.error('Error unflagging post:', error);
+        alert('Error unflagging post');
       }
     }
   };
@@ -188,14 +187,16 @@ const FlaggedPostsTable: React.FC = () => {
                 </td>
                 <td className="px-6 py-4 border-b text-sm font-medium space-x-2">
                   <button
-                    onClick={() => handleResolve(post.post_id)}
-                    className="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 px-3 py-1 rounded text-xs transition-colors"
+                    onClick={() => handleUnflag(post.post_id)}
+                    className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded text-xs transition-colors"
+                    title="Remove flag and return post to normal status"
                   >
-                    Resolve
+                    Unflag
                   </button>
                   <button
                     onClick={() => handleDelete(post.post_id)}
                     className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded text-xs transition-colors"
+                    title="Permanently delete this post"
                   >
                     Delete
                   </button>
