@@ -63,6 +63,8 @@ public class SecurityConfig {
                 .requestMatchers("/v1/articles/delete/**").hasRole("ADMIN")
                 .requestMatchers("/v1/articles/manage/**").hasRole("ADMIN")
                 .requestMatchers("/v1/articles/upload-docx").hasRole("ADMIN")
+                // Admin-only post endpoints
+                .requestMatchers("/admin/v1/posts/**").hasRole("ADMIN")
                 // Admin actuator endpoints
                 .requestMatchers("/actuator/env", "/actuator/env/**").hasRole("ADMIN")
                 .requestMatchers("/actuator/beans").hasRole("ADMIN")
