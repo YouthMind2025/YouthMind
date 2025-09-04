@@ -102,12 +102,11 @@ export const postsApi = {
     preImg?: string;
   }) => api.post('/v1/posts/create', data),
 
-  // Delete post (admin functionality)
-  deletePost: (postId: string) => api.delete(`/v1/posts/${postId}`),
+  // Delete post (admin functionality) - uses admin endpoint that bypasses ownership checks
+  deletePost: (postId: string) => api.delete(`/admin/v1/posts/delete/${postId}`),
 
   // Get flagged posts for moderation queue
-  // Using general posts endpoint and filtering on frontend since specific flagged endpoint doesn't exist yet
-  getFlaggedPosts: () => api.get('/v1/posts?page=1&limit=100'),
+  getFlaggedPosts: () => api.get('/admin/v1/posts/flagged'),
 };
 
 // Articles API methods - using actual backend endpoints
