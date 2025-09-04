@@ -6,6 +6,41 @@ const FlaggedPostsTable: React.FC = () => {
   const [flaggedPosts, setFlaggedPosts] = useState<FlaggedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const truncateContent = (content: string, maxLength: number = 80) => {
+    return content.length > maxLength 
+      ? content.substring(0, maxLength) + '...' 
+      : content;
+  };
+
+  const truncateId = (id: string, maxLength: number = 12) => {
+    return id.length > maxLength 
+      ? id.substring(0, maxLength) + '...' 
+      : id;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const toggleExpanded = (postId: string) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(postId)) {
+      newExpandedRows.delete(postId);
+    } else {
+      newExpandedRows.add(postId);
+    }
+    setExpandedRows(newExpandedRows);
+  };
+
+  const isExpanded = (postId: string) => expandedRows.has(postId);
 
   useEffect(() => {
     const fetchFlaggedPosts = async () => {
@@ -139,69 +174,110 @@ const FlaggedPostsTable: React.FC = () => {
           </thead>
           <tbody>
             {flaggedPosts.map((post) => (
-              <tr key={post.post_id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 border-b text-sm font-mono text-gray-900">
-                  {post.post_id.length > 12 ? post.post_id.substring(0, 12) + '...' : post.post_id}
-                </td>
-                <td className="px-6 py-4 border-b text-sm text-gray-900">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    post.flag_reason.includes('harmful') ? 'bg-red-100 text-red-800' :
-                    post.flag_reason.includes('spam') ? 'bg-yellow-100 text-yellow-800' :
-                    post.flag_reason.includes('inappropriate') ? 'bg-orange-100 text-orange-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {post.flag_reason}
-                  </span>
-                </td>
-                <td className="px-6 py-4 border-b text-sm text-gray-500">
-                  {new Date(post.flagged_at).toLocaleString()}
-                </td>
-                <td className="px-6 py-4 border-b text-sm text-gray-900">
-                  <div className="flex items-center">
-                    <span className="mr-2">{(post.ai_confidence * 100).toFixed(1)}%</span>
-                    <div className="w-16 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${
-                          post.ai_confidence > 0.8 ? 'bg-red-500' :
-                          post.ai_confidence > 0.6 ? 'bg-yellow-500' :
-                          'bg-green-500'
-                        }`}
-                        style={{ width: `${post.ai_confidence * 100}%` }}
-                      ></div>
+              <React.Fragment key={post.post_id}>
+                <tr className="hover:bg-gray-50">
+                  <td className="px-6 py-4 border-b text-sm font-mono text-gray-900">
+                    {truncateId(post.post_id)}
+                  </td>
+                  <td className="px-6 py-4 border-b text-sm text-gray-900">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      post.flag_reason.includes('harmful') ? 'bg-red-100 text-red-800' :
+                      post.flag_reason.includes('spam') ? 'bg-yellow-100 text-yellow-800' :
+                      post.flag_reason.includes('inappropriate') ? 'bg-orange-100 text-orange-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {truncateContent(post.flag_reason, 30)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 border-b text-sm text-gray-500">
+                    {formatDate(post.flagged_at)}
+                  </td>
+                  <td className="px-6 py-4 border-b text-sm text-gray-900">
+                    <div className="flex items-center">
+                      <span className="mr-2">{(post.ai_confidence * 100).toFixed(1)}%</span>
+                      <div className="w-16 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${
+                            post.ai_confidence > 0.8 ? 'bg-red-500' :
+                            post.ai_confidence > 0.6 ? 'bg-yellow-500' :
+                            'bg-green-500'
+                          }`}
+                          style={{ width: `${post.ai_confidence * 100}%` }}
+                        ></div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 border-b text-sm text-gray-900 max-w-xs">
-                  <div className="truncate" title={post.content_preview}>
-                    {post.content_preview}
-                  </div>
-                </td>
-                <td className="px-6 py-4 border-b text-sm">
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    post.status === 'pending_review' ? 'bg-yellow-100 text-yellow-800' : 
-                    post.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {post.status.replace('_', ' ')}
-                  </span>
-                </td>
-                <td className="px-6 py-4 border-b text-sm font-medium space-x-2">
-                  <button
-                    onClick={() => handleUnflag(post.post_id)}
-                    className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded text-xs transition-colors"
-                    title="Remove flag and return post to normal status"
-                  >
-                    Unflag
-                  </button>
-                  <button
-                    onClick={() => handleDelete(post.post_id)}
-                    className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded text-xs transition-colors"
-                    title="Permanently delete this post"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
+                  </td>
+                  <td className="px-6 py-4 border-b text-sm text-gray-900 max-w-xs">
+                    <div title={post.content_preview}>
+                      {truncateContent(post.content_preview)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 border-b text-sm">
+                    <span className={`px-2 py-1 rounded-full text-sm ${
+                      post.status === 'pending_review' ? 'bg-yellow-100 text-yellow-800' : 
+                      post.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {post.status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 border-b text-sm font-medium space-x-1">
+                    <button
+                      onClick={() => toggleExpanded(post.post_id)}
+                      className="text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-2 py-1 rounded text-xs transition-colors"
+                      title={isExpanded(post.post_id) ? "Collapse" : "Expand"}
+                    >
+                      {isExpanded(post.post_id) ? "^" : "v"}
+                    </button>
+                    <button
+                      onClick={() => handleUnflag(post.post_id)}
+                      className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded text-xs transition-colors"
+                      title="Remove flag and return post to normal status"
+                    >
+                      Unflag
+                    </button>
+                    <button
+                      onClick={() => handleDelete(post.post_id)}
+                      className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-2 py-1 rounded text-xs transition-colors"
+                      title="Permanently delete this post"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+                {isExpanded(post.post_id) && (
+                  <tr className="bg-gray-50">
+                    <td colSpan={7} className="px-6 py-3 text-sm">
+                      <div className="space-y-2">
+                        <div>
+                          <span className="font-semibold text-gray-700">Full Post ID:</span>
+                          <p className="mt-1 font-mono text-gray-900">{post.post_id}</p>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-700">Full Flag Reason:</span>
+                          <p className="mt-1 text-gray-900">{post.flag_reason}</p>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-700">Full Content Preview:</span>
+                          <p className="mt-1 text-gray-900 whitespace-pre-wrap">{post.content_preview}</p>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-700">Flagged At:</span>
+                          <p className="mt-1 text-gray-900">{new Date(post.flagged_at).toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-700">AI Confidence:</span>
+                          <p className="mt-1 text-gray-900">{(post.ai_confidence * 100).toFixed(1)}%</p>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-700">Status:</span>
+                          <p className="mt-1 text-gray-900">{post.status.replace('_', ' ')}</p>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
