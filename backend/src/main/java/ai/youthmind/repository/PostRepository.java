@@ -4,6 +4,7 @@ import ai.youthmind.entity.Post;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -27,6 +28,16 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     Page<Post> findByEmotionTagOrderByCreatedAtDesc(String emotionTag, Pageable pageable);
     
     List<Post> findByUserIdAndEmotionTag(UUID userId, String emotionTag);
+    
+    // New emotion enum methods
+    List<Post> findByEmotion(Post.Emotion emotion);
+    Page<Post> findByEmotion(Post.Emotion emotion, Pageable pageable);
+    
+    Page<Post> findByEmotionOrderByCreatedAtDesc(Post.Emotion emotion, Pageable pageable);
+    
+    List<Post> findByUserIdAndEmotion(UUID userId, Post.Emotion emotion);
+    
+    Page<Post> findByUserIdAndEmotion(UUID userId, Post.Emotion emotion, Pageable pageable);
     
     // Retrieve posts that have been flagged for moderation
     List<Post> findByFlaggedTrue();
@@ -68,6 +79,47 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     
     @Query("SELECT p FROM Post p WHERE p.createdAt >= :since AND (:emotion IS NULL OR p.emotionTag = :emotion) ORDER BY p.bookmarks DESC")
     List<Post> findMostBookmarkedPosts(@Param("since") LocalDateTime since, @Param("emotion") String emotion, Pageable pageable);
+    
+    // New methods for enhanced engagement tracking
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.resonanceCount DESC")
+    Page<Post> findMostResonantPosts(@Param("since") LocalDateTime since, Pageable pageable);
+    
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.collectCount DESC")
+    Page<Post> findMostCollectedPosts(@Param("since") LocalDateTime since, Pageable pageable);
+    
+    @Query("SELECT p FROM Post p WHERE p.emotion = :emotion ORDER BY p.resonanceCount DESC")
+    Page<Post> findMostResonantPostsByEmotion(@Param("emotion") Post.Emotion emotion, Pageable pageable);
+    
+    @Query("SELECT p FROM Post p WHERE p.userId = :userId AND p.deletedAt IS NULL ORDER BY p.createdAt DESC")
+    Page<Post> findActivePostsByUser(@Param("userId") UUID userId, Pageable pageable);
+    
+    @Query("SELECT p FROM Post p WHERE p.flagged = true AND p.deletedAt IS NULL ORDER BY p.flaggedAt DESC")
+    Page<Post> findFlaggedPosts(Pageable pageable);
+    
+    @Query("SELECT p FROM Post p WHERE p.isAnonymous = true AND p.deletedAt IS NULL ORDER BY p.createdAt DESC")
+    Page<Post> findAnonymousPosts(Pageable pageable);
+    
+    // Analytics queries
+    @Query("SELECT COUNT(p) FROM Post p WHERE p.createdAt >= :since AND p.deletedAt IS NULL")
+    Long countPostsSince(@Param("since") LocalDateTime since);
+    
+    @Query("SELECT COUNT(p) FROM Post p WHERE p.userId = :userId AND p.createdAt >= :since AND p.deletedAt IS NULL")
+    Long countUserPostsSince(@Param("userId") UUID userId, @Param("since") LocalDateTime since);
+    
+    @Query("SELECT p.emotion, COUNT(p) FROM Post p WHERE p.createdAt >= :since AND p.deletedAt IS NULL GROUP BY p.emotion")
+    List<Object[]> getEmotionDistributionSince(@Param("since") LocalDateTime since);
+    
+    @Query("SELECT AVG(p.views), AVG(p.likes), AVG(p.resonanceCount) FROM Post p WHERE p.createdAt >= :since AND p.deletedAt IS NULL")
+    List<Object[]> getEngagementStatsSince(@Param("since") LocalDateTime since);
+    
+    // Soft delete support
+    @Query("UPDATE Post p SET p.deletedAt = CURRENT_TIMESTAMP WHERE p.id = :postId")
+    @Modifying
+    void softDeleteById(@Param("postId") UUID postId);
+    
+    @Query("UPDATE Post p SET p.deletedAt = CURRENT_TIMESTAMP WHERE p.userId = :userId")
+    @Modifying
+    void softDeleteByUserId(@Param("userId") UUID userId);
     
     void deleteByUserId(UUID userId);
 } 

@@ -1,61 +1,110 @@
 package ai.youthmind.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "posts")
+@SQLDelete(sql = "UPDATE posts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@Where(clause = "deleted_at IS NULL")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Post {
+    
+    public enum Emotion {
+        HAPPY, SAD, ANGRY, ANXIOUS, EXCITED, CALM, 
+        FRUSTRATED, HOPEFUL, LONELY, GRATEFUL, CONFUSED, 
+        OVERWHELMED, CONTENT, WORRIED, PROUD, DISAPPOINTED
+    }
     
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     
     @Column(name = "user_id", nullable = false)
+    @NotNull(message = "User ID is required")
     private UUID userId;
     
     @Column(name = "title", nullable = false)
+    @NotBlank(message = "Title is required")
+    @Size(max = 255, message = "Title must not exceed 255 characters")
     private String title;
     
     @Column(nullable = false, columnDefinition = "TEXT")
+    @NotBlank(message = "Content is required")
+    @Size(max = 10000, message = "Content must not exceed 10000 characters")
     private String content;
     
     @Column(name = "emotion_tag", length = 100)
+    @Deprecated // Keep for backward compatibility during migration
     private String emotionTag;
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "emotion")
+    private Emotion emotion;
+    
     @Column(name = "topics", columnDefinition = "TEXT")
+    @Size(max = 1000, message = "Topics must not exceed 1000 characters")
     private String topics;
     
     @Column(name = "pre_img")
+    @Size(max = 500, message = "Image URL must not exceed 500 characters")
     private String preImg;
     
     @Column(name = "likes", nullable = false)
+    @Min(value = 0, message = "Likes count cannot be negative")
     private Integer likes = 0;
     
     @Column(name = "bookmarks", nullable = false)
+    @Min(value = 0, message = "Bookmarks count cannot be negative")
     private Integer bookmarks = 0;
     
     @Column(name = "views", nullable = false)
+    @Min(value = 0, message = "Views count cannot be negative")
     private Integer views = 0;
     
-    @Column(name = "ai_metadata", columnDefinition = "TEXT") 
+    @Column(name = "resonance_count", nullable = false)
+    @Min(value = 0, message = "Resonance count cannot be negative")
+    private Integer resonanceCount = 0;
+    
+    @Column(name = "collect_count", nullable = false)
+    @Min(value = 0, message = "Collect count cannot be negative")
+    private Integer collectCount = 0;
+    
+    @Column(name = "ai_metadata", columnDefinition = "jsonb") 
     private String aiMetadata;
 
     @Column(name = "flagged", nullable = false)
-    private boolean flagged = false;
+    private Boolean flagged = false;
 
     @Column(name = "flag_reason")
+    @Size(max = 500, message = "Flag reason must not exceed 500 characters")
     private String flagReason;
 
     @Column(name = "flagged_at")
     private LocalDateTime flaggedAt;
+    
+    @Column(name = "is_anonymous", nullable = false)
+    private Boolean isAnonymous = false;
+    
+    @Column(name = "version", nullable = false)
+    @Version
+    private Integer version = 1;
+    
+    @Column(name = "last_modified_by")
+    private UUID lastModifiedBy;
+    
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
