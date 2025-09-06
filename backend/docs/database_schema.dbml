@@ -1,0 +1,16 @@
+// Database Schema for YouthMind
+// Use at https://dbdiagram.io/
+
+Table users {
+  id UUID [primary key, default: `gen_random_uuid()`]
+  email_hash VARCHAR(255) [not null, unique]
+  created_at TIMESTAMP [not null, default: `NOW()`]
+}
+
+Table posts {
+  id UUID [primary key, default: `gen_random_uuid()`]
+  user_id UUID [not null, ref: > users.id]
+  content TEXT [not null]
+  emotion_tag VARCHAR(100)
+  created_at TIMESTAMP [not null, default: `NOW()`]
+}
