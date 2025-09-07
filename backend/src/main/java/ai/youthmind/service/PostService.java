@@ -14,6 +14,7 @@ import ai.youthmind.entity.PostResonance;
 import ai.youthmind.entity.PostView;
 import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.repository.AIAnalysisRepository;
+import ai.youthmind.repository.CommentRepository;
 import ai.youthmind.repository.PostCollectionRepository;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.PostResonanceRepository;
@@ -55,6 +56,9 @@ public class PostService {
     
     @Autowired
     private PostCollectionRepository postCollectionRepository;
+    
+    @Autowired
+    private CommentRepository commentRepository;
     
     //@Autowired
     //private RedisService redisService;
@@ -139,7 +143,10 @@ public class PostService {
 
             // Get posts based on filters
             Page<Post> postsPage;
-            if (emotion != null && startDate != null && endDate != null) {
+            if ("popular".equals(sortBy)) {
+                // Use popularity sorting with time decay
+                postsPage = postRepository.findPostsByPopularity(emotion, pageable);
+            } else if (emotion != null && startDate != null && endDate != null) {
                 postsPage = postRepository.findByEmotionIgnoreCaseAndCreatedAtBetween(emotion, startDate, endDate, pageable);
             } else if (emotion != null) {
                 postsPage = postRepository.findByEmotionIgnoreCase(emotion, pageable);
@@ -573,6 +580,9 @@ public class PostService {
     }
     
     private PostDto convertToPostDto(Post post, UUID currentUserId) {
+        // Get actual comment count for this post
+        long commentCount = commentRepository.countByPostId(post.getId());
+        
         // Use the builder pattern for cleaner, more maintainable code
         PostDtoBuilder builder = PostDtoBuilder.create()
             .id(post.getId())
@@ -590,7 +600,7 @@ public class PostService {
             .flagged(post.isFlagged())
             .flagReason(post.getFlagReason())
             .flaggedAt(post.getFlaggedAt())
-            .commentsCount(0); // TODO: Implement comments count
+            .commentsCount((int) commentCount);
         
         // Check if current user has resonanced this post
         if (currentUserId != null) {
@@ -689,7 +699,7 @@ public class PostService {
         return switch (sortBy) {
             case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt");
             case "oldest" -> Sort.by(Sort.Direction.ASC, "createdAt");
-            case "popular" -> Sort.by(Sort.Direction.DESC, "createdAt"); // TODO: Implement popularity sorting
+            case "popular" -> Sort.by(Sort.Direction.DESC, "createdAt"); // Popularity sorting handled in repository query
             default -> Sort.by(Sort.Direction.DESC, "createdAt");
         };
     }

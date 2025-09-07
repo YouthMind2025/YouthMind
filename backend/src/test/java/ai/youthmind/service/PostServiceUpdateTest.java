@@ -4,6 +4,7 @@ import ai.youthmind.dto.PostDto;
 import ai.youthmind.dto.PostUpdateRequest;
 import ai.youthmind.entity.Post;
 import ai.youthmind.exception.ResourceNotFoundException;
+import ai.youthmind.repository.CommentRepository;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.service.RedisService;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,9 @@ class PostServiceUpdateTest {
 
     @Mock
     private PostRepository postRepository;
+
+    @Mock
+    private CommentRepository commentRepository;
 
     @Mock
     private RedisService redisService;
@@ -58,6 +62,9 @@ class PostServiceUpdateTest {
         existingPost.setUpdatedAt(LocalDateTime.now().minusDays(1));
         
         updateRequest = new PostUpdateRequest();
+        
+        // Mock comment count for all tests
+        when(commentRepository.countByPostId(any(UUID.class))).thenReturn(0L);
     }
 
     @Test

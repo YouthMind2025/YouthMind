@@ -26,6 +26,9 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     // Retrieve posts that have been flagged for moderation
     List<Post> findByFlaggedTrue();
     
+    // Find flagged posts by specific user
+    List<Post> findByUserIdAndFlaggedTrue(UUID userId);
+    
     // Filtering with pagination
     Page<Post> findByEmotionIgnoreCase(String emotion, Pageable pageable);
 
@@ -110,6 +113,17 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     
     @Query("SELECT p FROM Post p WHERE p.createdAt >= :since AND (:emotion IS NULL OR p.emotion = :emotion) ORDER BY p.collect DESC")
     List<Post> findMostBookmarkedPosts(@Param("since") LocalDateTime since, @Param("emotion") String emotion, Pageable pageable);
+    
+    /**
+     * Find posts sorted by popularity score with time decay
+     * Popularity score = (resonance * 2 + view + collect * 3) * time_decay_factor
+     * Time decay factor = 0.95^(hours_since_creation)
+     */
+    @Query("SELECT p FROM Post p WHERE (:emotion IS NULL OR LOWER(p.emotion) = LOWER(:emotion)) " +
+           "ORDER BY " +
+           "(p.resonance * 2.0 + p.view + p.collect * 3.0) * " +
+           "POWER(0.95, TIMESTAMPDIFF(HOUR, p.createdAt, CURRENT_TIMESTAMP)) DESC")
+    Page<Post> findPostsByPopularity(@Param("emotion") String emotion, Pageable pageable);
     
     void deleteByUserId(UUID userId);
 } 
