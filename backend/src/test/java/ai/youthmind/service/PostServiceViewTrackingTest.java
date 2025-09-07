@@ -5,6 +5,7 @@ import ai.youthmind.dto.PostViewStats;
 import ai.youthmind.entity.Post;
 import ai.youthmind.entity.PostView;
 import ai.youthmind.exception.ResourceNotFoundException;
+import ai.youthmind.repository.CommentRepository;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.PostViewRepository;
 import ai.youthmind.service.PostService;
@@ -33,6 +34,9 @@ class PostServiceViewTrackingTest {
     
     @Mock
     private PostViewRepository postViewRepository;
+    
+    @Mock
+    private CommentRepository commentRepository;
     
     @Mock
     private RedisService redisService;
@@ -66,6 +70,9 @@ class PostServiceViewTrackingTest {
         testPostView = new PostView(testUserId, testPostId);
         testPostView.setId(UUID.randomUUID());
         testPostView.setViewedAt(LocalDateTime.now());
+        
+        // Mock comment count for all tests
+        when(commentRepository.countByPostId(any(UUID.class))).thenReturn(0L);
     }
     
     @Test

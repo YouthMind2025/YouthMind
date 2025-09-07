@@ -7,6 +7,7 @@ import ai.youthmind.entity.PostCollection;
 import ai.youthmind.entity.PostResonance;
 import ai.youthmind.entity.PostView;
 import ai.youthmind.exception.ResourceNotFoundException;
+import ai.youthmind.repository.CommentRepository;
 import ai.youthmind.repository.PostCollectionRepository;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.PostResonanceRepository;
@@ -30,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -49,6 +51,9 @@ public class PostServiceTest {
     
     @Mock
     private PostCollectionRepository postCollectionRepository;
+    
+    @Mock
+    private CommentRepository commentRepository;
     
     @Mock
     private RedisService redisService;
@@ -75,6 +80,9 @@ public class PostServiceTest {
         testPost.setResonance(10);
         testPost.setCollect(2);
         testPost.setCreatedAt(LocalDateTime.now());
+        
+        // Mock comment count for all tests (lenient to avoid unnecessary stubbing errors)
+        lenient().when(commentRepository.countByPostId(any(UUID.class))).thenReturn(0L);
     }
     
     @Test
@@ -83,7 +91,6 @@ public class PostServiceTest {
         when(postRepository.findById(postId)).thenReturn(Optional.of(testPost));
         when(postViewRepository.existsByUserIdAndPostId(userId, postId)).thenReturn(false);
         when(postViewRepository.save(any(PostView.class))).thenReturn(new PostView(userId, postId));
-        when(postRepository.save(any(Post.class))).thenReturn(testPost);
         
         // When
         PostDto result = postService.getPostById(postId, userId);
@@ -94,15 +101,14 @@ public class PostServiceTest {
         assertThat(result.getTitle()).isEqualTo("Test Post");
         assertThat(result.getContent()).isEqualTo("Test content");
         assertThat(result.getEmotion()).isEqualTo("happy");
-        assertThat(result.getView()).isEqualTo(6); // Should be incremented from 5 to 6
+        assertThat(result.getView()).isEqualTo(5); // Original view count (increment happens async)
         assertThat(result.getResonance()).isEqualTo(10);
         assertThat(result.getCollect()).isEqualTo(2);
         
         // Verify view tracking was recorded
         verify(postViewRepository).existsByUserIdAndPostId(userId, postId);
         verify(postViewRepository).save(any(PostView.class));
-        verify(postRepository).save(any(Post.class));
-        verify(redisService).invalidateFeedCache();
+        verify(postRepository).incrementViewCount(postId);
     }
     
     @Test
@@ -166,15 +172,12 @@ public class PostServiceTest {
         when(postRepository.findById(postId)).thenReturn(Optional.of(testPost));
         when(postViewRepository.existsByUserIdAndPostId(userId, postId)).thenReturn(false);
         when(postViewRepository.save(any(PostView.class))).thenReturn(new PostView(userId, postId));
-        when(postRepository.save(any(Post.class))).thenReturn(testPost);
         
         // When
         postService.getPostById(postId, userId);
         
         // Then
-        verify(postRepository).save(argThat(post -> 
-            post.getView() == 6 // Should be incremented from 5 to 6
-        ));
+        verify(postRepository).incrementViewCount(postId); // View count incremented via native query
     }
 
     @Test
