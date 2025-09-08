@@ -2,8 +2,8 @@ package ai.youthmind.service;
 
 import ai.youthmind.dto.*;
 import ai.youthmind.entity.Post;
-import ai.youthmind.repository.PostRepository;
-import ai.youthmind.repository.UserRepository;
+import ai.youthmind.entity.UserEngagement;
+import ai.youthmind.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +23,12 @@ public class SearchService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private UserEngagementRepository userEngagementRepository;
+
+    @Autowired
+    private CommentRepository commentRepository;
 
     @Autowired
     private UserService userService;
@@ -224,10 +230,14 @@ public class SearchService {
             dto.setAuthor(authorDto);
         });
 
-        // Set engagement flags (would need to check user engagement)
-        dto.setLiked(false); // TODO: Check if current user liked this post
-        dto.setBookmarked(false); // TODO: Check if current user bookmarked this post
-        dto.setCommentsCount(0); // TODO: Get actual comment count
+        // Set engagement flags
+        Optional<UserEngagement> resonanceEngagement = userEngagementRepository.findByUserIdAndPostIdAndType(currentUserId, post.getId(), UserEngagement.EngagementType.RESONANCE);
+        Optional<UserEngagement> collectEngagement = userEngagementRepository.findByUserIdAndPostIdAndType(currentUserId, post.getId(), UserEngagement.EngagementType.COLLECT);
+        dto.setLiked(resonanceEngagement.isPresent());
+        dto.setBookmarked(collectEngagement.isPresent());
+
+        // Set comments count
+        dto.setCommentsCount((int) commentRepository.countByPostId(post.getId()));
 
         return dto;
     }
