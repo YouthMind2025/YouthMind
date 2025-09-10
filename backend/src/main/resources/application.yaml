@@ -201,8 +201,21 @@ management:
       enabled: true
       mode: full
 
+# DeepSeek API Configuration
+deepseek:
+  api:
+    base-url: ${YOUTHMIND_DEEPSEEK_API_URL:https://api.deepseek.com/v1}
+    api-key: ${YOUTHMIND_DEEPSEEK_API_KEY:}
+    timeout: ${YOUTHMIND_DEEPSEEK_TIMEOUT:30000} # 30 seconds
+    max-retries: ${YOUTHMIND_DEEPSEEK_MAX_RETRIES:3}
+    model: ${YOUTHMIND_DEEPSEEK_MODEL:deepseek-chat}
+    moderation:
+      enabled: ${YOUTHMIND_DEEPSEEK_MODERATION_ENABLED:true}
+      threshold: ${YOUTHMIND_DEEPSEEK_MODERATION_THRESHOLD:0.7}
+
 # Logging
 logging:
   level:
     org.springframework.security: DEBUG
-    ai.youthmind: DEBUG 
+    ai.youthmind: DEBUG
+    ai.youthmind.service.AIServiceClient: DEBUG 

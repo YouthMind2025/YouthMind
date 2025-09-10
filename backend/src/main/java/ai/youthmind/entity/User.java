@@ -59,8 +59,22 @@ public class User {
     @Column(name = "role", nullable = false)
     private Role role = Role.USER;
     
+    @Column(name = "warnings_count", nullable = false)
+    private Integer warningsCount = 0;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_status", nullable = false)
+    private UserStatus userStatus = UserStatus.ACTIVE;
+    
+    @Column(name = "ban_expires_at")
+    private LocalDateTime banExpiresAt;
+    
     public enum Role {
         USER, ADMIN
+    }
+    
+    public enum UserStatus {
+        ACTIVE, WARNED, BANNED, SUSPENDED
     }
     
     @PrePersist
@@ -185,5 +199,29 @@ public class User {
     
     public void setRole(Role role) {
         this.role = role;
+    }
+    
+    public Integer getWarningsCount() {
+        return warningsCount;
+    }
+    
+    public void setWarningsCount(Integer warningsCount) {
+        this.warningsCount = warningsCount;
+    }
+    
+    public UserStatus getUserStatus() {
+        return userStatus;
+    }
+    
+    public void setUserStatus(UserStatus userStatus) {
+        this.userStatus = userStatus;
+    }
+    
+    public LocalDateTime getBanExpiresAt() {
+        return banExpiresAt;
+    }
+    
+    public void setBanExpiresAt(LocalDateTime banExpiresAt) {
+        this.banExpiresAt = banExpiresAt;
     }
 } 
