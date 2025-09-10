@@ -409,6 +409,11 @@ export YOUTHMIND_BACKEND_URL=http://localhost:8080
 # Security
 export YOUTHMIND_JWT_SECRET=your_256_bit_secret
 export YOUTHMIND_TWILIO_API_KEY=your_twilio_key
+
+# DeepSeek AI API Configuration
+export YOUTHMIND_DEEPSEEK_API_KEY=your_deepseek_api_key
+export YOUTHMIND_DEEPSEEK_API_URL=https://api.deepseek.com/v1
+export YOUTHMIND_DEEPSEEK_MODERATION_ENABLED=true
 ```
 
 ### Local Development Setup

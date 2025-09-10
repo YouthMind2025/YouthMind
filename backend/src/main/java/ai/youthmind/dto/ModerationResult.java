@@ -1,0 +1,93 @@
+package ai.youthmind.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+/**
+ * Result DTO for content moderation analysis
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ModerationResult {
+    
+    /**
+     * Whether the content is safe to publish
+     */
+    private boolean isSafe;
+    
+    /**
+     * Confidence score (0.0 to 1.0) for the moderation decision
+     */
+    private double confidence;
+    
+    /**
+     * Reason for the moderation decision
+     */
+    private String reason;
+    
+    /**
+     * Detected content categories (e.g., "harassment", "violence", "spam")
+     */
+    private String[] detectedCategories;
+    
+    /**
+     * Severity level (LOW, MEDIUM, HIGH, CRITICAL)
+     */
+    private SeverityLevel severity;
+    
+    /**
+     * Raw response from DeepSeek API
+     */
+    private String rawResponse;
+    
+    /**
+     * Timestamp when moderation was performed
+     */
+    private LocalDateTime moderatedAt;
+    
+    /**
+     * Cost of the API call (in USD)
+     */
+    private double cost;
+    
+    /**
+     * Number of tokens used in the API call
+     */
+    private int tokensUsed;
+    
+    public enum SeverityLevel {
+        LOW, MEDIUM, HIGH, CRITICAL
+    }
+    
+    /**
+     * Create a safe result
+     */
+    public static ModerationResult safe(String reason) {
+        ModerationResult result = new ModerationResult();
+        result.setSafe(true);
+        result.setConfidence(1.0);
+        result.setReason(reason);
+        result.setSeverity(SeverityLevel.LOW);
+        result.setDetectedCategories(new String[0]);
+        result.setModeratedAt(LocalDateTime.now());
+        return result;
+    }
+    
+    /**
+     * Create an unsafe result
+     */
+    public static ModerationResult unsafe(String reason, SeverityLevel severity, String[] categories) {
+        ModerationResult result = new ModerationResult();
+        result.setSafe(false);
+        result.setConfidence(0.9);
+        result.setReason(reason);
+        result.setSeverity(severity);
+        result.setDetectedCategories(categories);
+        result.setModeratedAt(LocalDateTime.now());
+        return result;
+    }
+}
