@@ -29,6 +29,9 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     // Find flagged posts by specific user
     List<Post> findByUserIdAndFlaggedTrue(UUID userId);
     
+    // Count flagged posts
+    long countByFlaggedTrue();
+    
     // Filtering with pagination
     Page<Post> findByEmotionIgnoreCase(String emotion, Pageable pageable);
 
