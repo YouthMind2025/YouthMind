@@ -1,5 +1,6 @@
 package ai.youthmind.service;
 
+import ai.youthmind.dto.ModerationResult;
 import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.dto.PostDto;
 import ai.youthmind.dto.PostDtoBuilder;
@@ -7,6 +8,7 @@ import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.dto.FlaggedPostDto;
 import ai.youthmind.dto.PostViewStats;
 import ai.youthmind.dto.PostUpdateRequest;
+import ai.youthmind.util.ModerationUtils;
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
 import ai.youthmind.entity.PostCollection;
@@ -103,6 +105,12 @@ public class PostService {
         return aiAnalysisRepository.save(analysis);
     }
 
+    @Autowired
+    private PostModerationService postModerationService;
+    
+    @Autowired
+    private ModerationLoggingService moderationLoggingService;
+    
     public Post createPost(UUID userId, PostCreateRequest request) {
         Post post = new Post();
         post.setUserId(userId);
@@ -114,6 +122,50 @@ public class PostService {
         post.setView(0); // New post starts with 0 views
         post.setCollect(0); // New post starts with 0 collections
         
+        // AI Moderation Integration - Pre-publish content screening
+        try {
+            // Check if user should be exempt from moderation
+            if (!postModerationService.isUserExemptFromModeration(userId)) {
+                // Perform AI moderation
+                ModerationResult moderationResult = postModerationService.moderatePost(post, userId);
+                
+                // Log moderation result
+                moderationLoggingService.logPostModeration(post, userId, moderationResult, "post_creation");
+                
+                // Apply moderation actions (flagging, warnings, etc.)
+                if (!moderationResult.isSafe()) {
+                    // Content flagged - post will be saved but flagged
+                    post.setFlagged(true);
+                    post.setFlagReason(moderationResult.getReason());
+                    post.setFlaggedAt(LocalDateTime.now());
+                    
+                    // Log warning issuance if applicable
+                    if (ModerationUtils.shouldIssueWarning(moderationResult)) {
+                        moderationLoggingService.logWarningIssuance(
+                            userId, 
+                            post.getId(), 
+                            ModerationUtils.mapCategoryToWarningTypeString(ModerationUtils.getPrimaryCategory(moderationResult)),
+                            ModerationUtils.getSeverityAsString(moderationResult),
+                            "AI-detected harmful content: " + moderationResult.getReason()
+                        );
+                    }
+                }
+            } else {
+                // User is exempt from moderation
+                post.setFlagged(false);
+                post.setFlagReason(null);
+                post.setFlaggedAt(null);
+            }
+        } catch (Exception e) {
+            // Log moderation error but don't block post creation
+            moderationLoggingService.logModerationError(userId, null, e, "post_creation_moderation");
+            
+            // Default to safe on error to avoid blocking legitimate content
+            post.setFlagged(false);
+            post.setFlagReason(null);
+            post.setFlaggedAt(null);
+        }
+        
         Post savedPost = postRepository.save(post);
         
         // Invalidate feed cache after creating a post
@@ -121,6 +173,7 @@ public class PostService {
         
         return savedPost;
     }
+    
     
     /**
      * Get feed with optimized batch operations and caching

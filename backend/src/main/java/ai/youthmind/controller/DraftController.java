@@ -6,6 +6,7 @@ import ai.youthmind.dto.DraftDto;
 import ai.youthmind.dto.DraftListResponse;
 import ai.youthmind.dto.DraftPublishResponse;
 import ai.youthmind.dto.DraftUpdateRequest;
+import ai.youthmind.dto.ModerationResult;
 import ai.youthmind.dto.PaginationDto;
 import ai.youthmind.dto.PostDto;
 import ai.youthmind.dto.UserDto;
@@ -13,8 +14,11 @@ import ai.youthmind.entity.Draft;
 import ai.youthmind.entity.Post;
 import ai.youthmind.entity.User;
 import ai.youthmind.service.DraftService;
+import ai.youthmind.service.ModerationLoggingService;
+import ai.youthmind.service.PostModerationService;
 import ai.youthmind.service.PostService;
 import ai.youthmind.service.UserService;
+import ai.youthmind.util.ModerationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -45,12 +49,18 @@ public class DraftController {
 
     @Autowired
     private DraftService draftService;
-
+    
     @Autowired
     private PostService postService;
-
+    
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private PostModerationService postModerationService;
+    
+    @Autowired
+    private ModerationLoggingService moderationLoggingService;
 
     @GetMapping
     @Operation(
@@ -300,6 +310,65 @@ public class DraftController {
             post.setView(0);
             post.setCreatedAt(LocalDateTime.now());
 
+            // AI Moderation Integration - Pre-publish content screening for drafts
+            try {
+                // Check if user should be exempt from moderation
+                if (!postModerationService.isUserExemptFromModeration(currentUserId)) {
+                    // Perform AI moderation on draft content
+                    ModerationResult moderationResult = postModerationService.moderateDraft(
+                        draft.getTitle(), 
+                        draft.getContent(), 
+                        currentUserId
+                    );
+                    
+                    // Log moderation result
+                    moderationLoggingService.logDraftModeration(
+                        draft.getTitle(), 
+                        draft.getContent(), 
+                        currentUserId, 
+                        moderationResult, 
+                        "draft_publishing"
+                    );
+                    
+                    // Apply moderation actions
+                    if (!moderationResult.isSafe()) {
+                        // Content flagged - post will be saved but flagged
+                        post.setFlagged(true);
+                        post.setFlagReason(moderationResult.getReason());
+                        post.setFlaggedAt(LocalDateTime.now());
+                        
+                        // Log warning issuance if applicable
+                        if (ModerationUtils.shouldIssueWarning(moderationResult)) {
+                        moderationLoggingService.logWarningIssuance(
+                            currentUserId, 
+                            post.getId(), 
+                            ModerationUtils.mapCategoryToWarningTypeString(ModerationUtils.getPrimaryCategory(moderationResult)),
+                            ModerationUtils.getSeverityAsString(moderationResult),
+                            "AI-detected harmful content in draft: " + moderationResult.getReason()
+                        );
+                        }
+                    } else {
+                        // Content is safe
+                        post.setFlagged(false);
+                        post.setFlagReason(null);
+                        post.setFlaggedAt(null);
+                    }
+                } else {
+                    // User is exempt from moderation
+                    post.setFlagged(false);
+                    post.setFlagReason(null);
+                    post.setFlaggedAt(null);
+                }
+            } catch (Exception e) {
+                // Log moderation error but don't block draft publishing
+                moderationLoggingService.logModerationError(currentUserId, null, e, "draft_publishing_moderation");
+                
+                // Default to safe on error to avoid blocking legitimate content
+                post.setFlagged(false);
+                post.setFlagReason(null);
+                post.setFlaggedAt(null);
+            }
+
             Post savedPost = postService.savePost(post);
             
             // Delete the draft
@@ -363,4 +432,5 @@ public class DraftController {
         
         return dto;
     }
+    
 }
