@@ -23,6 +23,9 @@ public class WarningHistory {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
+    @Column(name = "user_id", nullable = false, insertable = false, updatable = false)
+    private UUID userId;
+    
     @Enumerated(EnumType.STRING)
     @Column(name = "warning_type", nullable = false)
     private WarningType warningType;
@@ -38,9 +41,15 @@ public class WarningHistory {
     @JoinColumn(name = "moderator_id")
     private User moderator;
     
+    @Column(name = "moderator_id", insertable = false, updatable = false)
+    private UUID moderatorId;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id")
     private Post post;
+    
+    @Column(name = "post_id", insertable = false, updatable = false)
+    private UUID postId;
     
     @Column(name = "comment_id")
     private UUID commentId;

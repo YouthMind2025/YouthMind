@@ -23,6 +23,9 @@ public class UserModerationStatus {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
     
+    @Column(name = "user_id", nullable = false, insertable = false, updatable = false)
+    private UUID userId;
+    
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private ModerationStatus status = ModerationStatus.CLEAN;

@@ -92,4 +92,61 @@ public class ApiResponse<T> {
     public boolean isSuccess() {
         return statusCode >= 200 && statusCode < 300;
     }
+    
+    // Builder pattern for better API consistency and longevity
+    public static class Builder<T> {
+        private T data;
+        private int statusCode = 200;
+        private Map<String, String> headers = new HashMap<>();
+        private String message;
+        private String errorCode;
+        private boolean success = true;
+        
+        public Builder<T> data(T data) {
+            this.data = data;
+            return this;
+        }
+        
+        public Builder<T> statusCode(int statusCode) {
+            this.statusCode = statusCode;
+            this.success = statusCode >= 200 && statusCode < 300;
+            return this;
+        }
+        
+        public Builder<T> headers(Map<String, String> headers) {
+            this.headers = headers != null ? headers : new HashMap<>();
+            return this;
+        }
+        
+        public Builder<T> message(String message) {
+            this.message = message;
+            return this;
+        }
+        
+        public Builder<T> errorCode(String errorCode) {
+            this.errorCode = errorCode;
+            return this;
+        }
+        
+        public Builder<T> success(boolean success) {
+            this.success = success;
+            return this;
+        }
+        
+        public ApiResponse<T> build() {
+            ApiResponse<T> response = new ApiResponse<>(data, statusCode, headers);
+            if (message != null) {
+                response.addHeader("message", message);
+            }
+            if (errorCode != null) {
+                response.addHeader("errorCode", errorCode);
+            }
+            response.addHeader("success", String.valueOf(success));
+            return response;
+        }
+    }
+    
+    public static <T> Builder<T> builder() {
+        return new Builder<>();
+    }
 } 
