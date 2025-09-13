@@ -8,11 +8,14 @@ import ai.youthmind.dto.DeepSeekModerationResponse;
 import ai.youthmind.dto.ModerationResult;
 import ai.youthmind.entity.AiApiUsage;
 import ai.youthmind.exception.AIServiceException;
+import ai.youthmind.util.CircuitBreaker;
 import ai.youthmind.util.ModerationResponseParser;
+import ai.youthmind.util.RetryUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -21,10 +24,14 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 /**
@@ -48,8 +55,22 @@ public class AIServiceClient {
     @Autowired
     private ApiCostCalculationService costCalculationService;
     
+    @Autowired
+    private AIFallbackService fallbackService;
+    
+    @Autowired
+    @Qualifier("aiServiceCircuitBreaker")
+    private CircuitBreaker circuitBreaker;
+    
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    
+    // Retry configuration
+    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final Duration INITIAL_RETRY_DELAY = Duration.ofMillis(1000);
+    private static final double RETRY_BACKOFF_MULTIPLIER = 2.0;
+    private static final Duration MAX_RETRY_DELAY = Duration.ofSeconds(10);
+    private static final double JITTER_FACTOR = 0.1;
     
     // Moderation prompt templates
     private static final String MODERATION_SYSTEM_PROMPT = """
@@ -86,7 +107,8 @@ public class AIServiceClient {
     public ModerationResult moderateContent(String content, String contentType, UUID userId, String sessionId) {
         // Validate configuration
         if (!isConfigured()) {
-            throw AIServiceException.configurationError("DeepSeek API is not properly configured");
+            logger.warn("DeepSeek API is not properly configured, using fallback");
+            return fallbackService.generateFallbackModerationResult(content, contentType);
         }
         
         if (!moderationConfig.isEnabled()) {
@@ -97,52 +119,71 @@ public class AIServiceClient {
         long startTime = System.currentTimeMillis();
         boolean success = true;
         String errorMessage = null;
-        int promptTokens = 0;
-        int completionTokens = 0;
+        final int[] promptTokens = {0};
+        final int[] completionTokens = {0};
         
         try {
             logger.debug("Moderating {} content: {}", contentType, content.substring(0, Math.min(100, content.length())));
             
-            DeepSeekModerationRequest request = buildModerationRequest(content);
-            DeepSeekModerationResponse response = callDeepSeekAPI(request);
+            // Use circuit breaker with retry logic
+            ModerationResult result = circuitBreaker.execute(() -> {
+                return RetryUtil.executeWithRetry(
+                    () -> {
+                        DeepSeekModerationRequest request = buildModerationRequest(content);
+                        DeepSeekModerationResponse response = callDeepSeekAPIWithRetry(request);
+                        
+                        // Extract usage information
+                        if (response.getUsage() != null) {
+                            promptTokens[0] = response.getUsage().getPromptTokens();
+                            completionTokens[0] = response.getUsage().getCompletionTokens();
+                        }
+                        
+                        return parseModerationResponse(response, content);
+                    },
+                    MAX_RETRY_ATTEMPTS,
+                    createAIServiceRetryPredicate(),
+                    INITIAL_RETRY_DELAY,
+                    RETRY_BACKOFF_MULTIPLIER,
+                    MAX_RETRY_DELAY,
+                    JITTER_FACTOR
+                );
+            });
             
-            // Extract usage information
-            if (response.getUsage() != null) {
-                promptTokens = response.getUsage().getPromptTokens();
-                completionTokens = response.getUsage().getCompletionTokens();
-            }
-            
-            ModerationResult result = parseModerationResponse(response, content);
-            
-            // Record usage
+            // Record successful usage
             recordApiUsage(userId, sessionId, AiApiUsage.RequestType.MODERATION, 
-                          deepSeekConfig.getModel(), promptTokens, completionTokens, 
+                          deepSeekConfig.getModel(), promptTokens[0], completionTokens[0], 
                           System.currentTimeMillis() - startTime, success, errorMessage, content);
             
             return result;
             
+        } catch (CircuitBreaker.CircuitBreakerOpenException e) {
+            logger.warn("Circuit breaker is open, using fallback moderation: {}", e.getMessage());
+            return fallbackService.generateFallbackModerationResult(content, contentType);
+        } catch (RetryUtil.RetryExhaustedException e) {
+            logger.error("All retry attempts exhausted, using fallback moderation: {}", e.getMessage());
+            return fallbackService.generateFallbackModerationResult(content, contentType);
         } catch (AIServiceException e) {
             success = false;
             errorMessage = e.getMessage();
             
             // Record failed usage
             recordApiUsage(userId, sessionId, AiApiUsage.RequestType.MODERATION, 
-                          deepSeekConfig.getModel(), promptTokens, completionTokens, 
+                          deepSeekConfig.getModel(), promptTokens[0], completionTokens[0], 
                           System.currentTimeMillis() - startTime, success, errorMessage, content);
             
-            // Re-throw AI service exceptions
-            throw e;
+            logger.error("AI service error, using fallback moderation: {}", e.getMessage());
+            return fallbackService.generateFallbackModerationResult(content, contentType);
         } catch (Exception e) {
             success = false;
             errorMessage = e.getMessage();
             
             // Record failed usage
             recordApiUsage(userId, sessionId, AiApiUsage.RequestType.MODERATION, 
-                          deepSeekConfig.getModel(), promptTokens, completionTokens, 
+                          deepSeekConfig.getModel(), promptTokens[0], completionTokens[0], 
                           System.currentTimeMillis() - startTime, success, errorMessage, content);
             
-            logger.error("Error during content moderation: {}", e.getMessage(), e);
-            throw AIServiceException.configurationError("Content moderation failed: " + e.getMessage());
+            logger.error("Unexpected error during content moderation, using fallback: {}", e.getMessage(), e);
+            return fallbackService.generateFallbackModerationResult(content, contentType);
         }
     }
     
@@ -306,8 +347,18 @@ public class AIServiceClient {
         try {
             logger.debug("Generating chat completion with model: {}", request.getModel());
             
-            // Call the existing API method
-            DeepSeekModerationResponse response = callDeepSeekAPI(request);
+            // Use circuit breaker with retry logic
+            DeepSeekModerationResponse response = circuitBreaker.execute(() -> {
+                return RetryUtil.executeWithRetry(
+                    () -> callDeepSeekAPIWithRetry(request),
+                    MAX_RETRY_ATTEMPTS,
+                    createAIServiceRetryPredicate(),
+                    INITIAL_RETRY_DELAY,
+                    RETRY_BACKOFF_MULTIPLIER,
+                    MAX_RETRY_DELAY,
+                    JITTER_FACTOR
+                );
+            });
             
             // Extract usage information
             if (response.getUsage() != null) {
@@ -315,13 +366,19 @@ public class AIServiceClient {
                 completionTokens = response.getUsage().getCompletionTokens();
             }
             
-            // Record usage
+            // Record successful usage
             recordApiUsage(userId, sessionId, AiApiUsage.RequestType.CONTENT_GENERATION, 
                           request.getModel(), promptTokens, completionTokens, 
                           System.currentTimeMillis() - startTime, success, errorMessage, null);
             
             return response;
             
+        } catch (CircuitBreaker.CircuitBreakerOpenException e) {
+            logger.warn("Circuit breaker is open for chat completion: {}", e.getMessage());
+            throw AIServiceException.configurationError("AI service unavailable: " + e.getMessage());
+        } catch (RetryUtil.RetryExhaustedException e) {
+            logger.error("All retry attempts exhausted for chat completion: {}", e.getMessage());
+            throw AIServiceException.configurationError("Chat completion failed after retries: " + e.getMessage());
         } catch (AIServiceException e) {
             success = false;
             errorMessage = e.getMessage();
@@ -390,6 +447,62 @@ public class AIServiceClient {
     }
     
     /**
+     * Call DeepSeek API with retry logic
+     */
+    private DeepSeekModerationResponse callDeepSeekAPIWithRetry(DeepSeekModerationRequest request) {
+        try {
+            return RetryUtil.executeWithRetry(
+                () -> callDeepSeekAPI(request),
+                MAX_RETRY_ATTEMPTS,
+                createAIServiceRetryPredicate(),
+                INITIAL_RETRY_DELAY,
+                RETRY_BACKOFF_MULTIPLIER,
+                MAX_RETRY_DELAY,
+                JITTER_FACTOR
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to call DeepSeek API with retry", e);
+        }
+    }
+    
+    /**
+     * Create retry predicate for AI service calls
+     */
+    private Predicate<Exception> createAIServiceRetryPredicate() {
+        return e -> {
+            // Retry for network issues, timeouts, and temporary service errors
+            String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+            
+            return message.contains("timeout") ||
+                   message.contains("connection") ||
+                   message.contains("network") ||
+                   message.contains("temporary") ||
+                   message.contains("service unavailable") ||
+                   message.contains("rate limit") ||
+                   e instanceof java.net.ConnectException ||
+                   e instanceof java.net.SocketTimeoutException ||
+                   e instanceof java.util.concurrent.TimeoutException ||
+                   e instanceof ResourceAccessException ||
+                   (e instanceof HttpServerErrorException && 
+                    ((HttpServerErrorException) e).getStatusCode().is5xxServerError());
+        };
+    }
+    
+    /**
+     * Get circuit breaker health status
+     */
+    public CircuitBreaker.CircuitBreakerHealth getCircuitBreakerHealth() {
+        return circuitBreaker.getHealth();
+    }
+    
+    /**
+     * Reset circuit breaker
+     */
+    public void resetCircuitBreaker() {
+        circuitBreaker.reset();
+    }
+    
+    /**
      * Get service status for health checks
      */
     public String getServiceStatus() {
@@ -399,6 +512,27 @@ public class AIServiceClient {
         if (!moderationConfig.isEnabled()) {
             return "DISABLED";
         }
-        return "READY";
+        
+        CircuitBreaker.State circuitState = circuitBreaker.getState();
+        return switch (circuitState) {
+            case CLOSED -> "READY";
+            case OPEN -> "CIRCUIT_OPEN";
+            case HALF_OPEN -> "RECOVERING";
+        };
+    }
+    
+    /**
+     * Get detailed service health information
+     */
+    public Map<String, Object> getDetailedHealthStatus() {
+        Map<String, Object> health = new HashMap<>();
+        health.put("configured", isConfigured());
+        health.put("moderationEnabled", moderationConfig.isEnabled());
+        health.put("serviceStatus", getServiceStatus());
+        health.put("circuitBreakerHealth", getCircuitBreakerHealth());
+        health.put("fallbackServiceStatus", fallbackService.getFallbackServiceStatus());
+        health.put("timestamp", LocalDateTime.now());
+        
+        return health;
     }
 }
