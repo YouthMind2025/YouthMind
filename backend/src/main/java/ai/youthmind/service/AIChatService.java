@@ -51,6 +51,9 @@ public class AIChatService {
     @Autowired
     private SafetyFilter safetyFilter;
     
+    @Autowired
+    private AIFallbackService fallbackService;
+    
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     // Personality system prompts
@@ -148,7 +151,15 @@ public class AIChatService {
             
         } catch (Exception e) {
             logger.error("Error processing AI chat request: {}", e.getMessage(), e);
-            return createErrorResponse("Sorry, I encountered an error. Please try again.", request);
+            
+            // Try fallback service if AI is unavailable
+            try {
+                logger.info("Attempting fallback response for user: {}", userId);
+                return fallbackService.generateFallbackChatResponse(request, userId);
+            } catch (Exception fallbackError) {
+                logger.error("Fallback service also failed: {}", fallbackError.getMessage(), fallbackError);
+                return createErrorResponse("Sorry, I encountered an error. Please try again.", request);
+            }
         }
     }
     
