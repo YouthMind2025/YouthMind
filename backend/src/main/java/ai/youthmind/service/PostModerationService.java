@@ -56,8 +56,8 @@ public class PostModerationService {
             // Combine title and content for comprehensive analysis
             String fullContent = buildContentForModeration(post);
             
-            // Call AI moderation service
-            ModerationResult result = aiServiceClient.moderateContent(fullContent, "post");
+            // Call AI moderation service with user tracking
+            ModerationResult result = aiServiceClient.moderateContent(fullContent, "post", userId, null);
             
             // Log moderation result
             logModerationResult(post, userId, result);
@@ -93,8 +93,8 @@ public class PostModerationService {
             // Build content for moderation
             String fullContent = buildDraftContentForModeration(title, content);
             
-            // Call AI moderation service
-            ModerationResult result = aiServiceClient.moderateContent(fullContent, "draft");
+            // Call AI moderation service with user tracking
+            ModerationResult result = aiServiceClient.moderateContent(fullContent, "draft", userId, null);
             
             // Log moderation result
             logDraftModerationResult(title, content, userId, result);
