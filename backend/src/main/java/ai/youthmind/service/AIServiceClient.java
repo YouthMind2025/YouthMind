@@ -230,6 +230,33 @@ public class AIServiceClient {
     }
     
     /**
+     * Generate chat completion using DeepSeek API
+     * 
+     * @param request The chat completion request
+     * @return DeepSeekModerationResponse with the AI-generated response
+     */
+    public DeepSeekModerationResponse generateChatCompletion(DeepSeekModerationRequest request) {
+        // Validate configuration
+        if (!isConfigured()) {
+            throw AIServiceException.configurationError("DeepSeek API is not properly configured");
+        }
+        
+        try {
+            logger.debug("Generating chat completion with model: {}", request.getModel());
+            
+            // Call the existing API method
+            return callDeepSeekAPI(request);
+            
+        } catch (AIServiceException e) {
+            // Re-throw AI service exceptions
+            throw e;
+        } catch (Exception e) {
+            logger.error("Error generating chat completion: {}", e.getMessage(), e);
+            throw AIServiceException.configurationError("Chat completion failed: " + e.getMessage());
+        }
+    }
+    
+    /**
      * Get service status for health checks
      */
     public String getServiceStatus() {

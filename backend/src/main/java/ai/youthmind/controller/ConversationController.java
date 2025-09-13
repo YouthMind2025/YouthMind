@@ -1,14 +1,6 @@
 package ai.youthmind.controller;
 
-import ai.youthmind.dto.ApiResponse;
-import ai.youthmind.dto.ConversationCreateRequest;
-import ai.youthmind.dto.ConversationDto;
-import ai.youthmind.dto.ConversationListResponse;
-import ai.youthmind.dto.ConversationUpdateRequest;
-import ai.youthmind.dto.MessageCreateRequest;
-import ai.youthmind.dto.MessageDto;
-import ai.youthmind.dto.MessageListResponse;
-import ai.youthmind.dto.PaginationDto;
+import ai.youthmind.dto.*;
 import ai.youthmind.entity.Conversation;
 import ai.youthmind.entity.Message;
 import ai.youthmind.service.ConversationService;
@@ -223,6 +215,56 @@ public class ConversationController {
             
             return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(messageDto, 201));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(null, 500));
+        }
+    }
+    
+    @PostMapping("/{conversationId}/ai-chat")
+    @Operation(
+        summary = "Send message with AI response",
+        description = "Send a message to a conversation and get an AI-generated response with personality adaptation and safety filtering"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "AI response generated successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request or safety filter blocked message"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Conversation not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Not authorized to access this conversation")
+    })
+    public ResponseEntity<ApiResponse<AIChatResponse>> sendMessageWithAIResponse(
+            @PathVariable UUID conversationId,
+            @Valid @RequestBody MessageCreateRequest request) {
+        
+        try {
+            // Get current user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(null, 401));
+            }
+            UUID currentUserId = (UUID) authentication.getPrincipal();
+
+            // Check if conversation exists
+            Optional<Conversation> conversationOpt = conversationService.getConversationById(conversationId);
+            if (conversationOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(null, 404));
+            }
+
+            Conversation conversation = conversationOpt.get();
+            
+            // Check if user owns the conversation
+            if (!conversation.getUserId().equals(currentUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(null, 403));
+            }
+
+            // Process message with AI response
+            AIChatResponse aiResponse = conversationService.addMessageWithAIResponse(conversationId, request, currentUserId);
+            
+            return ResponseEntity.ok(ApiResponse.success(aiResponse));
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
