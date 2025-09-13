@@ -77,6 +77,8 @@ public class SecurityConfig {
                 // Protected endpoints
                 .requestMatchers("/v1/auth/test").authenticated()
                 .requestMatchers("/v1/posts/create").authenticated()
+                .requestMatchers("/v1/conversations/**").authenticated()
+                .requestMatchers("/v1/ai-chat/**").authenticated()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
             //.addFilterAfter(rateFilter, UsernamePasswordAuthenticationFilter.class);

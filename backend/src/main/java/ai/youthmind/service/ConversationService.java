@@ -26,6 +26,9 @@ public class ConversationService {
 
     @Autowired
     private MessageRepository messageRepository;
+    
+    @Autowired
+    private AIChatService aiChatService;
 
     /**
      * Get conversations by user ID with pagination
@@ -173,6 +176,45 @@ public class ConversationService {
         conversationRepository.save(conversation);
 
         return convertToMessageDto(savedMessage);
+    }
+    
+    /**
+     * Add a message to a conversation with AI response
+     */
+    public AIChatResponse addMessageWithAIResponse(UUID conversationId, MessageCreateRequest request, UUID userId) {
+        Optional<Conversation> conversationOpt = conversationRepository.findById(conversationId);
+        if (conversationOpt.isEmpty()) {
+            throw new RuntimeException("Conversation not found");
+        }
+
+        Conversation conversation = conversationOpt.get();
+        if (!conversation.getUserId().equals(userId)) {
+            throw new RuntimeException("Not authorized to add messages to this conversation");
+        }
+
+        // Save user message
+        Message userMessage = new Message();
+        userMessage.setConversationId(conversationId);
+        userMessage.setText(request.getText());
+        userMessage.setSender("user");
+        userMessage.setTimestamp(LocalDateTime.now());
+        messageRepository.save(userMessage);
+
+        // Create AI chat request
+        AIChatRequest aiRequest = new AIChatRequest();
+        aiRequest.setMessage(request.getText());
+        aiRequest.setConversationId(conversationId.toString());
+        aiRequest.setEnableSafetyFiltering(true);
+        aiRequest.setEnablePersonalityAdaptation(true);
+
+        // Process with AI chat service
+        AIChatResponse aiResponse = aiChatService.processChatRequest(aiRequest, userId);
+
+        // Update conversation's updatedAt timestamp
+        conversation.setUpdatedAt(LocalDateTime.now());
+        conversationRepository.save(conversation);
+
+        return aiResponse;
     }
 
     /**

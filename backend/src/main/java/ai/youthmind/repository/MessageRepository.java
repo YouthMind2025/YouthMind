@@ -16,5 +16,7 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
     
     List<Message> findByConversationIdOrderByTimestampAsc(UUID conversationId);
     
+    List<Message> findByConversationIdOrderByTimestampDesc(UUID conversationId);
+    
     void deleteByConversationId(UUID conversationId);
 }
