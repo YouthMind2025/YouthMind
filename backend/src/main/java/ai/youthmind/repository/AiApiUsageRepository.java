@@ -210,4 +210,38 @@ public interface AiApiUsageRepository extends JpaRepository<AiApiUsage, UUID> {
      */
     @Query("SELECT HOUR(a.createdAt) as hour, COUNT(a) as requestCount, SUM(a.totalCost) as totalCost FROM AiApiUsage a WHERE DATE(a.createdAt) = DATE(:date) GROUP BY HOUR(a.createdAt) ORDER BY hour")
     List<Object[]> getHourlyUsageStatistics(@Param("date") LocalDateTime date);
+
+    // Health monitoring methods
+    /**
+     * Count requests after a specific date.
+     */
+    Long countByCreatedAtAfter(LocalDateTime date);
+
+    /**
+     * Count requests after a specific date with success status.
+     */
+    Long countByCreatedAtAfterAndSuccess(LocalDateTime date, Boolean success);
+
+    /**
+     * Count requests between two dates.
+     */
+    Long countByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+
+    /**
+     * Find average response time after a specific date.
+     */
+    @Query("SELECT AVG(a.requestDurationMs) FROM AiApiUsage a WHERE a.createdAt > :date")
+    Double findAverageResponseTimeByCreatedAtAfter(@Param("date") LocalDateTime date);
+
+    /**
+     * Find total cost after a specific date.
+     */
+    @Query("SELECT COALESCE(SUM(a.totalCost), 0) FROM AiApiUsage a WHERE a.createdAt > :date")
+    Double findTotalCostByCreatedAtAfter(@Param("date") LocalDateTime date);
+
+    /**
+     * Find total tokens after a specific date.
+     */
+    @Query("SELECT COALESCE(SUM(a.totalTokens), 0) FROM AiApiUsage a WHERE a.createdAt > :date")
+    Long findTotalTokensByCreatedAtAfter(@Param("date") LocalDateTime date);
 }
