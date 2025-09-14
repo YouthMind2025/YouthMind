@@ -127,6 +127,12 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
            "(p.resonance * 2.0 + p.view + p.collect * 3.0) * " +
            "POWER(0.95, TIMESTAMPDIFF(HOUR, p.createdAt, CURRENT_TIMESTAMP)) DESC")
     Page<Post> findPostsByPopularity(@Param("emotion") String emotion, Pageable pageable);
+
+    Page<Post> findByFlaggedTrue(Pageable pageable);
+
+    long countByFlaggedTrueAndFlaggedAtAfter(LocalDateTime date);
+
+    long countByCreatedAtAfter(LocalDateTime date);
     
     void deleteByUserId(UUID userId);
 } 

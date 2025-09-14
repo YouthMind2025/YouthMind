@@ -70,6 +70,11 @@ public class ModerationStatusResponse {
     @Schema(description = "Current escalation level", 
             example = "1")
     private Integer escalationLevel = 0;
+
+    @JsonProperty("moderator_id")
+    @Schema(description = "ID of the content being moderated",
+            example = "123e4567-e89b-12d3-a456-426614174000")
+    private UUID moderatorId;
     
     // Constructors
     public ModerationStatusResponse() {}
@@ -175,6 +180,14 @@ public class ModerationStatusResponse {
     
     public void setEscalationLevel(Integer escalationLevel) {
         this.escalationLevel = escalationLevel;
+    }
+
+    public UUID getModeratorId() {
+        return moderatorId;
+    }
+
+    public void setModeratorId(UUID moderatorId) {
+        this.moderatorId = moderatorId;
     }
     
     // Helper methods
