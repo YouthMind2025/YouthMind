@@ -7,7 +7,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @SpringBootApplication
-@EnableJpaRepositories(basePackages = "ai.youthmind.repository")
+@EnableJpaRepositories(basePackages = "ai.youthmind")
 @EnableTransactionManagement
 @EnableScheduling
 public class YouthmindBackendApplication {
