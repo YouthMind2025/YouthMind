@@ -55,6 +55,14 @@ jwt:
   expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days in milliseconds
 
+# File Upload Configuration
+app:
+  upload:
+    dir: ${UPLOAD_DIR:uploads}
+  avatar:
+    max-size: ${AVATAR_MAX_SIZE:2097152} # 2MB
+    allowed-types: ${AVATAR_ALLOWED_TYPES:image/jpeg,image/png,image/gif,image/webp}
+
 # OpenAPI/Swagger Configuration
 # Application Information for Actuator Info Endpoint
 info:
