@@ -14,6 +14,7 @@ import ai.youthmind.entity.User;
 import ai.youthmind.service.CommentService;
 import ai.youthmind.service.PostService;
 import ai.youthmind.service.UserService;
+import ai.youthmind.util.AuthenticationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -25,8 +26,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -37,7 +36,7 @@ import java.util.stream.Collectors;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/v1/posts")
 @Tag(name = "Comments", description = "Comment management operations")
 @SecurityRequirement(name = "bearer-jwt")
 public class CommentController {
@@ -51,7 +50,7 @@ public class CommentController {
     @Autowired
     private UserService userService;
 
-    @GetMapping("/posts/{postId}/comments")
+    @GetMapping("/{postId}/comments")
     @Operation(
         summary = "Get comments for a post",
         description = "Retrieve paginated comments for a specific post"
@@ -74,15 +73,7 @@ public class CommentController {
             }
 
             // Get current user for engagement status
-            UUID currentUserId = null;
-            try {
-                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-                if (authentication != null && authentication.getPrincipal() instanceof UUID) {
-                    currentUserId = (UUID) authentication.getPrincipal();
-                }
-            } catch (Exception e) {
-                // User not authenticated, continue without engagement status
-            }
+            UUID currentUserId = AuthenticationUtils.getCurrentUserIdOrNull();
 
             // Get comments with pagination
             Pageable pageable = PageRequest.of(page - 1, limit);
@@ -96,7 +87,7 @@ public class CommentController {
         }
     }
 
-    @PostMapping("/posts/{postId}/comments")
+    @PostMapping("/{postId}/comments")
     @Operation(
         summary = "Add comment to a post",
         description = "Create a new comment on a specific post"
@@ -112,12 +103,7 @@ public class CommentController {
         
         try {
             // Get current user
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, 401));
-            }
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             // Check if post exists
             Optional<Post> postOpt = postService.getPostById(postId);
@@ -166,12 +152,7 @@ public class CommentController {
         
         try {
             // Get current user
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, 401));
-            }
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             // Check if parent comment exists
             Optional<Comment> parentCommentOpt = commentService.getCommentById(commentId);
@@ -225,12 +206,7 @@ public class CommentController {
         
         try {
             // Get current user
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, 401));
-            }
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             // Check if comment exists
             Optional<Comment> commentOpt = commentService.getCommentById(commentId);
@@ -276,12 +252,7 @@ public class CommentController {
         
         try {
             // Get current user
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, 401));
-            }
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             // Check if comment exists
             Optional<Comment> commentOpt = commentService.getCommentById(commentId);

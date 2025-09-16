@@ -75,6 +75,169 @@ public class SearchService {
     }
 
     /**
+     * Advanced search with relevance scoring
+     * Ranks results by relevance: title matches > content matches > topic matches
+     */
+    public SearchResponse advancedSearchPosts(String query, String emotion, int page, int limit, UUID currentUserId) {
+        if (query == null || query.trim().isEmpty()) {
+            throw new IllegalArgumentException("Search query cannot be empty");
+        }
+
+        // Get all posts that match the query (without pagination first)
+        List<Post> allMatchingPosts;
+        if (emotion != null && !emotion.trim().isEmpty()) {
+            allMatchingPosts = postRepository.searchPostsByEmotion(query.trim(), emotion.trim());
+        } else {
+            allMatchingPosts = postRepository.searchPosts(query.trim());
+        }
+
+        // Calculate relevance scores and sort by relevance
+        List<PostWithRelevance> postsWithRelevance = allMatchingPosts.stream()
+            .map(post -> new PostWithRelevance(post, calculateRelevanceScore(post, query.trim())))
+            .sorted((a, b) -> Double.compare(b.relevanceScore, a.relevanceScore))
+            .collect(Collectors.toList());
+
+        // Apply pagination
+        int startIndex = page * limit;
+        int endIndex = Math.min(startIndex + limit, postsWithRelevance.size());
+        
+        List<Post> paginatedPosts = postsWithRelevance.subList(startIndex, endIndex)
+            .stream()
+            .map(pwr -> pwr.post)
+            .collect(Collectors.toList());
+
+        // Convert to DTOs
+        List<PostDto> postDtos = paginatedPosts.stream()
+            .map(post -> convertToPostDto(post, currentUserId))
+            .collect(Collectors.toList());
+
+        // Create pagination info
+        PaginationDto pagination = new PaginationDto();
+        pagination.setPage(page + 1); // Convert to 1-based
+        pagination.setLimit(limit);
+        pagination.setTotalItems(allMatchingPosts.size());
+        pagination.setTotalPages((int) Math.ceil((double) allMatchingPosts.size() / limit));
+        pagination.setHasNext(endIndex < allMatchingPosts.size());
+        pagination.setHasPrevious(page > 0);
+
+        SearchResponse response = new SearchResponse();
+        response.setPosts(postDtos);
+        response.setPagination(pagination);
+        response.setTotalResults(allMatchingPosts.size());
+
+        return response;
+    }
+
+    /**
+     * Calculate relevance score for a post based on query
+     * Higher scores indicate better matches
+     */
+    private double calculateRelevanceScore(Post post, String query) {
+        String queryLower = query.toLowerCase();
+        double score = 0.0;
+
+        // Title matches (highest weight)
+        if (post.getTitle() != null) {
+            String titleLower = post.getTitle().toLowerCase();
+            if (titleLower.contains(queryLower)) {
+                score += 10.0; // Base score for title match
+                
+                // Bonus for exact title match
+                if (titleLower.equals(queryLower)) {
+                    score += 5.0;
+                }
+                
+                // Bonus for title starting with query
+                if (titleLower.startsWith(queryLower)) {
+                    score += 3.0;
+                }
+                
+                // Count word matches in title
+                String[] titleWords = titleLower.split("\\s+");
+                String[] queryWords = queryLower.split("\\s+");
+                for (String queryWord : queryWords) {
+                    for (String titleWord : titleWords) {
+                        if (titleWord.contains(queryWord)) {
+                            score += 1.0;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Content matches (medium weight)
+        if (post.getContent() != null) {
+            String contentLower = post.getContent().toLowerCase();
+            if (contentLower.contains(queryLower)) {
+                score += 5.0; // Base score for content match
+                
+                // Count occurrences in content
+                int occurrences = (contentLower.split(queryLower, -1).length - 1);
+                score += occurrences * 0.5;
+                
+                // Count word matches in content
+                String[] contentWords = contentLower.split("\\s+");
+                String[] queryWords = queryLower.split("\\s+");
+                for (String queryWord : queryWords) {
+                    for (String contentWord : contentWords) {
+                        if (contentWord.contains(queryWord)) {
+                            score += 0.3;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Topic matches (lower weight)
+        if (post.getTopics() != null) {
+            String topicsLower = post.getTopics().toLowerCase();
+            if (topicsLower.contains(queryLower)) {
+                score += 2.0; // Base score for topic match
+                
+                // Count word matches in topics
+                String[] topicWords = topicsLower.split("[,\\s]+");
+                String[] queryWords = queryLower.split("\\s+");
+                for (String queryWord : queryWords) {
+                    for (String topicWord : topicWords) {
+                        if (topicWord.contains(queryWord)) {
+                            score += 0.5;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Emotion match bonus
+        if (post.getEmotion() != null && post.getEmotion().toLowerCase().contains(queryLower)) {
+            score += 1.0;
+        }
+
+        // Engagement boost (posts with more engagement get slight boost)
+        double engagementBoost = Math.log(1 + post.getResonance() + post.getView() + post.getCollect()) * 0.1;
+        score += engagementBoost;
+
+        // Recency boost (newer posts get slight boost)
+        long daysSinceCreation = java.time.Duration.between(post.getCreatedAt(), LocalDateTime.now()).toDays();
+        double recencyBoost = Math.max(0, 1.0 - (daysSinceCreation / 30.0)) * 0.5; // Boost decreases over 30 days
+        score += recencyBoost;
+
+        return score;
+    }
+
+    /**
+     * Helper class to hold post with its relevance score
+     */
+    private static class PostWithRelevance {
+        final Post post;
+        final double relevanceScore;
+
+        PostWithRelevance(Post post, double relevanceScore) {
+            this.post = post;
+            this.relevanceScore = relevanceScore;
+        }
+    }
+
+    /**
      * Get trending posts based on timeframe
      */
     public TrendingResponse getTrendingPosts(String timeframe, int limit) {

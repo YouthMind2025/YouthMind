@@ -4,11 +4,15 @@ import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.dto.UserDto;
 import ai.youthmind.dto.UserPostsResponse;
 import ai.youthmind.dto.UserProfileUpdateRequest;
+import ai.youthmind.dto.UserStatisticsDto;
+import ai.youthmind.dto.AvatarUploadResponse;
 import ai.youthmind.dto.PostDto;
 import ai.youthmind.dto.PaginationDto;
 import ai.youthmind.entity.User;
 import ai.youthmind.service.UserService;
 import ai.youthmind.service.PostService;
+import ai.youthmind.service.FileUploadService;
+import ai.youthmind.util.AuthenticationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -18,9 +22,8 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +43,9 @@ public class UserProfileController {
     @Autowired
     private PostService postService;
 
+    @Autowired
+    private FileUploadService fileUploadService;
+
     @GetMapping("/profile")
     @Operation(
         summary = "Get user profile",
@@ -52,8 +58,7 @@ public class UserProfileController {
     public ResponseEntity<ApiResponse<UserDto>> getProfile() {
         try {
             // Extract user from authentication
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             Optional<User> userOpt = userService.getUserById(currentUserId);
             if (userOpt.isEmpty()) {
@@ -97,8 +102,7 @@ public class UserProfileController {
     public ResponseEntity<ApiResponse<UserDto>> updateProfile(@Valid @RequestBody UserProfileUpdateRequest request) {
         try {
             // Extract user from authentication
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             Optional<User> userOpt = userService.getUserById(currentUserId);
             if (userOpt.isEmpty()) {
@@ -161,8 +165,7 @@ public class UserProfileController {
     ) {
         try {
             // Extract user from authentication
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             // Get user posts
             List<PostDto> posts = postService.getPostsByUser(currentUserId, currentUserId);
@@ -209,8 +212,7 @@ public class UserProfileController {
     ) {
         try {
             // Extract user from authentication
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             List<PostDto> posts = postService.getLikedPostsByUser(currentUserId);
             PaginationDto pagination = new PaginationDto(page, limit, 0, 0, 0, false, false);
@@ -223,16 +225,16 @@ public class UserProfileController {
         }
     }
 
-    @GetMapping("/bookmarked-posts")
+    @GetMapping("/saved-posts")
     @Operation(
-        summary = "Get bookmarked posts",
-        description = "Get posts bookmarked by the current user"
+        summary = "Get saved posts",
+        description = "Get posts saved by the current user"
     )
     @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Bookmarked posts retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Saved posts retrieved successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    public ResponseEntity<ApiResponse<UserPostsResponse>> getBookmarkedPosts(
+    public ResponseEntity<ApiResponse<UserPostsResponse>> getSavedPosts(
         @Parameter(description = "Page number", example = "1")
         @RequestParam(defaultValue = "1") int page,
         
@@ -241,14 +243,101 @@ public class UserProfileController {
     ) {
         try {
             // Extract user from authentication
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             List<PostDto> posts = postService.getBookmarkedPostsByUser(currentUserId);
             PaginationDto pagination = new PaginationDto(page, limit, 0, 0, 0, false, false);
             UserPostsResponse response = new UserPostsResponse(posts, pagination);
 
             return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(null, HttpStatus.INTERNAL_SERVER_ERROR.value()));
+        }
+    }
+
+    @GetMapping("/statistics")
+    @Operation(
+        summary = "Get user statistics",
+        description = "Get comprehensive statistics about the current user's activity, engagement, and performance"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Statistics retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
+    })
+    public ResponseEntity<ApiResponse<UserStatisticsDto>> getUserStatistics() {
+        try {
+            // Extract user from authentication
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+
+            // Get user statistics
+            UserStatisticsDto statistics = userService.getUserStatistics(currentUserId);
+
+            return ResponseEntity.ok(ApiResponse.success(statistics));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(null, HttpStatus.NOT_FOUND.value()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(null, HttpStatus.INTERNAL_SERVER_ERROR.value()));
+        }
+    }
+
+    @PostMapping("/avatar")
+    @Operation(
+        summary = "Upload user avatar",
+        description = "Upload and set a new avatar image for the current user. Supports JPEG, PNG, GIF, and WebP formats up to 2MB."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Avatar uploaded successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid file or file type"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error during upload")
+    })
+    public ResponseEntity<ApiResponse<AvatarUploadResponse>> uploadAvatar(
+        @Parameter(description = "Avatar image file (JPEG, PNG, GIF, WebP)")
+        @RequestParam("file") MultipartFile file
+    ) {
+        try {
+            // Extract user from authentication
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+
+            // Verify user exists
+            Optional<User> userOpt = userService.getUserById(currentUserId);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(null, HttpStatus.NOT_FOUND.value()));
+            }
+
+            User user = userOpt.get();
+            
+            // Delete old avatar if exists
+            if (user.getAvatar() != null && !user.getAvatar().isEmpty()) {
+                fileUploadService.deleteAvatar(user.getAvatar());
+            }
+
+            // Upload new avatar
+            String avatarPath = fileUploadService.uploadAvatar(file, currentUserId);
+            String avatarUrl = fileUploadService.getAvatarUrl(avatarPath);
+
+            // Update user's avatar in database
+            user.setAvatar(avatarPath);
+            userService.saveUser(user);
+
+            // Create response
+            AvatarUploadResponse response = new AvatarUploadResponse();
+            response.setAvatarUrl(avatarUrl);
+            response.setMessage("Avatar uploaded successfully");
+            response.setFileSize(file.getSize());
+            response.setOriginalFilename(file.getOriginalFilename());
+            response.setProcessedFilename(avatarPath);
+
+            return ResponseEntity.ok(ApiResponse.success(response));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(null, HttpStatus.BAD_REQUEST.value()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(null, HttpStatus.INTERNAL_SERVER_ERROR.value()));
@@ -268,8 +357,7 @@ public class UserProfileController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> deleteAccount() {
         try {
             // Extract user from authentication
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             // Verify user exists before deletion
             Optional<User> userOpt = userService.getUserById(currentUserId);
