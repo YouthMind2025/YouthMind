@@ -535,4 +535,60 @@ public class AIServiceClient {
         
         return health;
     }
+    
+    /**
+     * Generate AI completion for various analysis tasks
+     */
+    public String generateCompletion(String prompt, String taskType) {
+        try {
+            logger.info("Generating AI completion for task: {}", taskType);
+            
+            // Create completion request
+            DeepSeekModerationRequest request = new DeepSeekModerationRequest();
+            request.setModel(deepSeekConfig.getModel());
+            List<DeepSeekModerationRequest.Message> messages = Arrays.asList(
+                new DeepSeekModerationRequest.Message("system", "You are a helpful AI assistant for a mental health support platform."),
+                new DeepSeekModerationRequest.Message("user", prompt)
+            );
+            request.setMessages(messages);
+            request.setMaxTokens(500);
+            request.setTemperature(0.7);
+            
+            // Call AI service
+            DeepSeekModerationResponse response = generateChatCompletion(request);
+            
+            if (response != null && response.getChoices() != null && !response.getChoices().isEmpty()) {
+                String completion = response.getChoices().get(0).getMessage().getContent();
+                logger.info("AI completion generated successfully for task: {}", taskType);
+                return completion;
+            } else {
+                logger.warn("No completion generated for task: {}", taskType);
+                return generateFallbackResponse(taskType);
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error generating AI completion for task {}: {}", taskType, e.getMessage(), e);
+            return generateFallbackResponse(taskType);
+        }
+    }
+    
+    /**
+     * Generate fallback response when AI service is unavailable
+     */
+    private String generateFallbackResponse(String taskType) {
+        switch (taskType) {
+            case "sentiment_analysis":
+                return "0.0"; // Neutral sentiment
+            case "empathy_analysis":
+                return "0.5"; // Moderate empathy
+            case "question_generation":
+                return "- How are you feeling about this situation?\n- What would be most helpful for you right now?\n- Would you like to talk more about this?";
+            case "suggestions":
+                return "- How can I help you today?\n- What's on your mind?\n- Would you like to talk about something specific?";
+            case "analysis":
+                return "Basic analysis completed. AI service temporarily unavailable.";
+            default:
+                return "AI service temporarily unavailable. Please try again later.";
+        }
+    }
 }
