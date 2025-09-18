@@ -3,8 +3,10 @@ package ai.youthmind.service;
 import ai.youthmind.dto.*;
 import ai.youthmind.entity.Comment;
 import ai.youthmind.entity.CommentEngagement;
+import ai.youthmind.entity.CommentReport;
 import ai.youthmind.entity.User;
 import ai.youthmind.repository.CommentEngagementRepository;
+import ai.youthmind.repository.CommentReportRepository;
 import ai.youthmind.repository.CommentRepository;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.UserRepository;
@@ -30,6 +32,9 @@ public class CommentService {
     private CommentEngagementRepository commentEngagementRepository;
 
     @Autowired
+    private CommentReportRepository commentReportRepository;
+
+    @Autowired
     private PostRepository postRepository;
 
     @Autowired
@@ -38,13 +43,13 @@ public class CommentService {
     /**
      * Get comments for a post with pagination
      */
-    public CommentListResponse getCommentsByPostId(UUID postId, Pageable pageable) {
+    public CommentListResponse getCommentsByPostId(UUID postId, Pageable pageable, UUID currentUserId) {
         // Get all comments for the post with pagination
         Page<Comment> commentsPage = commentRepository.findByPostIdOrderByCreatedAtDesc(postId, pageable);
         
         // Convert to DTOs with replies
         List<CommentDto> commentDtos = commentsPage.getContent().stream()
-            .map(comment -> convertToCommentDto(comment, null)) // TODO: Pass actual currentUserId
+            .map(comment -> convertToCommentDto(comment, currentUserId))
             .collect(Collectors.toList());
 
         // Create pagination info
@@ -90,10 +95,10 @@ public class CommentService {
     /**
      * Get replies by comment ID
      */
-    public List<CommentDto> getRepliesByCommentId(UUID commentId) {
+    public List<CommentDto> getRepliesByCommentId(UUID commentId, UUID currentUserId) {
         List<Comment> replies = commentRepository.findByParentIdOrderByCreatedAtAsc(commentId);
         return replies.stream()
-            .map(reply -> convertToCommentDto(reply, null)) // TODO: Pass actual currentUserId
+            .map(reply -> convertToCommentDto(reply, currentUserId))
             .collect(Collectors.toList());
     }
 
@@ -278,5 +283,32 @@ public class CommentService {
         });
 
         return response;
+    }
+
+    /**
+     * Report a comment for inappropriate content
+     */
+    public CommentReportResponse reportComment(UUID commentId, CommentReportRequest request, UUID reporterId) {
+        // Verify comment exists
+        Optional<Comment> commentOpt = commentRepository.findById(commentId);
+        if (commentOpt.isEmpty()) {
+            throw new RuntimeException("Comment not found");
+        }
+
+        // Check if user has already reported this comment
+        if (commentReportRepository.existsByCommentIdAndReporterId(commentId, reporterId)) {
+            throw new RuntimeException("You have already reported this comment");
+        }
+
+        // Create report
+        CommentReport report = new CommentReport();
+        report.setCommentId(commentId);
+        report.setReporterId(reporterId);
+        report.setReportReason(request.getReportReason());
+        report.setDescription(request.getDescription());
+        report.setStatus(CommentReport.ReportStatus.PENDING);
+
+        CommentReport savedReport = commentReportRepository.save(report);
+        return new CommentReportResponse(savedReport);
     }
 }

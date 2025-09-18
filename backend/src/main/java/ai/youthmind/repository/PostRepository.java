@@ -151,4 +151,22 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     long countByCreatedAtAfter(LocalDateTime date);
     
     void deleteByUserId(UUID userId);
+    
+    /**
+     * Find posts by topics containing the given tag (case-insensitive)
+     */
+    Page<Post> findByTopicsContainingIgnoreCase(String tag, Pageable pageable);
+    
+    /**
+     * Find posts by topics containing tag AND (content containing term OR title containing term)
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :tag, '%')) AND " +
+           "(LOWER(p.content) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
+           "LOWER(p.title) LIKE LOWER(CONCAT('%', :term, '%'))) " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> findByTopicsContainingIgnoreCaseAndContentContainingIgnoreCaseOrTitleContainingIgnoreCase(
+        @Param("tag") String tag, 
+        @Param("term") String term, 
+        Pageable pageable);
 } 
