@@ -620,6 +620,59 @@ public class PostService {
         return response;
     }
 
+    /**
+     * Get posts with tag and term filtering
+     * 
+     * @param page Page number (0-based)
+     * @param size Page size
+     * @param tag Optional tag filter
+     * @param term Optional search term
+     * @param currentUserId Current user ID for personalization
+     * @return FeedResponse with filtered posts
+     */
+    public FeedResponse getPostsWithTagFiltering(int page, int size, String tag, String term, UUID currentUserId) {
+        // Validate parameters
+        if (page < 0) page = 0;
+        if (size < 1) size = 20;
+        if (size > 100) size = 100;
+
+        // Create pageable with sorting by newest first
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<Post> postPage;
+        
+        if (tag != null && term != null) {
+            // Both tag and term filtering
+            postPage = postRepository.findByTopicsContainingIgnoreCaseAndContentContainingIgnoreCaseOrTitleContainingIgnoreCase(
+                tag, term, term, pageable);
+        } else if (tag != null) {
+            // Only tag filtering
+            postPage = postRepository.findByTopicsContainingIgnoreCase(tag, pageable);
+        } else if (term != null) {
+            // Only term filtering (search in title, content, and topics)
+            postPage = postRepository.searchPosts(term, pageable);
+        } else {
+            // No filtering, return all posts
+            postPage = postRepository.findAll(pageable);
+        }
+
+        // Convert to DTOs with batch user engagement lookup
+        List<PostDto> postDtos = convertPostsToDtosWithBatchEngagement(postPage.getContent(), currentUserId);
+
+        // Build response
+        FeedResponse response = new FeedResponse();
+        response.setPosts(postDtos);
+        response.setCurrentPage(postPage.getNumber());
+        response.setTotalPages(postPage.getTotalPages());
+        response.setTotalElements(postPage.getTotalElements());
+        response.setPageSize(postPage.getSize());
+        response.setHasNext(postPage.hasNext());
+        response.setFirst(postPage.isFirst());
+        response.setLast(postPage.isLast());
+
+        return response;
+    }
+
     private FlaggedPostDto convertToFlaggedPostDto(Post post) {
         FlaggedPostDto dto = new FlaggedPostDto();
         dto.setPostId(post.getId());

@@ -122,7 +122,7 @@ public class PostController {
     @GetMapping
     @Operation(
         summary = "Get all posts",
-        description = "Retrieve all posts with pagination"
+        description = "Retrieve all posts with pagination and optional tag/term filtering"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Posts retrieved successfully"),
@@ -133,7 +133,13 @@ public class PostController {
         @RequestParam(defaultValue = "0") int page,
         
         @Parameter(description = "Number of posts per page", example = "20")
-        @RequestParam(defaultValue = "20") int size
+        @RequestParam(defaultValue = "20") int size,
+        
+        @Parameter(description = "Filter by tag", example = "mental-health")
+        @RequestParam(required = false) String tag,
+        
+        @Parameter(description = "Search term", example = "anxiety")
+        @RequestParam(required = false) String term
     ) {
         // Extract user ID from JWT token
         UUID userId = AuthenticationUtils.getCurrentUserId();
@@ -143,8 +149,13 @@ public class PostController {
         if (size < 1) size = 20;
         if (size > 100) size = 100; // Limit max page size
         
-        // Get all posts (using feed with no filters)
-        FeedResponse feedResponse = postService.getFeed(page, size, "newest", null, null, null, userId);
+        // Get posts with optional tag/term filtering
+        FeedResponse feedResponse;
+        if (tag != null || term != null) {
+            feedResponse = postService.getPostsWithTagFiltering(page, size, tag, term, userId);
+        } else {
+            feedResponse = postService.getFeed(page, size, "newest", null, null, null, userId);
+        }
         
         return ResponseBuilder.success(feedResponse);
     }

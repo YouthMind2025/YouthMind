@@ -76,6 +76,53 @@ public class InsightsController {
         }
     }
 
+    @GetMapping("/v1/profile/{userId}")
+    @Operation(
+            summary = "Get User Profile Insights",
+            description = "Retrieve user activity summary and insights for a specific user"
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Profile insights retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<ApiResponse<UserActivitySummaryDto>> getProfileInsights(
+            @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000", required = true)
+            @PathVariable UUID userId
+    ) {
+        try {
+            // Verify user exists
+            Optional<User> userOpt = userService.getUserById(userId);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error(new UserActivitySummaryDto(), 404));
+            }
+
+            // Check cache first
+            String cacheKey = INSIGHTS_KEY_PREFIX + userId;
+            if (redisService.hasKey(cacheKey)) {
+                UserActivitySummaryDto cachedInsights = (UserActivitySummaryDto) redisService.getValue(cacheKey);
+                return ResponseEntity.ok(ApiResponse.success(cachedInsights));
+            }
+
+            // Generate insights for the last 30 days if not cached
+            LocalDateTime endDate = LocalDateTime.now();
+            LocalDateTime startDate = endDate.minusDays(30);
+            Pair<LocalDateTime, LocalDateTime> timeRange = Pair.of(startDate, endDate);
+            
+            UserActivitySummaryDto insights = insightsService.getUserActivitySummary(userId, timeRange);
+            
+            // Cache the insights for 1 hour
+            redisService.setValue(cacheKey, insights, 3600);
+
+            return ResponseEntity.ok(ApiResponse.success(insights));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(new UserActivitySummaryDto(), 500));
+        }
+    }
+
     @PostMapping("/v1/compute/insights")
     @Operation(
             summary = "Compute Insights",
