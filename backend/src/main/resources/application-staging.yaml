@@ -46,6 +46,10 @@ jwt:
   expiration: ${JWT_EXPIRATION:86400000}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
+# Admin Configuration
+admin:
+  secret-key: ${ADMIN_SECRET_KEY:YOUTHMIND_ADMIN_2024}
+
 # Actuator Configuration for Staging/Production Monitoring
 management:
   endpoints:

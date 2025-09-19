@@ -1,5 +1,6 @@
 package ai.youthmind.controller;
 
+import ai.youthmind.config.AdminConfig;
 import ai.youthmind.dto.AdminLoginRequest;
 import ai.youthmind.dto.AdminLoginResponse;
 import ai.youthmind.dto.AdminRegisterRequest;
@@ -44,7 +45,6 @@ import java.util.UUID;
 public class AuthController {
 
     private static final String MOCK_OTP = "123456";
-    private static final String ADMIN_SECRET_KEY = "YOUTHMIND_ADMIN_2024";
 
     @Autowired
     private UserService userService;
@@ -54,6 +54,9 @@ public class AuthController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private AdminConfig adminConfig;
 
     @PostMapping("/send-otp")
     @Operation(
@@ -286,7 +289,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AdminRegisterResponse>> registerAdmin(@Valid @RequestBody AdminRegisterRequest request) {
         
         // Validate admin secret key
-        if (!ADMIN_SECRET_KEY.equals(request.getAdminSecretKey())) {
+        if (!adminConfig.getSecretKey().equals(request.getAdminSecretKey())) {
             AdminRegisterResponse errorResponse = new AdminRegisterResponse();
             errorResponse.setMessage("Invalid admin secret key");
             return ResponseEntity.badRequest()

@@ -113,7 +113,7 @@ public class InsightsController {
             UserActivitySummaryDto insights = insightsService.getUserActivitySummary(userId, timeRange);
             
             // Cache the insights for 1 hour
-            redisService.setValue(cacheKey, insights, 3600);
+            redisService.setValue(cacheKey, insights, 1, java.util.concurrent.TimeUnit.HOURS);
 
             return ResponseEntity.ok(ApiResponse.success(insights));
 
