@@ -644,7 +644,7 @@ public class PostService {
         if (tag != null && term != null) {
             // Both tag and term filtering
             postPage = postRepository.findByTopicsContainingIgnoreCaseAndContentContainingIgnoreCaseOrTitleContainingIgnoreCase(
-                tag, term, term, pageable);
+                tag, term, pageable);
         } else if (tag != null) {
             // Only tag filtering
             postPage = postRepository.findByTopicsContainingIgnoreCase(tag, pageable);

@@ -55,6 +55,10 @@ jwt:
   expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days in milliseconds
 
+# Admin Configuration
+admin:
+  secret-key: ${ADMIN_SECRET_KEY:YOUTHMIND_ADMIN_2024}
+
 # File Upload Configuration
 app:
   upload:

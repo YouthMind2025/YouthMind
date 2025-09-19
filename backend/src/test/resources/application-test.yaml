@@ -31,6 +31,10 @@ spring:
         max-idle: 8
         min-idle: 0
 
+# Admin Configuration
+admin:
+  secret-key: ${ADMIN_SECRET_KEY:YOUTHMIND_ADMIN_2024}
+
 logging:
   level:
     ai.youthmind: DEBUG
