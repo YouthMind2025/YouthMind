@@ -221,6 +221,39 @@ deepseek:
     timeout: ${YOUTHMIND_DEEPSEEK_TIMEOUT:30000} # 30 seconds
     max-retries: ${YOUTHMIND_DEEPSEEK_MAX_RETRIES:3}
     model: ${YOUTHMIND_DEEPSEEK_MODEL:deepseek-chat}
+    
+    # Rate limiting configuration
+    rate-limit-per-minute: ${YOUTHMIND_DEEPSEEK_RATE_LIMIT:60}
+    rate-limit-burst: ${YOUTHMIND_DEEPSEEK_RATE_BURST:10}
+    
+    # Cost optimization settings
+    cache-hit-discount: ${YOUTHMIND_DEEPSEEK_CACHE_DISCOUNT:0.5} # 50% discount for cache hits
+    enable-cache-hit-pricing: ${YOUTHMIND_DEEPSEEK_CACHE_PRICING:true}
+    
+    # Off-peak window configuration
+    enable-off-peak-routing: ${YOUTHMIND_DEEPSEEK_OFF_PEAK:true}
+    off-peak-start-time: ${YOUTHMIND_DEEPSEEK_OFF_PEAK_START:22:00} # 10 PM
+    off-peak-end-time: ${YOUTHMIND_DEEPSEEK_OFF_PEAK_END:06:00} # 6 AM
+    off-peak-timezone: ${YOUTHMIND_DEEPSEEK_TIMEZONE:UTC}
+    
+    # Model selection configuration
+    default-model: ${YOUTHMIND_DEEPSEEK_DEFAULT_MODEL:deepseek-chat}
+    fallback-model: ${YOUTHMIND_DEEPSEEK_FALLBACK_MODEL:deepseek-chat}
+    
+    # Authentication configuration
+    enable-api-key-rotation: ${YOUTHMIND_DEEPSEEK_KEY_ROTATION:false}
+    api-key-rotation-interval-hours: ${YOUTHMIND_DEEPSEEK_KEY_ROTATION_HOURS:24}
+    
+    # Monitoring and logging
+    enable-detailed-logging: ${YOUTHMIND_DEEPSEEK_DETAILED_LOGGING:true}
+    enable-cost-tracking: ${YOUTHMIND_DEEPSEEK_COST_TRACKING:true}
+    enable-performance-metrics: ${YOUTHMIND_DEEPSEEK_PERFORMANCE_METRICS:true}
+    
+    # Circuit breaker configuration
+    circuit-breaker-failure-threshold: ${YOUTHMIND_DEEPSEEK_CB_THRESHOLD:5}
+    circuit-breaker-recovery-timeout: ${YOUTHMIND_DEEPSEEK_CB_TIMEOUT:30} # seconds
+    circuit-breaker-half-open-max-calls: ${YOUTHMIND_DEEPSEEK_CB_MAX_CALLS:3}
+    
     moderation:
       enabled: ${YOUTHMIND_DEEPSEEK_MODERATION_ENABLED:true}
       threshold: ${YOUTHMIND_DEEPSEEK_MODERATION_THRESHOLD:0.7}
