@@ -72,18 +72,59 @@ public class AIServiceClient {
     private static final Duration MAX_RETRY_DELAY = Duration.ofSeconds(10);
     private static final double JITTER_FACTOR = 0.1;
     
-    // Moderation prompt templates
+    // Enhanced moderation prompt templates for contextual analysis
     private static final String MODERATION_SYSTEM_PROMPT = """
         You are a content moderation AI for YouthMind, a mental health support platform for youth.
-        Your task is to analyze text content and determine if it's safe to publish.
+        Your task is to analyze text content with CONTEXTUAL AWARENESS and determine if it's safe to publish.
         
-        Guidelines:
-        - APPROVE content that is supportive, educational, or shares personal experiences constructively
-        - REJECT content that contains harassment, hate speech, violence, self-harm, or spam
-        - Be especially careful with content that could harm vulnerable youth
+        CRITICAL: Focus on CONTEXT and INTENT, not just individual words.
+        
+        APPROVE content when:
+        - Profanity is used in positive contexts (e.g., "I did fucking well", "that's so fucking awesome")
+        - Mild profanity expresses emotions constructively (e.g., "I'm so fucking frustrated with this situation")
+        - Gen Z language patterns are used appropriately (e.g., "no cap", "that's fire", "periodt")
+        - Content is supportive, educational, or shares personal experiences constructively
+        - Therapeutic or mental health contexts contain emotional expression
+        - Self-reflection and growth are evident despite strong language
+        
+        REJECT content when:
+        - Profanity targets or attacks others (e.g., "you're a fucking idiot")
+        - Hate speech, discrimination, or harassment is present
+        - Violence, threats, or self-harm is promoted
+        - Spam or malicious content is detected
+        - Content could harm vulnerable youth regardless of language used
+        
+        CONTEXT ANALYSIS PRIORITIES:
+        1. Intent and emotional tone (positive vs negative)
+        2. Target of language (self vs others)
+        3. Mental health/therapeutic context
+        4. Gen Z cultural expressions
+        5. Supportive vs harmful messaging
         
         Respond with ONLY "APPROVE" or "REJECT" followed by a brief reason.
         Format: "APPROVE: [reason]" or "REJECT: [reason]"
+        """;
+    
+    // Gen Z language tolerance prompt
+    private static final String GEN_Z_CONTEXT_PROMPT = """
+        Analyze this content for Gen Z language patterns and cultural context:
+        
+        COMMON GEN Z EXPRESSIONS (generally acceptable):
+        - "no cap" (no lie), "fr" (for real), "ngl" (not gonna lie)
+        - "that's fire/lit/sick/dope" (positive reactions)
+        - "period" or "periodt" (emphasis/agreement)
+        - "stan" (strong support for someone/something)
+        - "goals", "mood", "vibe", "energy" (emotional states)
+        - Casual profanity in positive contexts
+        
+        CONTEXT MATTERS:
+        - Positive emotional expression with profanity = APPROVE
+        - Self-expression and personal sharing = APPROVE
+        - Supportive or encouraging language = APPROVE
+        - Targeting others negatively = REJECT
+        - Hate speech or harassment = REJECT
+        
+        Focus on the OVERALL MESSAGE and EMOTIONAL TONE, not individual words.
         """;
     
     
@@ -195,18 +236,193 @@ public class AIServiceClient {
     }
     
     /**
-     * Build moderation request for DeepSeek API
+     * Enhanced moderation with contextual analysis for borderline cases
+     * 
+     * @param content The content to moderate
+     * @param contentType Type of content (post, comment, etc.)
+     * @param userId User ID for usage tracking (optional)
+     * @param sessionId Session ID for usage tracking (optional)
+     * @param localAnalysis Local moderation analysis results
+     * @param contextAnalysis Context-aware analysis results
+     * @return ModerationResult with enhanced contextual decision
+     */
+    public ModerationResult moderateContentWithContext(String content, String contentType, UUID userId, String sessionId,
+                                                      LocalModerationService.LocalModerationAnalysis localAnalysis,
+                                                      ContextAwareModerationService.ContextAwareAnalysis contextAnalysis) {
+        // Validate configuration
+        if (!isConfigured()) {
+            logger.warn("DeepSeek API is not properly configured, using fallback");
+            return fallbackService.generateFallbackModerationResult(content, contentType);
+        }
+        
+        if (!moderationConfig.isEnabled()) {
+            logger.debug("Moderation is disabled, approving content by default");
+            return ModerationResult.safe("Moderation disabled");
+        }
+        
+        long startTime = System.currentTimeMillis();
+        boolean success = true;
+        String errorMessage = null;
+        final int[] promptTokens = {0};
+        final int[] completionTokens = {0};
+        
+        try {
+            logger.debug("Enhanced contextual moderation for {} content: {}", contentType, content.substring(0, Math.min(100, content.length())));
+            
+            // Use circuit breaker with retry logic
+            ModerationResult result = circuitBreaker.execute(() -> {
+                return RetryUtil.executeWithRetry(
+                    () -> {
+                        DeepSeekModerationRequest request = buildEnhancedModerationRequest(content, localAnalysis, contextAnalysis);
+                        DeepSeekModerationResponse response = callDeepSeekAPIWithRetry(request);
+                        
+                        // Extract usage information
+                        if (response.getUsage() != null) {
+                            promptTokens[0] = response.getUsage().getPromptTokens();
+                            completionTokens[0] = response.getUsage().getCompletionTokens();
+                        }
+                        
+                        return parseModerationResponse(response, content);
+                    },
+                    MAX_RETRY_ATTEMPTS,
+                    createAIServiceRetryPredicate(),
+                    INITIAL_RETRY_DELAY,
+                    RETRY_BACKOFF_MULTIPLIER,
+                    MAX_RETRY_DELAY,
+                    JITTER_FACTOR
+                );
+            });
+            
+            // Record successful usage
+            recordApiUsage(userId, sessionId, AiApiUsage.RequestType.MODERATION, 
+                          deepSeekConfig.getModel(), promptTokens[0], completionTokens[0], 
+                          System.currentTimeMillis() - startTime, success, errorMessage, content);
+            
+            return result;
+            
+        } catch (CircuitBreaker.CircuitBreakerOpenException e) {
+            logger.warn("Circuit breaker is open, using fallback moderation: {}", e.getMessage());
+            return fallbackService.generateFallbackModerationResult(content, contentType);
+        } catch (RetryUtil.RetryExhaustedException e) {
+            logger.error("All retry attempts exhausted, using fallback moderation: {}", e.getMessage());
+            return fallbackService.generateFallbackModerationResult(content, contentType);
+        } catch (AIServiceException e) {
+            success = false;
+            errorMessage = e.getMessage();
+            
+            // Record failed usage
+            recordApiUsage(userId, sessionId, AiApiUsage.RequestType.MODERATION, 
+                          deepSeekConfig.getModel(), promptTokens[0], completionTokens[0], 
+                          System.currentTimeMillis() - startTime, success, errorMessage, content);
+            
+            logger.error("AI service error, using fallback moderation: {}", e.getMessage());
+            return fallbackService.generateFallbackModerationResult(content, contentType);
+        } catch (Exception e) {
+            success = false;
+            errorMessage = e.getMessage();
+            
+            // Record failed usage
+            recordApiUsage(userId, sessionId, AiApiUsage.RequestType.MODERATION, 
+                          deepSeekConfig.getModel(), promptTokens[0], completionTokens[0], 
+                          System.currentTimeMillis() - startTime, success, errorMessage, content);
+            
+            logger.error("Unexpected error during enhanced moderation, using fallback: {}", e.getMessage(), e);
+            return fallbackService.generateFallbackModerationResult(content, contentType);
+        }
+    }
+    
+    /**
+     * Build moderation request for DeepSeek API with enhanced contextual analysis
      */
     private DeepSeekModerationRequest buildModerationRequest(String content) {
-        DeepSeekModerationRequest.Message systemMessage = new DeepSeekModerationRequest.Message("system", MODERATION_SYSTEM_PROMPT);
-        DeepSeekModerationRequest.Message userMessage = new DeepSeekModerationRequest.Message("user", 
-            "Please moderate this content:\n\n" + content);
+        // Enhanced system prompt with contextual analysis
+        String enhancedSystemPrompt = MODERATION_SYSTEM_PROMPT + "\n\n" + GEN_Z_CONTEXT_PROMPT;
+        
+        DeepSeekModerationRequest.Message systemMessage = new DeepSeekModerationRequest.Message("system", enhancedSystemPrompt);
+        
+        // Enhanced user message with context analysis instructions
+        String userMessageContent = String.format("""
+            Please analyze this content with CONTEXTUAL AWARENESS:
+            
+            Content to analyze:
+            "%s"
+            
+            ANALYSIS STEPS:
+            1. Identify the overall emotional tone (positive, negative, neutral)
+            2. Check if profanity targets self or others
+            3. Look for Gen Z language patterns
+            4. Assess mental health/therapeutic context
+            5. Determine if the message is supportive or harmful
+            
+            Remember: Focus on CONTEXT and INTENT, not individual words.
+            """, content);
+        
+        DeepSeekModerationRequest.Message userMessage = new DeepSeekModerationRequest.Message("user", userMessageContent);
         
         return new DeepSeekModerationRequest(
             deepSeekConfig.getModel(),
             Arrays.asList(systemMessage, userMessage),
             0.1, // Low temperature for consistent decisions
-            100, // Max tokens for short responses
+            150, // Increased max tokens for more detailed analysis
+            false
+        );
+    }
+    
+    /**
+     * Build enhanced moderation request for borderline cases
+     */
+    private DeepSeekModerationRequest buildEnhancedModerationRequest(String content, 
+                                                                    LocalModerationService.LocalModerationAnalysis localAnalysis,
+                                                                    ContextAwareModerationService.ContextAwareAnalysis contextAnalysis) {
+        // Create context-aware system prompt
+        StringBuilder contextInfo = new StringBuilder();
+        
+        if (contextAnalysis.getContextTypes() != null && !contextAnalysis.getContextTypes().isEmpty()) {
+            contextInfo.append("DETECTED CONTEXTS: ").append(String.join(", ", contextAnalysis.getContextTypes())).append("\n");
+        }
+        
+        if (localAnalysis.getDetectedWords() != null && !localAnalysis.getDetectedWords().isEmpty()) {
+            contextInfo.append("DETECTED WORDS: ");
+            for (LocalModerationService.DetectedWord word : localAnalysis.getDetectedWords()) {
+                contextInfo.append(word.getWord()).append("(severity:").append(word.getSeverity()).append(") ");
+            }
+            contextInfo.append("\n");
+        }
+        
+        String enhancedSystemPrompt = MODERATION_SYSTEM_PROMPT + "\n\n" + GEN_Z_CONTEXT_PROMPT + 
+            "\n\nCONTEXT INFORMATION:\n" + contextInfo.toString();
+        
+        DeepSeekModerationRequest.Message systemMessage = new DeepSeekModerationRequest.Message("system", enhancedSystemPrompt);
+        
+        // Enhanced user message with local analysis context
+        String userMessageContent = String.format("""
+            ENHANCED CONTEXTUAL ANALYSIS REQUIRED:
+            
+            Content: "%s"
+            
+            LOCAL ANALYSIS RESULTS:
+            - Safe: %s
+            - Max Severity: %d
+            - Context Confidence: %.2f
+            - Context Types: %s
+            
+            Please provide a FINAL DECISION considering:
+            1. The local analysis results above
+            2. Contextual appropriateness
+            3. Gen Z language tolerance
+            4. Mental health platform guidelines
+            
+            Focus on whether this content would be HELPFUL or HARMFUL to youth seeking mental health support.
+            """, content, localAnalysis.isSafe(), localAnalysis.getMaxSeverity(), 
+            contextAnalysis.getConfidence(), String.join(", ", contextAnalysis.getContextTypes()));
+        
+        DeepSeekModerationRequest.Message userMessage = new DeepSeekModerationRequest.Message("user", userMessageContent);
+        
+        return new DeepSeekModerationRequest(
+            deepSeekConfig.getModel(),
+            Arrays.asList(systemMessage, userMessage),
+            0.1, // Low temperature for consistent decisions
+            200, // More tokens for detailed analysis
             false
         );
     }
