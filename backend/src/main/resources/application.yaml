@@ -63,6 +63,90 @@ admin:
 app:
   upload:
     dir: ${UPLOAD_DIR:uploads}
+
+# Qdrant Vector Database Configuration
+qdrant:
+  host: ${QDRANT_HOST:localhost}
+  port: ${QDRANT_PORT:6333}
+  api-key: ${QDRANT_API_KEY:}
+  use-https: ${QDRANT_USE_HTTPS:false}
+  timeout-ms: ${QDRANT_TIMEOUT_MS:10000}
+  connection-timeout-ms: ${QDRANT_CONNECTION_TIMEOUT_MS:5000}
+  
+  # Collection Configuration
+  default-collection: ${QDRANT_DEFAULT_COLLECTION:youthmind_vectors}
+  vector-size: ${QDRANT_VECTOR_SIZE:384}
+  distance-metric: ${QDRANT_DISTANCE_METRIC:Cosine}
+  replication-factor: ${QDRANT_REPLICATION_FACTOR:1}
+  write-consistency-factor: ${QDRANT_WRITE_CONSISTENCY_FACTOR:1}
+  
+  # Performance Configuration
+  max-connections: ${QDRANT_MAX_CONNECTIONS:10}
+  max-idle-connections: ${QDRANT_MAX_IDLE_CONNECTIONS:5}
+  connection-max-idle-time-ms: ${QDRANT_CONNECTION_MAX_IDLE_TIME_MS:300000}
+  enable-connection-pooling: ${QDRANT_ENABLE_CONNECTION_POOLING:true}
+  
+  # Indexing Configuration
+  enable-hnsw-index: ${QDRANT_ENABLE_HNSW_INDEX:true}
+  hnsw-m: ${QDRANT_HNSW_M:16}
+  hnsw-ef-construct: ${QDRANT_HNSW_EF_CONSTRUCT:100}
+  hnsw-ef-search: ${QDRANT_HNSW_EF_SEARCH:50}
+  enable-payload-index: ${QDRANT_ENABLE_PAYLOAD_INDEX:true}
+  
+  # Search Configuration
+  default-limit: ${QDRANT_DEFAULT_LIMIT:10}
+  default-threshold: ${QDRANT_DEFAULT_THRESHOLD:0.7}
+  enable-exact-search: ${QDRANT_ENABLE_EXACT_SEARCH:false}
+  max-search-results: ${QDRANT_MAX_SEARCH_RESULTS:1000}
+  
+  # Backup and Recovery Configuration
+  enable-auto-backup: ${QDRANT_ENABLE_AUTO_BACKUP:false}
+  backup-schedule: ${QDRANT_BACKUP_SCHEDULE:0 2 * * *}
+  backup-location: ${QDRANT_BACKUP_LOCATION:./backups/qdrant}
+  backup-retention-days: ${QDRANT_BACKUP_RETENTION_DAYS:30}
+  enable-compression: ${QDRANT_ENABLE_COMPRESSION:true}
+  
+  # Monitoring Configuration
+  enable-metrics: ${QDRANT_ENABLE_METRICS:true}
+  enable-health-checks: ${QDRANT_ENABLE_HEALTH_CHECKS:true}
+  health-check-interval-ms: ${QDRANT_HEALTH_CHECK_INTERVAL_MS:30000}
+  enable-slow-query-logging: ${QDRANT_ENABLE_SLOW_QUERY_LOGGING:true}
+  slow-query-threshold-ms: ${QDRANT_SLOW_QUERY_THRESHOLD_MS:1000}
+  
+  # Security Configuration
+  enable-tls: ${QDRANT_ENABLE_TLS:false}
+  tls-cert-path: ${QDRANT_TLS_CERT_PATH:}
+  tls-key-path: ${QDRANT_TLS_KEY_PATH:}
+  tls-ca-path: ${QDRANT_TLS_CA_PATH:}
+  verify-tls-cert: ${QDRANT_VERIFY_TLS_CERT:true}
+  
+  # Development Configuration
+  enable-debug-logging: ${QDRANT_ENABLE_DEBUG_LOGGING:false}
+  enable-query-logging: ${QDRANT_ENABLE_QUERY_LOGGING:false}
+  enable-performance-logging: ${QDRANT_ENABLE_PERFORMANCE_LOGGING:false}
+  
+  # Collection-specific configurations
+  collections:
+    posts:
+      name: posts
+      vector-size: 384
+      distance-metric: Cosine
+      enable-payload-index: true
+    comments:
+      name: comments
+      vector-size: 384
+      distance-metric: Cosine
+      enable-payload-index: true
+    moderation:
+      name: moderation
+      vector-size: 384
+      distance-metric: Cosine
+      enable-payload-index: true
+    embeddings:
+      name: embeddings
+      vector-size: 384
+      distance-metric: Cosine
+      enable-payload-index: true
   avatar:
     max-size: ${AVATAR_MAX_SIZE:2097152} # 2MB
     allowed-types: ${AVATAR_ALLOWED_TYPES:image/jpeg,image/png,image/gif,image/webp}
