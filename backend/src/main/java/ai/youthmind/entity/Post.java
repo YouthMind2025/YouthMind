@@ -57,6 +57,25 @@ public class Post {
     @Column(name = "flagged_at")
     private LocalDateTime flaggedAt;
     
+    // Enhanced moderation fields
+    @Column(name = "masked_content", columnDefinition = "TEXT")
+    private String maskedContent;
+    
+    @Column(name = "moderation_layer", length = 50)
+    private String moderationLayer;
+    
+    @Column(name = "moderation_confidence", precision = 5, scale = 4)
+    private Double moderationConfidence = 0.0;
+    
+    @Column(name = "moderation_details", columnDefinition = "jsonb")
+    private String moderationDetails;
+    
+    @Column(name = "content_hash", length = 64)
+    private String contentHash;
+    
+    @Column(name = "original_content_backup", columnDefinition = "TEXT")
+    private String originalContentBackup;
+    
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     
