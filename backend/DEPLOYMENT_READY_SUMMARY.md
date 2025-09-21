@@ -47,7 +47,20 @@
 
 ### For Kevin (DevOps Engineer):
 
-#### 1. **Immediate Deployment Steps**
+#### 1. **Environment Variables Setup**
+
+```bash
+# Required Environment Variables
+export ADMIN_SECRET_KEY="your-secure-admin-secret-key-here"
+export JWT_SECRET="your-jwt-secret-key-here"
+export DB_USERNAME="youthmind_user"
+export DB_PASSWORD="your-database-password"
+export REDIS_HOST="localhost"
+export REDIS_PORT="6379"
+export REDIS_PASSWORD="your-redis-password"
+```
+
+#### 2. **Immediate Deployment Steps**
 
 ```bash
 # 1. Deploy the application
@@ -60,7 +73,7 @@ curl http://localhost:8080/actuator/health/redis
 curl http://localhost:8080/actuator/health/database
 ```
 
-#### 2. **Prometheus Configuration**
+#### 3. **Prometheus Configuration**
 
 ```yaml
 # Add to prometheus.yml
@@ -72,7 +85,7 @@ scrape_configs:
     scrape_interval: 30s
 ```
 
-#### 3. **Kubernetes Health Probes**
+#### 4. **Kubernetes Health Probes**
 
 ```yaml
 # Add to deployment.yaml
@@ -91,7 +104,7 @@ readinessProbe:
   periodSeconds: 10
 ```
 
-#### 4. **Grafana Dashboard Queries**
+#### 5. **Grafana Dashboard Queries**
 
 ```promql
 # Health Status
@@ -137,10 +150,20 @@ health_component_status{component="database"}
 
 ## 🛡️ SECURITY CONFIGURATION
 
+### Admin Secret Key Security
+
+**CRITICAL**: The `ADMIN_SECRET_KEY` environment variable is required for admin functionality:
+
+- **Development**: Default key `YOUTHMIND_ADMIN_2024` is acceptable
+- **Production/Staging**: Must use a secure, unique secret key
+- **Validation**: Application startup will fail if admin secret is not configured
+- **Security**: Never commit the production admin secret to version control
+
 ### Development Environment
 
 - All actuator endpoints are accessible for testing
 - Detailed health information shown
+- Default admin secret key allowed
 
 ### Production Environment
 
@@ -154,6 +177,14 @@ management:
     web:
       exposure:
         include: health,metrics,prometheus
+```
+
+**Required Environment Variables for Production:**
+```bash
+ADMIN_SECRET_KEY=your-secure-production-admin-secret
+JWT_SECRET=your-secure-jwt-secret
+DB_PASSWORD=your-secure-database-password
+REDIS_PASSWORD=your-secure-redis-password
 ```
 
 ## 🔍 HEALTH CHECK EXAMPLES

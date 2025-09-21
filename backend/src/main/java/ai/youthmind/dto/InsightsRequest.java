@@ -12,4 +12,9 @@ import java.time.LocalDateTime;
 public class InsightsRequest {
     private LocalDateTime start;
     private LocalDateTime end;
+
+    @Override
+    public String toString() {
+        return start + " - " + end;
+    }
 }

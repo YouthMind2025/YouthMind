@@ -1156,4 +1156,376 @@ public class AIChatService {
             return "Error analyzing user personality: " + e.getMessage();
         }
     }
+    
+    /**
+     * Generate AI suggestions based on user message
+     */
+    @Transactional
+    public AIChatSuggestionsResponse generateSuggestions(AIChatSuggestionsRequest request, UUID userId) {
+        try {
+            logger.info("Generating AI suggestions for user: {}", userId);
+            
+            // Get user personality profile
+            UserPersonalityProfile personalityProfile = getUserPersonalityProfile(userId);
+            
+            // Analyze the input message
+            Map<String, Object> nlpAnalysis = nlpAnalyzer.analyzeMessage(request.getMessage());
+            
+            // Apply safety filtering
+            AISafetyFilterResult safetyResult = safetyFilter.filterMessage(
+                request.getMessage(), 
+                personalityProfile, 
+                nlpAnalysis
+            );
+            
+            if (!safetyResult.isSafe()) {
+                return createSafetyFilteredSuggestionsResponse(safetyResult, request);
+            }
+            
+            // Get conversation context
+            String conversationContext = getConversationContext(request.getConversationId(), userId);
+            
+            // Adapt personality based on user profile and context
+            String adaptedPersonality = personalityAdapter.adaptPersonality(
+                personalityProfile, 
+                nlpAnalysis, 
+                conversationContext
+            );
+            
+            // Generate AI suggestions
+            List<String> suggestions = generateAISuggestions(
+                request, 
+                personalityProfile, 
+                adaptedPersonality, 
+                conversationContext,
+                nlpAnalysis
+            );
+            
+            // Create response
+            AIChatSuggestionsResponse response = new AIChatSuggestionsResponse();
+            response.setMessageId(UUID.randomUUID().toString());
+            response.setSuggestions(suggestions);
+            response.setSuggestionType(request.getSuggestionType() != null ? request.getSuggestionType() : "questions");
+            response.setPersonalityUsed(adaptedPersonality);
+            response.setEmotionDetected((String) nlpAnalysis.get("emotion"));
+            response.setSafetyFiltered(false);
+            response.setTimestamp(LocalDateTime.now());
+            response.setTokensUsed(0); // Would be set by AI service
+            response.setConfidence(0.8); // Would be calculated by AI service
+            response.setConversationContext(conversationContext);
+            response.setNeedsHumanReview(false);
+            
+            // Note: Message saving would be handled by the conversation service
+            
+            return response;
+            
+        } catch (Exception e) {
+            logger.error("Error generating AI suggestions: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to generate AI suggestions: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Analyze user message comprehensively
+     */
+    @Transactional
+    public AIChatAnalyzeResponse analyzeMessage(AIChatAnalyzeRequest request, UUID userId) {
+        try {
+            logger.info("Analyzing message for user: {}", userId);
+            
+            // Get user personality profile
+            UserPersonalityProfile personalityProfile = getUserPersonalityProfile(userId);
+            
+            // Analyze the input message
+            Map<String, Object> nlpAnalysis = nlpAnalyzer.analyzeMessage(request.getMessage());
+            
+            // Apply safety filtering
+            AISafetyFilterResult safetyResult = safetyFilter.filterMessage(
+                request.getMessage(), 
+                personalityProfile, 
+                nlpAnalysis
+            );
+            
+            if (!safetyResult.isSafe()) {
+                return createSafetyFilteredAnalyzeResponse(safetyResult, request);
+            }
+            
+            // Get conversation context
+            String conversationContext = getConversationContext(request.getConversationId(), userId);
+            
+            // Adapt personality based on user profile and context
+            String adaptedPersonality = personalityAdapter.adaptPersonality(
+                personalityProfile, 
+                nlpAnalysis, 
+                conversationContext
+            );
+            
+            // Perform comprehensive analysis
+            Map<String, Object> analysisResult = performComprehensiveAnalysis(
+                request, 
+                personalityProfile, 
+                adaptedPersonality, 
+                conversationContext,
+                nlpAnalysis
+            );
+            
+            // Create response
+            AIChatAnalyzeResponse response = new AIChatAnalyzeResponse();
+            response.setMessageId(UUID.randomUUID().toString());
+            response.setAnalysisResult((String) analysisResult.get("analysis"));
+            response.setAnalysisType(request.getAnalysisType() != null ? request.getAnalysisType() : "comprehensive");
+            response.setPersonalityUsed(adaptedPersonality);
+            response.setEmotionDetected((String) nlpAnalysis.get("emotion"));
+            response.setSentimentScore((String) analysisResult.get("sentiment"));
+            response.setIntentDetected((String) analysisResult.get("intent"));
+            response.setKeyTopics((List<String>) analysisResult.get("topics"));
+            response.setRecommendations((List<String>) analysisResult.get("recommendations"));
+            response.setRiskAssessment((Map<String, Object>) analysisResult.get("risk"));
+            response.setSafetyFiltered(false);
+            response.setTimestamp(LocalDateTime.now());
+            response.setTokensUsed(0); // Would be set by AI service
+            response.setConfidence(0.8); // Would be calculated by AI service
+            response.setConversationContext(conversationContext);
+            response.setNeedsHumanReview(false);
+            response.setEmotionalInsights((Map<String, Object>) analysisResult.get("emotionalInsights"));
+            response.setSuggestedActions((List<String>) analysisResult.get("actions"));
+            
+            // Note: Message saving would be handled by the conversation service
+            
+            return response;
+            
+        } catch (Exception e) {
+            logger.error("Error analyzing message: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to analyze message: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Generate AI suggestions using AI service
+     */
+    private List<String> generateAISuggestions(AIChatSuggestionsRequest request, UserPersonalityProfile personalityProfile, 
+                                             String adaptedPersonality, String conversationContext, Map<String, Object> nlpAnalysis) {
+        try {
+            // Create AI prompt for suggestions
+            String prompt = buildSuggestionsPrompt(request, personalityProfile, adaptedPersonality, conversationContext, nlpAnalysis);
+            
+            // Call AI service for suggestions
+            String aiResponse = aiServiceClient.generateCompletion(prompt, "suggestions");
+            
+            // Parse AI response to extract suggestions
+            return parseSuggestionsFromAIResponse(aiResponse, request.getMaxSuggestions());
+            
+        } catch (Exception e) {
+            logger.error("Error generating AI suggestions: {}", e.getMessage(), e);
+            // Return fallback suggestions
+            return generateFallbackSuggestions(request, personalityProfile);
+        }
+    }
+    
+    /**
+     * Perform comprehensive analysis using AI service
+     */
+    private Map<String, Object> performComprehensiveAnalysis(AIChatAnalyzeRequest request, UserPersonalityProfile personalityProfile, 
+                                                            String adaptedPersonality, String conversationContext, Map<String, Object> nlpAnalysis) {
+        try {
+            // Create AI prompt for analysis
+            String prompt = buildAnalysisPrompt(request, personalityProfile, adaptedPersonality, conversationContext, nlpAnalysis);
+            
+            // Call AI service for analysis
+            String aiResponse = aiServiceClient.generateCompletion(prompt, "analysis");
+            
+            // Parse AI response to extract analysis components
+            return parseAnalysisFromAIResponse(aiResponse);
+            
+        } catch (Exception e) {
+            logger.error("Error performing comprehensive analysis: {}", e.getMessage(), e);
+            // Return fallback analysis
+            return generateFallbackAnalysis(request, personalityProfile, nlpAnalysis);
+        }
+    }
+    
+    /**
+     * Build AI prompt for suggestions generation
+     */
+    private String buildSuggestionsPrompt(AIChatSuggestionsRequest request, UserPersonalityProfile personalityProfile, 
+                                        String adaptedPersonality, String conversationContext, Map<String, Object> nlpAnalysis) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("You are an AI assistant providing suggestions for a mental health support platform. ");
+        prompt.append("Generate ").append(request.getMaxSuggestions()).append(" ").append(request.getSuggestionType()).append(" based on the user's message.\n\n");
+        
+        prompt.append("User Message: ").append(request.getMessage()).append("\n");
+        prompt.append("Personality Type: ").append(adaptedPersonality).append("\n");
+        prompt.append("Emotion Detected: ").append(nlpAnalysis.get("emotion")).append("\n");
+        
+        if (conversationContext != null && !conversationContext.isEmpty()) {
+            prompt.append("Conversation Context: ").append(conversationContext).append("\n");
+        }
+        
+        prompt.append("\nPlease provide ").append(request.getMaxSuggestions()).append(" relevant ").append(request.getSuggestionType()).append(" that would be helpful for this user.");
+        
+        return prompt.toString();
+    }
+    
+    /**
+     * Build AI prompt for comprehensive analysis
+     */
+    private String buildAnalysisPrompt(AIChatAnalyzeRequest request, UserPersonalityProfile personalityProfile, 
+                                     String adaptedPersonality, String conversationContext, Map<String, Object> nlpAnalysis) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("You are an AI assistant analyzing messages for a mental health support platform. ");
+        prompt.append("Perform a comprehensive analysis of the user's message.\n\n");
+        
+        prompt.append("User Message: ").append(request.getMessage()).append("\n");
+        prompt.append("Analysis Type: ").append(request.getAnalysisType()).append("\n");
+        prompt.append("Personality Type: ").append(adaptedPersonality).append("\n");
+        prompt.append("Emotion Detected: ").append(nlpAnalysis.get("emotion")).append("\n");
+        
+        if (conversationContext != null && !conversationContext.isEmpty()) {
+            prompt.append("Conversation Context: ").append(conversationContext).append("\n");
+        }
+        
+        prompt.append("\nPlease provide a comprehensive analysis including:\n");
+        prompt.append("- Sentiment analysis\n");
+        prompt.append("- Intent detection\n");
+        prompt.append("- Key topics\n");
+        prompt.append("- Recommendations\n");
+        prompt.append("- Risk assessment\n");
+        prompt.append("- Emotional insights\n");
+        prompt.append("- Suggested actions\n");
+        
+        return prompt.toString();
+    }
+    
+    /**
+     * Parse suggestions from AI response
+     */
+    private List<String> parseSuggestionsFromAIResponse(String aiResponse, int maxSuggestions) {
+        List<String> suggestions = new ArrayList<>();
+        
+        // Simple parsing - in a real implementation, this would be more sophisticated
+        String[] lines = aiResponse.split("\n");
+        for (String line : lines) {
+            line = line.trim();
+            if (line.startsWith("-") || line.startsWith("•") || line.matches("\\d+\\.")) {
+                String suggestion = line.replaceFirst("^[-•\\d+\\.\\s]+", "").trim();
+                if (!suggestion.isEmpty() && suggestions.size() < maxSuggestions) {
+                    suggestions.add(suggestion);
+                }
+            }
+        }
+        
+        // If no suggestions found, add fallback
+        if (suggestions.isEmpty()) {
+            suggestions.add("How are you feeling about this situation?");
+            suggestions.add("Would you like to talk more about this?");
+            suggestions.add("What would be most helpful for you right now?");
+        }
+        
+        return suggestions;
+    }
+    
+    /**
+     * Parse analysis from AI response
+     */
+    private Map<String, Object> parseAnalysisFromAIResponse(String aiResponse) {
+        Map<String, Object> analysis = new HashMap<>();
+        
+        // Simple parsing - in a real implementation, this would be more sophisticated
+        analysis.put("analysis", aiResponse);
+        analysis.put("sentiment", "neutral"); // Would be extracted from AI response
+        analysis.put("intent", "support_seeking"); // Would be extracted from AI response
+        analysis.put("topics", Arrays.asList("general", "support")); // Would be extracted from AI response
+        analysis.put("recommendations", Arrays.asList("Consider talking to a professional", "Practice self-care"));
+        analysis.put("risk", Map.of("level", "low", "factors", Arrays.asList()));
+        analysis.put("emotionalInsights", Map.of("primary_emotion", "neutral", "intensity", "medium"));
+        analysis.put("actions", Arrays.asList("Continue conversation", "Seek professional help if needed"));
+        
+        return analysis;
+    }
+    
+    /**
+     * Generate fallback suggestions when AI service is unavailable
+     */
+    private List<String> generateFallbackSuggestions(AIChatSuggestionsRequest request, UserPersonalityProfile personalityProfile) {
+        List<String> suggestions = new ArrayList<>();
+        
+        switch (request.getSuggestionType()) {
+            case "questions":
+                suggestions.add("How are you feeling about this situation?");
+                suggestions.add("What would be most helpful for you right now?");
+                suggestions.add("Would you like to talk more about this?");
+                break;
+            case "responses":
+                suggestions.add("I understand how you're feeling.");
+                suggestions.add("That sounds really challenging.");
+                suggestions.add("You're not alone in this.");
+                break;
+            case "topics":
+                suggestions.add("Emotional support");
+                suggestions.add("Coping strategies");
+                suggestions.add("Professional resources");
+                break;
+            case "actions":
+                suggestions.add("Take a deep breath");
+                suggestions.add("Reach out to a friend");
+                suggestions.add("Consider professional help");
+                break;
+            default:
+                suggestions.add("How can I help you today?");
+                suggestions.add("What's on your mind?");
+                suggestions.add("Would you like to talk about something specific?");
+        }
+        
+        return suggestions.subList(0, Math.min(suggestions.size(), request.getMaxSuggestions()));
+    }
+    
+    /**
+     * Generate fallback analysis when AI service is unavailable
+     */
+    private Map<String, Object> generateFallbackAnalysis(AIChatAnalyzeRequest request, UserPersonalityProfile personalityProfile, Map<String, Object> nlpAnalysis) {
+        Map<String, Object> analysis = new HashMap<>();
+        
+        analysis.put("analysis", "Basic analysis completed. AI service temporarily unavailable.");
+        analysis.put("sentiment", nlpAnalysis.getOrDefault("sentiment", "neutral"));
+        analysis.put("intent", "support_seeking");
+        analysis.put("topics", Arrays.asList("general", "support"));
+        analysis.put("recommendations", Arrays.asList("Continue the conversation", "Consider professional support"));
+        analysis.put("risk", Map.of("level", "low", "factors", Arrays.asList()));
+        analysis.put("emotionalInsights", Map.of("primary_emotion", nlpAnalysis.getOrDefault("emotion", "neutral"), "intensity", "medium"));
+        analysis.put("actions", Arrays.asList("Continue conversation", "Seek additional support if needed"));
+        
+        return analysis;
+    }
+    
+    /**
+     * Create safety filtered suggestions response
+     */
+    private AIChatSuggestionsResponse createSafetyFilteredSuggestionsResponse(AISafetyFilterResult safetyResult, AIChatSuggestionsRequest request) {
+        AIChatSuggestionsResponse response = new AIChatSuggestionsResponse();
+        response.setMessageId(UUID.randomUUID().toString());
+        response.setSuggestions(Arrays.asList("I'm here to help in a safe and supportive way."));
+        response.setSuggestionType(request.getSuggestionType() != null ? request.getSuggestionType() : "questions");
+        response.setSafetyFiltered(true);
+        response.setSafetyReason(safetyResult.getReason());
+        response.setTimestamp(LocalDateTime.now());
+        response.setNeedsHumanReview(safetyResult.isNeedsHumanReview());
+        response.setReviewReason(safetyResult.getReason());
+        return response;
+    }
+    
+    /**
+     * Create safety filtered analysis response
+     */
+    private AIChatAnalyzeResponse createSafetyFilteredAnalyzeResponse(AISafetyFilterResult safetyResult, AIChatAnalyzeRequest request) {
+        AIChatAnalyzeResponse response = new AIChatAnalyzeResponse();
+        response.setMessageId(UUID.randomUUID().toString());
+        response.setAnalysisResult("Message blocked by safety filter: " + safetyResult.getReason());
+        response.setAnalysisType(request.getAnalysisType() != null ? request.getAnalysisType() : "comprehensive");
+        response.setSafetyFiltered(true);
+        response.setSafetyReason(safetyResult.getReason());
+        response.setTimestamp(LocalDateTime.now());
+        response.setNeedsHumanReview(safetyResult.isNeedsHumanReview());
+        response.setReviewReason(safetyResult.getReason());
+        return response;
+    }
 }

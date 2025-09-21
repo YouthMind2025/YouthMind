@@ -122,7 +122,7 @@ public class PostController {
     @GetMapping
     @Operation(
         summary = "Get all posts",
-        description = "Retrieve all posts with pagination"
+        description = "Retrieve all posts with pagination and optional tag/term filtering"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Posts retrieved successfully"),
@@ -133,7 +133,13 @@ public class PostController {
         @RequestParam(defaultValue = "0") int page,
         
         @Parameter(description = "Number of posts per page", example = "20")
-        @RequestParam(defaultValue = "20") int size
+        @RequestParam(defaultValue = "20") int size,
+        
+        @Parameter(description = "Filter by tag", example = "mental-health")
+        @RequestParam(required = false) String tag,
+        
+        @Parameter(description = "Search term", example = "anxiety")
+        @RequestParam(required = false) String term
     ) {
         // Extract user ID from JWT token
         UUID userId = AuthenticationUtils.getCurrentUserId();
@@ -143,8 +149,13 @@ public class PostController {
         if (size < 1) size = 20;
         if (size > 100) size = 100; // Limit max page size
         
-        // Get all posts (using feed with no filters)
-        FeedResponse feedResponse = postService.getFeed(page, size, "newest", null, null, null, userId);
+        // Get posts with optional tag/term filtering
+        FeedResponse feedResponse;
+        if (tag != null || term != null) {
+            feedResponse = postService.getPostsWithTagFiltering(page, size, tag, term, userId);
+        } else {
+            feedResponse = postService.getFeed(page, size, "newest", null, null, null, userId);
+        }
         
         return ResponseBuilder.success(feedResponse);
     }
@@ -205,26 +216,6 @@ public class PostController {
         return ResponseBuilder.success(feedResponse);
     }
 
-    @GetMapping("/by-emotion/{emotion}")
-    @Operation(
-        summary = "Get posts by emotion",
-        description = "Retrieve posts filtered by specific emotion"
-    )
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Posts retrieved successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
-    })
-    public ResponseEntity<ApiResponse<List<PostDto>>> getPostsByEmotion(
-        @Parameter(description = "Emotion to filter by", example = "happy")
-        @PathVariable String emotion
-    ) {
-        // Extract user ID from JWT token
-        UUID userId = AuthenticationUtils.getCurrentUserId();
-        
-        List<PostDto> posts = postService.getPostsByEmotion(emotion, userId);
-        
-        return ResponseBuilder.success(posts);
-    }
 
     @GetMapping("/by-user/{userId}")
     @Operation(
@@ -316,84 +307,7 @@ public class PostController {
         return ResponseBuilder.success(updatedPost);
     }
     
-    @GetMapping("/search")
-    @Operation(
-        summary = "Search posts with text query and emotion filter",
-        description = "Search posts by text content (title, content, topics) with optional emotion filtering. " +
-                     "Supports pagination and multiple sorting options including relevance-based ranking."
-    )
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Search completed successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid search parameters"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
-    })
-    public ResponseEntity<ApiResponse<FeedResponse>> searchPosts(
-        @Parameter(description = "Search query text", example = "mental health", required = true)
-        @RequestParam String query,
-        
-        @Parameter(description = "Filter by emotion", example = "happy", required = false)
-        @RequestParam(required = false) String emotion,
-        
-        @Parameter(description = "Page number (0-based)", example = "0")
-        @RequestParam(defaultValue = "0") int page,
-        
-        @Parameter(description = "Number of posts per page", example = "20")
-        @RequestParam(defaultValue = "20") int size,
-        
-        @Parameter(description = "Sort order", example = "relevance")
-        @RequestParam(defaultValue = "relevance") String sortBy
-    ) {
-        // Extract user ID from JWT token
-        UUID userId = AuthenticationUtils.getCurrentUserId();
-        
-        // Validate pagination parameters
-        if (page < 0) page = 0;
-        if (size < 1) size = 20;
-        if (size > 100) size = 100; // Limit max page size
-        
-        // Execute search
-        FeedResponse searchResults = postService.searchPosts(query, emotion, page, size, sortBy, userId);
-        
-        return ResponseBuilder.success(searchResults);
-    }
     
-    @GetMapping("/search/advanced")
-    @Operation(
-        summary = "Advanced search with relevance scoring",
-        description = "Advanced search that ranks results by relevance (title matches > content matches > topic matches) " +
-                     "with optional emotion filtering. Best for finding the most relevant posts first."
-    )
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Advanced search completed successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid search parameters"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
-    })
-    public ResponseEntity<ApiResponse<FeedResponse>> advancedSearch(
-        @Parameter(description = "Search query text", example = "anxiety coping strategies", required = true)
-        @RequestParam String query,
-        
-        @Parameter(description = "Filter by emotion", example = "calm", required = false)
-        @RequestParam(required = false) String emotion,
-        
-        @Parameter(description = "Page number (0-based)", example = "0")
-        @RequestParam(defaultValue = "0") int page,
-        
-        @Parameter(description = "Number of posts per page", example = "20")
-        @RequestParam(defaultValue = "20") int size
-    ) {
-        // Extract user ID from JWT token
-        UUID userId = AuthenticationUtils.getCurrentUserId();
-        
-        // Validate pagination parameters
-        if (page < 0) page = 0;
-        if (size < 1) size = 20;
-        if (size > 100) size = 100; // Limit max page size
-        
-        // Execute advanced search
-        FeedResponse searchResults = postService.searchPostsWithRelevance(query, emotion, page, size, userId);
-        
-        return ResponseBuilder.success(searchResults);
-    }
     
     @PutMapping("/{id}")
     @Operation(

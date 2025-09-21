@@ -90,6 +90,22 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
            "p.createdAt DESC")
     Page<Post> searchPostsWithRelevance(@Param("query") String query, @Param("emotion") String emotion, Pageable pageable);
     
+    // Non-paginated versions for advanced search
+    @Query("SELECT p FROM Post p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "ORDER BY p.createdAt DESC")
+    List<Post> searchPosts(@Param("query") String query);
+    
+    @Query("SELECT p FROM Post p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "AND LOWER(p.emotion) = LOWER(:emotion) " +
+           "ORDER BY p.createdAt DESC")
+    List<Post> searchPostsByEmotion(@Param("query") String query, @Param("emotion") String emotion);
+    
     @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.resonance DESC")
     Page<Post> findTrendingPosts(@Param("since") LocalDateTime since, Pageable pageable);
     
@@ -135,4 +151,22 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     long countByCreatedAtAfter(LocalDateTime date);
     
     void deleteByUserId(UUID userId);
+    
+    /**
+     * Find posts by topics containing the given tag (case-insensitive)
+     */
+    Page<Post> findByTopicsContainingIgnoreCase(String tag, Pageable pageable);
+    
+    /**
+     * Find posts by topics containing tag AND (content containing term OR title containing term)
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :tag, '%')) AND " +
+           "(LOWER(p.content) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
+           "LOWER(p.title) LIKE LOWER(CONCAT('%', :term, '%'))) " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> findByTopicsContainingIgnoreCaseAndContentContainingIgnoreCaseOrTitleContainingIgnoreCase(
+        @Param("tag") String tag, 
+        @Param("term") String term, 
+        Pageable pageable);
 } 
