@@ -12,6 +12,7 @@ import java.sql.Connection;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Component("comprehensive")
 public class ComprehensiveHealthIndicator implements HealthIndicator {
@@ -68,7 +69,7 @@ public class ComprehensiveHealthIndicator implements HealthIndicator {
             if (overallHealthy) {
                 return Health.up().withDetails(details).build();
             } else {
-                return Health.degraded().withDetails(details).build();
+                return Health.down().withDetails(details).build();
             }
             
         } catch (Exception e) {
