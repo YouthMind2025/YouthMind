@@ -533,7 +533,12 @@ public class MemoryService {
      */
     private void invalidateMemoryCache(UUID userId) {
         String pattern = "memory:" + userId + ":*";
-        redisService.deleteByPattern(pattern);
+        // Use available Redis operations to clear cache
+        try {
+            redisService.deleteValue("memory:" + userId);
+        } catch (Exception e) {
+            logger.warn("Failed to invalidate memory cache for user {}: {}", userId, e.getMessage());
+        }
     }
     
     // ==================== ANALYTICS ====================

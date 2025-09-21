@@ -21,7 +21,12 @@ public class CircuitBreakerService {
         
         if (breaker.getState() == CircuitBreakerState.OPEN) {
             logger.warn("Circuit breaker is OPEN for service: {}", serviceName);
-            return fallback.get();
+            try {
+                return fallback.get();
+            } catch (Exception e) {
+                logger.error("Fallback failed for service {}: {}", serviceName, e.getMessage());
+                throw new RuntimeException("Both primary and fallback operations failed", e);
+            }
         }
         
         try {
@@ -36,7 +41,12 @@ public class CircuitBreakerService {
                 logger.warn("Circuit breaker opened for service: {}", serviceName);
             }
             
-            return fallback.get();
+            try {
+                return fallback.get();
+            } catch (Exception fallbackException) {
+                logger.error("Fallback failed for service {}: {}", serviceName, fallbackException.getMessage());
+                throw new RuntimeException("Both primary and fallback operations failed", fallbackException);
+            }
         }
     }
     
