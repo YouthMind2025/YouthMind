@@ -6,14 +6,18 @@ import ai.youthmind.dto.CommentDto;
 import ai.youthmind.dto.CommentEngagementRequest;
 import ai.youthmind.dto.CommentEngagementResponse;
 import ai.youthmind.dto.CommentListResponse;
+import ai.youthmind.dto.CommentReportRequest;
+import ai.youthmind.dto.CommentReportResponse;
 import ai.youthmind.dto.PaginationDto;
 import ai.youthmind.entity.Comment;
 import ai.youthmind.entity.CommentEngagement;
+import ai.youthmind.entity.CommentReport;
 import ai.youthmind.entity.Post;
 import ai.youthmind.entity.User;
 import ai.youthmind.service.CommentService;
 import ai.youthmind.service.PostService;
 import ai.youthmind.service.UserService;
+import ai.youthmind.util.AuthenticationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -25,8 +29,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -37,7 +39,7 @@ import java.util.stream.Collectors;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/v1/posts")
 @Tag(name = "Comments", description = "Comment management operations")
 @SecurityRequirement(name = "bearer-jwt")
 public class CommentController {
@@ -51,7 +53,7 @@ public class CommentController {
     @Autowired
     private UserService userService;
 
-    @GetMapping("/posts/{postId}/comments")
+    @GetMapping("/{postId}/comments")
     @Operation(
         summary = "Get comments for a post",
         description = "Retrieve paginated comments for a specific post"
@@ -74,19 +76,11 @@ public class CommentController {
             }
 
             // Get current user for engagement status
-            UUID currentUserId = null;
-            try {
-                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-                if (authentication != null && authentication.getPrincipal() instanceof UUID) {
-                    currentUserId = (UUID) authentication.getPrincipal();
-                }
-            } catch (Exception e) {
-                // User not authenticated, continue without engagement status
-            }
+            UUID currentUserId = AuthenticationUtils.getCurrentUserIdOrNull();
 
             // Get comments with pagination
             Pageable pageable = PageRequest.of(page - 1, limit);
-            CommentListResponse response = commentService.getCommentsByPostId(postId, pageable);
+            CommentListResponse response = commentService.getCommentsByPostId(postId, pageable, currentUserId);
             
             return ResponseEntity.ok(ApiResponse.success(response));
             
@@ -96,7 +90,7 @@ public class CommentController {
         }
     }
 
-    @PostMapping("/posts/{postId}/comments")
+    @PostMapping("/{postId}/comments")
     @Operation(
         summary = "Add comment to a post",
         description = "Create a new comment on a specific post"
@@ -112,12 +106,7 @@ public class CommentController {
         
         try {
             // Get current user
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, 401));
-            }
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             // Check if post exists
             Optional<Post> postOpt = postService.getPostById(postId);
@@ -166,12 +155,7 @@ public class CommentController {
         
         try {
             // Get current user
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, 401));
-            }
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             // Check if parent comment exists
             Optional<Comment> parentCommentOpt = commentService.getCommentById(commentId);
@@ -225,12 +209,7 @@ public class CommentController {
         
         try {
             // Get current user
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, 401));
-            }
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             // Check if comment exists
             Optional<Comment> commentOpt = commentService.getCommentById(commentId);
@@ -276,12 +255,7 @@ public class CommentController {
         
         try {
             // Get current user
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(null, 401));
-            }
-            UUID currentUserId = (UUID) authentication.getPrincipal();
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
 
             // Check if comment exists
             Optional<Comment> commentOpt = commentService.getCommentById(commentId);
@@ -294,6 +268,48 @@ public class CommentController {
             CommentEngagementResponse response = commentService.toggleCommentLike(commentId, request, currentUserId);
             
             return ResponseEntity.ok(ApiResponse.success(response));        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(null, 500));
+        }
+    }
+
+    @PostMapping("/comments/{commentId}/report")
+    @Operation(
+        summary = "Report a comment",
+        description = "Report a comment for inappropriate content or policy violations"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Comment reported successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Comment not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Already reported or invalid request"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<ApiResponse<CommentReportResponse>> reportComment(
+            @PathVariable UUID commentId,
+            @Valid @RequestBody CommentReportRequest request) {
+        
+        try {
+            // Get current user
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+
+            // Report the comment
+            CommentReportResponse response = commentService.reportComment(commentId, request, currentUserId);
+            
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(response, 201));
+            
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(null, 404));
+            } else if (e.getMessage().contains("already reported")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(null, 400));
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(null, 500));
+            }
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(null, 500));
         }
@@ -314,7 +330,7 @@ public class CommentController {
         // Get replies if this is a parent comment
         List<CommentDto> replies = null;
         if (comment.getParentId() == null) {
-            replies = commentService.getRepliesByCommentId(comment.getId());
+            replies = commentService.getRepliesByCommentId(comment.getId(), currentUserId);
         }
 
         return new CommentDto(

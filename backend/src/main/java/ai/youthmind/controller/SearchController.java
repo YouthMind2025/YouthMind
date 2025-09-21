@@ -16,6 +16,7 @@ import ai.youthmind.entity.User;
 import ai.youthmind.service.PostService;
 import ai.youthmind.service.SearchService;
 import ai.youthmind.service.UserService;
+import ai.youthmind.util.AuthenticationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -26,8 +27,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,7 +49,7 @@ public class SearchController {
     @Autowired
     private UserService userService;
 
-    @GetMapping("/search")
+    @GetMapping("/search/posts")
     @Operation(
         summary = "Search posts",
         description = "Search posts by query with filters and pagination"
@@ -67,20 +66,78 @@ public class SearchController {
         
         try {
             // Get current user for engagement status
-            UUID currentUserId = null;
-            try {
-                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-                if (authentication != null && authentication.getPrincipal() instanceof UUID) {
-                    currentUserId = (UUID) authentication.getPrincipal();
-                }
-            } catch (Exception e) {
-                // User not authenticated, continue without engagement status
-            }
+            UUID currentUserId = AuthenticationUtils.getCurrentUserIdOrNull();
 
             // Perform search
             SearchResponse response = searchService.searchPosts(q, emotion, sort, page, limit, currentUserId);
             
             return ResponseEntity.ok(ApiResponse.success(response));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(null, 500));
+        }
+    }
+
+    @GetMapping("/search/posts/advanced")
+    @Operation(
+        summary = "Advanced search with relevance scoring",
+        description = "Advanced search that ranks results by relevance (title matches > content matches > topic matches) " +
+                     "with optional emotion filtering. Best for finding the most relevant posts first."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Advanced search completed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid search parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<SearchResponse>> advancedSearch(
+        @RequestParam String q,
+        @RequestParam(required = false) String emotion,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int limit
+    ) {
+        try {
+            // Get current user for engagement status
+            UUID currentUserId = AuthenticationUtils.getCurrentUserIdOrNull();
+
+            // Perform advanced search with relevance scoring
+            SearchResponse response = searchService.advancedSearchPosts(q, emotion, page, limit, currentUserId);
+            
+            return ResponseEntity.ok(ApiResponse.success(response));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(null, 500));
+        }
+    }
+
+    @GetMapping("/search/posts/emotion/{emotion}")
+    @Operation(
+        summary = "Get posts by emotion",
+        description = "Retrieve posts filtered by specific emotion"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Posts retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<List<PostDto>>> getPostsByEmotion(
+        @PathVariable String emotion,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int limit
+    ) {
+        try {
+            // Get current user for engagement status
+            UUID currentUserId = AuthenticationUtils.getCurrentUserIdOrNull();
+
+            // Get posts by emotion using PostService
+            List<PostDto> posts = postService.getPostsByEmotion(emotion, currentUserId);
+            
+            // Apply pagination
+            int startIndex = page * limit;
+            int endIndex = Math.min(startIndex + limit, posts.size());
+            List<PostDto> paginatedPosts = posts.subList(startIndex, endIndex);
+            
+            return ResponseEntity.ok(ApiResponse.success(paginatedPosts));
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

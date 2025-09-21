@@ -42,6 +42,7 @@ public class InsightsService {
         activitySummaryDto.setContentPatternsDto(analyzeContentPatterns(userId, timeRange));
         activitySummaryDto.setEngagementPatternsDto(analyzeEngagementPatterns(userId));
         activitySummaryDto.setActivityPatternsDto(analyzeActivityPatterns(userId));
+        activitySummaryDto.setTimeRange(timeRange);
         return activitySummaryDto;
     }
 

@@ -55,6 +55,9 @@ public class ModerationService {
         if (!request.isValidPriority()) {
             throw new IllegalArgumentException("Invalid priority: " + request.getPriority());
         }
+
+        // Create and return status response
+        ModerationStatusResponse response = new ModerationStatusResponse();
         
         // Verify content exists
         if ("post".equals(request.getContentType())) {
@@ -66,24 +69,22 @@ public class ModerationService {
             // Flag the post using existing PostService method
             postService.flagPost(request.getContentId(), request.getReason() + 
                 (request.getDetails() != null ? " - " + request.getDetails() : ""));
+            response.setEscalationLevel(0);
+            response.setStatus("pending_review");
         } else if ("user".equals(request.getContentType())) {
             Optional<User> user = userRepository.findById(request.getContentId());
             if (user.isEmpty()) {
                 throw new IllegalArgumentException("User not found with ID: " + request.getContentId());
             }
-            // For user moderation, we would implement user flagging logic here
-            // For now, we'll just create a status response
+            response.setEscalationLevel(user.get().getWarningsCount());
+            response.setStatus(user.get().getUserStatus().name());
         }
-        
-        // Create and return status response
-        ModerationStatusResponse response = new ModerationStatusResponse();
+
         response.setContentId(request.getContentId());
         response.setContentType(request.getContentType());
-        response.setStatus("pending_review");
         response.setReason(request.getReason());
         response.setPriority(request.getPriority());
         response.setSubmittedAt(LocalDateTime.now());
-        response.setEscalationLevel(0);
         response.setModeratorId(moderatorId);
         
         return response;
@@ -100,7 +101,7 @@ public class ModerationService {
         Optional<Post> post = postRepository.findById(contentId);
         if (post.isPresent()) {
             Post postEntity = post.get();
-            
+
             ModerationStatusResponse response = new ModerationStatusResponse();
             response.setContentId(contentId);
             response.setContentType("post");
@@ -108,13 +109,13 @@ public class ModerationService {
             response.setReason(postEntity.getFlagReason());
             response.setSubmittedAt(postEntity.getFlaggedAt());
             response.setEscalationLevel(0);
-            
+
             // If not flagged, it's considered approved
             if (!postEntity.isFlagged()) {
                 response.setStatus("approved");
                 response.setReviewedAt(postEntity.getUpdatedAt());
             }
-            
+
             return response;
         }
         
@@ -124,14 +125,14 @@ public class ModerationService {
             ModerationStatusResponse response = new ModerationStatusResponse();
             response.setContentId(contentId);
             response.setContentType("user");
-            response.setStatus("active"); // Default status for users
-            response.setEscalationLevel(0);
+            response.setStatus(user.get().getUserStatus().name());
+            response.setEscalationLevel(user.get().getWarningsCount());
             return response;
         }
         
         throw new IllegalArgumentException("Content not found with ID: " + contentId);
     }
-    
+
     /**
      * Get moderation history for a specific user
      * 
@@ -167,8 +168,8 @@ public class ModerationService {
         response.setTotalModerationCases(entries.size());
         response.setPendingCases((int) entries.stream().filter(e -> "pending_review".equals(e.getStatus())).count());
         response.setResolvedCases((int) entries.stream().filter(e -> "resolved".equals(e.getStatus())).count());
-        response.setEscalatedCases(0); // Not implemented yet
-        response.setUserStatus("active"); // Default status
+        response.setEscalatedCases(user.get().getWarningsCount());
+        response.setUserStatus(user.get().getUserStatus().name());
         response.setRiskScore(calculateRiskScore(entries));
         
         return response;
