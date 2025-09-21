@@ -189,6 +189,34 @@ public class VectorDatabaseService {
     }
 
     /**
+     * Delete a vector from collection.
+     */
+    public CompletableFuture<Boolean> deleteVector(String collectionName, String pointId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return qdrantRestClient.deleteVector(collectionName, pointId).get();
+            } catch (Exception e) {
+                log.error("Error deleting vector {} from collection {}: {}", pointId, collectionName, e.getMessage(), e);
+                return false;
+            }
+        });
+    }
+
+    /**
+     * Get collection information.
+     */
+    public CompletableFuture<Object> getCollectionInfo(String collectionName) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return qdrantRestClient.getCollectionInfo(collectionName).get();
+            } catch (Exception e) {
+                log.error("Error getting collection info for {}: {}", collectionName, e.getMessage(), e);
+                return null;
+            }
+        });
+    }
+
+    /**
      * Convert search result to our DTO.
      */
     private VectorSearchResult convertToSearchResult(Map<String, Object> result) {

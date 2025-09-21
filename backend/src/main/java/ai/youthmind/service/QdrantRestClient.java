@@ -280,6 +280,34 @@ public class QdrantRestClient {
     }
 
     /**
+     * Delete a vector by point ID.
+     */
+    public CompletableFuture<Boolean> deleteVector(String collectionName, String pointId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String url = qdrantConfig.getConnectionUrl() + "/collections/" + collectionName + "/points";
+                
+                Map<String, Object> requestBody = Map.of(
+                    "points", List.of(pointId)
+                );
+
+                HttpHeaders headers = createHeaders();
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+                ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.POST, entity, String.class
+                );
+
+                return response.getStatusCode().is2xxSuccessful();
+
+            } catch (Exception e) {
+                log.error("Failed to delete vector {} from collection {}: {}", pointId, collectionName, e.getMessage(), e);
+                return false;
+            }
+        });
+    }
+
+    /**
      * Test connection to Qdrant.
      */
     public CompletableFuture<Boolean> testConnection() {

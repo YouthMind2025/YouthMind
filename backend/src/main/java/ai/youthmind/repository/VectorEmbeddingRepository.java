@@ -23,6 +23,9 @@ public interface VectorEmbeddingRepository extends JpaRepository<VectorEmbedding
     List<VectorEmbedding> findByContentIdAndContentType(UUID contentId, VectorEmbedding.ContentType contentType);
     List<VectorEmbedding> findByCollectionName(String collectionName);
     List<VectorEmbedding> findByModel(String model);
+    
+    // Delete methods
+    void deleteByContentIdAndContentType(UUID contentId, VectorEmbedding.ContentType contentType);
 
     // Active embeddings
     List<VectorEmbedding> findByIsActiveTrue();
