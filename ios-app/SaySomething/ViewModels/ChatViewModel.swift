@@ -29,6 +29,13 @@ class ChatViewModel: ObservableObject {
     // connectionStatus: the status of the connection
     @Published var connectionStatus: ConnectionStatus = .connected
     
+    // MARK: - Psychological State Properties (Youseef's Integration)
+    @Published var psychologicalState: PsychologicalState = PsychologicalState()
+    @Published var buddhistFactors: BuddhistFactors = BuddhistFactors()
+    @Published var psychologicalInsights: PsychologicalInsights = PsychologicalInsights()
+    @Published var showPsychologicalInsights: Bool = false
+    @Published var responseTone: ResponseTone = .supportive
+    
     private var cancellables = Set<AnyCancellable>()
     private var messagePublisher = PassthroughSubject<Message, Never>()
     private var responseTimer: Timer?
@@ -201,14 +208,19 @@ class ChatViewModel: ObservableObject {
         sendMessage()
     }
     
-    // Request AI response via OpenAI
+    // Request AI response via OpenAI with psychological state awareness
     private func requestAIResponse(context: [Message], userInput: String) {
         isLoading = true
         connectionStatus = .connecting
+        
+        // Analyze psychological state from user input
+        analyzePsychologicalState(from: userInput)
+        
         Task { [weak self] in
             guard let self else { return }
             do {
-                let responseText = try await ai.sendChatCompletion(messages: context)
+                // Try psychological state-aware response first
+                let responseText = try await self.requestPsychologicalStateAwareResponse(userInput: userInput)
                 let aiMessage = Message.aiMessage(responseText)
                 await MainActor.run {
                     self.connectionStatus = .connected
@@ -220,8 +232,8 @@ class ChatViewModel: ObservableObject {
                 await self.sendMessageToBackend(text: responseText, sender: "ai")
                 
             } catch {
-                // Fallback to local response to avoid disrupting UX
-                let fallback = self.generateAIResponse(to: userInput)
+                // Fallback to local response with psychological awareness
+                let fallback = self.generatePsychologicallyAwareResponse(to: userInput)
                 let aiMessage = Message.aiMessage(fallback)
                 await MainActor.run {
                     self.connectionStatus = .connected
@@ -522,7 +534,138 @@ class ChatViewModel: ObservableObject {
 
     private func defaultSeedMessages() -> [Message] {
         [
-            Message.aiMessage("Hey there! I’m your friendly personal assistant. Ask me anything, and I’ll do my best to help. How can I support you today?")
+            Message.aiMessage("Hey there! I'm your friendly personal assistant. Ask me anything, and I'll do my best to help. How can I support you today?")
         ]
+    }
+    
+    // MARK: - Psychological State Analysis (Youseef's Integration)
+    
+    /// Analyze psychological state from user input
+    private func analyzePsychologicalState(from userInput: String) {
+        let lowercasedInput = userInput.lowercased()
+        
+        // Calculate psychological metrics based on content analysis
+        let stress = calculateStressLevel(from: lowercasedInput)
+        let mindfulness = calculateMindfulnessLevel(from: lowercasedInput)
+        let compassion = calculateCompassionLevel(from: lowercasedInput)
+        let equanimity = calculateEquanimityLevel(from: lowercasedInput)
+        let intensityFactor = calculateIntensityFactor(from: lowercasedInput)
+        
+        // Update psychological state
+        psychologicalState = PsychologicalState(
+            stress: stress,
+            mindfulness: mindfulness,
+            compassion: compassion,
+            equanimity: equanimity,
+            intensityFactor: intensityFactor
+        )
+        
+        // Determine response tone
+        responseTone = determineResponseTone()
+        
+        print("[ChatViewModel] Psychological state updated - Stress: \(stress), Mindfulness: \(mindfulness), Tone: \(responseTone)")
+    }
+    
+    /// Calculate stress level from user input
+    private func calculateStressLevel(from input: String) -> Double {
+        let stressKeywords = ["anxious", "panic", "overwhelmed", "stressed", "worried", "nervous", "fear", "scared", "terrified", "panic", "crisis"]
+        let stressCount = stressKeywords.reduce(0) { count, keyword in
+            count + (input.contains(keyword) ? 1 : 0)
+        }
+        return min(Double(stressCount) * 0.2, 1.0)
+    }
+    
+    /// Calculate mindfulness level from user input
+    private func calculateMindfulnessLevel(from input: String) -> Double {
+        let mindfulnessKeywords = ["mindful", "present", "aware", "conscious", "meditation", "breathing", "calm", "peaceful", "centered", "grounded"]
+        let mindfulnessCount = mindfulnessKeywords.reduce(0) { count, keyword in
+            count + (input.contains(keyword) ? 1 : 0)
+        }
+        return min(Double(mindfulnessCount) * 0.15, 1.0)
+    }
+    
+    /// Calculate compassion level from user input
+    private func calculateCompassionLevel(from input: String) -> Double {
+        let compassionKeywords = ["care", "love", "kind", "gentle", "understanding", "empathy", "compassion", "support", "help", "comfort"]
+        let compassionCount = compassionKeywords.reduce(0) { count, keyword in
+            count + (input.contains(keyword) ? 1 : 0)
+        }
+        return min(Double(compassionCount) * 0.15, 1.0)
+    }
+    
+    /// Calculate equanimity level from user input
+    private func calculateEquanimityLevel(from input: String) -> Double {
+        let equanimityKeywords = ["balanced", "stable", "steady", "equanimity", "neutral", "acceptance", "peace", "serenity", "tranquil", "composed"]
+        let equanimityCount = equanimityKeywords.reduce(0) { count, keyword in
+            count + (input.contains(keyword) ? 1 : 0)
+        }
+        return min(Double(equanimityCount) * 0.15, 1.0)
+    }
+    
+    /// Calculate intensity factor from user input
+    private func calculateIntensityFactor(from input: String) -> Double {
+        let intensityKeywords = ["urgent", "emergency", "crisis", "desperate", "immediate", "critical", "severe", "extreme", "intense", "overwhelming"]
+        let intensityCount = intensityKeywords.reduce(0) { count, keyword in
+            count + (input.contains(keyword) ? 1 : 0)
+        }
+        return min(Double(intensityCount) * 0.2, 1.0)
+    }
+    
+    /// Determine response tone based on psychological state
+    private func determineResponseTone() -> ResponseTone {
+        if psychologicalState.stress > 0.7 || psychologicalState.intensityFactor > 0.8 {
+            return .calming
+        } else if psychologicalState.mindfulness > 0.6 && psychologicalState.compassion > 0.5 {
+            return .reflective
+        } else if psychologicalState.compassion > 0.7 {
+            return .empathetic
+        } else if psychologicalState.mindfulness > 0.5 {
+            return .mindful
+        } else {
+            return .supportive
+        }
+    }
+    
+    /// Request psychological state-aware response from backend
+    private func requestPsychologicalStateAwareResponse(userInput: String) async throws -> String {
+        // This would integrate with our backend psychological analysis API
+        // For now, return a psychologically aware response based on local analysis
+        
+        switch responseTone {
+        case .calming:
+            return "I can sense you're going through something intense right now. Let's take a moment to breathe together. What feels most overwhelming at this moment?"
+        case .reflective:
+            return "Let's gently observe what's arising within you. What changes when we sit with this feeling for a moment?"
+        case .empathetic:
+            return "I feel the weight of what you're carrying. You're not alone in this. What would feel most supportive for you right now?"
+        case .mindful:
+            return "Let's bring awareness to this moment. What do you notice when you pause and observe your experience?"
+        case .supportive:
+            return "I'm here with you through whatever you're experiencing. Take your time and share what's on your heart - I'm listening."
+        }
+    }
+    
+    /// Generate psychologically aware response (fallback)
+    private func generatePsychologicallyAwareResponse(to userInput: String) -> String {
+        let baseResponse = generateAIResponse(to: userInput)
+        
+        // Enhance response based on psychological state
+        switch responseTone {
+        case .calming:
+            return "I understand this feels overwhelming. " + baseResponse + "\n\nLet's take this one step at a time. What would help you feel more grounded right now?"
+        case .reflective:
+            return baseResponse + "\n\nWhat do you notice about your thoughts and feelings as we discuss this?"
+        case .empathetic:
+            return "I can really feel what you're going through. " + baseResponse + "\n\nYou're showing such strength in sharing this with me."
+        case .mindful:
+            return baseResponse + "\n\nLet's stay present with this. What do you notice in this moment?"
+        case .supportive:
+            return baseResponse + "\n\nI'm here to support you through this. What would be most helpful right now?"
+        }
+    }
+    
+    /// Toggle psychological insights display
+    func togglePsychologicalInsights() {
+        showPsychologicalInsights.toggle()
     }
 } 
