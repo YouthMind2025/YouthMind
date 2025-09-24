@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -102,4 +103,38 @@ public interface PostResonanceRepository extends JpaRepository<PostResonance, UU
      * @param userId The user ID
      */
     void deleteByUserId(UUID userId);
+    
+    /**
+     * Count resonances by user ID.
+     *
+     * @param userId The user ID
+     * @return The count of resonances by the user
+     */
+    long countByUserId(UUID userId);
+    
+    /**
+     * Find resonances by user ID and resonanced at after a specific time.
+     *
+     * @param userId The user ID
+     * @param resonancedAt The cutoff time
+     * @return List of resonances after the specified time
+     */
+    List<PostResonance> findByUserIdAndResonancedAtAfter(UUID userId, LocalDateTime resonancedAt);
+    
+    /**
+     * Count resonances by user ID and resonanced at after a specific time.
+     *
+     * @param userId The user ID
+     * @param resonancedAt The cutoff time
+     * @return The count of resonances after the specified time
+     */
+    long countByUserIdAndResonancedAtAfter(UUID userId, LocalDateTime resonancedAt);
+    
+    /**
+     * Count resonances by resonanced at after a specific time (global count).
+     *
+     * @param resonancedAt The cutoff time
+     * @return The count of resonances after the specified time
+     */
+    long countByResonancedAtAfter(LocalDateTime resonancedAt);
 } 
