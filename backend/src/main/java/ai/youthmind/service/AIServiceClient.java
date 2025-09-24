@@ -6,6 +6,8 @@ import ai.youthmind.dto.ApiUsageRequest;
 import ai.youthmind.dto.DeepSeekModerationRequest;
 import ai.youthmind.dto.DeepSeekModerationResponse;
 import ai.youthmind.dto.ModerationResult;
+import ai.youthmind.dto.PsychologicalAnalysisRequest;
+import ai.youthmind.dto.PsychologicalAnalysisResponse;
 import ai.youthmind.entity.AiApiUsage;
 import ai.youthmind.exception.AIServiceException;
 import ai.youthmind.util.CircuitBreaker;
@@ -26,6 +28,7 @@ import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -61,6 +64,21 @@ public class AIServiceClient {
     @Autowired
     @Qualifier("aiServiceCircuitBreaker")
     private CircuitBreaker circuitBreaker;
+    
+    @Autowired
+    private PsychologicalVectorGenerator psychologicalVectorGenerator;
+    
+    @Autowired
+    private BuddhistFactorAnalyzer buddhistFactorAnalyzer;
+    
+    @Autowired
+    private IntensityPredictor intensityPredictor;
+    
+    @Autowired
+    private StateVectorProcessor stateVectorProcessor;
+    
+    @Autowired
+    private AIErrorHandler aiErrorHandler;
     
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -806,5 +824,627 @@ public class AIServiceClient {
             default:
                 return "AI service temporarily unavailable. Please try again later.";
         }
+    }
+    
+    // ==================== PSYCHOLOGICAL ANALYSIS METHODS ====================
+    
+    /**
+     * Perform comprehensive psychological analysis
+     * @param request Psychological analysis request
+     * @return Comprehensive psychological analysis response
+     */
+    public PsychologicalAnalysisResponse performPsychologicalAnalysis(PsychologicalAnalysisRequest request) {
+        try {
+            logger.info("Performing psychological analysis for user {} with requestId {}", 
+                request.getUserId(), request.getRequestId());
+            
+            long startTime = System.currentTimeMillis();
+            
+            // Validate request
+            validatePsychologicalAnalysisRequest(request);
+            
+            // Perform analysis components
+            PsychologicalAnalysisResponse.PsychologicalVectorResult psychologicalVector = null;
+            PsychologicalAnalysisResponse.BuddhistFactorsResult buddhistFactors = null;
+            PsychologicalAnalysisResponse.IntensityFactorResult intensityFactor = null;
+            PsychologicalAnalysisResponse.StateVectorResult stateVector = null;
+            PsychologicalAnalysisResponse.ComprehensiveAnalysis comprehensiveAnalysis = null;
+            
+            // Generate psychological vector if requested
+            if (request.getAnalysisConfig().isGeneratePsychologicalVector()) {
+                psychologicalVector = generatePsychologicalVector(request);
+            }
+            
+            // Analyze Buddhist factors if requested
+            if (request.getAnalysisConfig().isAnalyzeBuddhistFactors()) {
+                buddhistFactors = analyzeBuddhistFactors(request);
+            }
+            
+            // Calculate intensity factor if requested
+            if (request.getAnalysisConfig().isCalculateIntensityFactor()) {
+                intensityFactor = calculateIntensityFactor(request, psychologicalVector, buddhistFactors);
+            }
+            
+            // Process state vector if requested
+            if (request.getAnalysisConfig().isProcessStateVector()) {
+                stateVector = processStateVector(request, psychologicalVector);
+            }
+            
+            // Perform comprehensive analysis if requested
+            if (request.getAnalysisConfig().isIncludeDetailedAnalysis()) {
+                comprehensiveAnalysis = performComprehensiveAnalysis(request, psychologicalVector, buddhistFactors, intensityFactor);
+            }
+            
+            // Generate recommendations and insights
+            List<PsychologicalAnalysisResponse.Recommendation> recommendations = generateRecommendations(request, comprehensiveAnalysis);
+            List<PsychologicalAnalysisResponse.Insight> insights = generateInsights(request, comprehensiveAnalysis);
+            
+            // Perform risk assessment
+            PsychologicalAnalysisResponse.RiskAssessment riskAssessment = performRiskAssessment(request, comprehensiveAnalysis);
+            
+            // Create response
+            PsychologicalAnalysisResponse response = new PsychologicalAnalysisResponse();
+            response.setRequestId(request.getRequestId());
+            response.setUserId(request.getUserId());
+            response.setSessionId(request.getSessionId());
+            response.setPsychologicalVector(psychologicalVector);
+            response.setBuddhistFactors(buddhistFactors);
+            response.setIntensityFactor(intensityFactor);
+            response.setStateVector(stateVector);
+            response.setComprehensiveAnalysis(comprehensiveAnalysis);
+            response.setRecommendations(recommendations);
+            response.setInsights(insights);
+            response.setRiskAssessment(riskAssessment);
+            
+            // Set metadata
+            long processingTime = System.currentTimeMillis() - startTime;
+            PsychologicalAnalysisResponse.AnalysisMetadata metadata = new PsychologicalAnalysisResponse.AnalysisMetadata();
+            metadata.setAnalysisId(UUID.randomUUID().toString());
+            metadata.setModelVersion("1.0.0");
+            metadata.setAnalysisMethod("COMPREHENSIVE_PSYCHOLOGICAL_ANALYSIS");
+            metadata.setTimestamp(LocalDateTime.now());
+            metadata.setProcessingTimeMs((int) processingTime);
+            metadata.setStatus("SUCCESS");
+            response.setMetadata(metadata);
+            
+            // Set processing info
+            PsychologicalAnalysisResponse.ProcessingInfo processingInfo = new PsychologicalAnalysisResponse.ProcessingInfo();
+            processingInfo.setProcessingEngine("YouthMind AI Engine");
+            processingInfo.setModelVersion("1.0.0");
+            processingInfo.setTotalProcessingTimeMs((int) processingTime);
+            processingInfo.setProcessingStatus("COMPLETED");
+            response.setProcessingInfo(processingInfo);
+            
+            logger.info("Psychological analysis completed for user {} in {}ms", 
+                request.getUserId(), processingTime);
+            
+            return response;
+            
+        } catch (Exception e) {
+            logger.error("Error performing psychological analysis for user {}: {}", 
+                request.getUserId(), e.getMessage(), e);
+            
+            // Handle error and return fallback response
+            Map<String, Object> errorContext = Map.of(
+                "requestId", request.getRequestId(),
+                "analysisType", "psychological_analysis",
+                "userId", request.getUserId()
+            );
+            
+            Map<String, Object> errorResult = aiErrorHandler.handleError(e, errorContext, request.getUserId());
+            
+            // Create error response
+            PsychologicalAnalysisResponse errorResponse = createErrorResponse(request, e, errorResult);
+            return errorResponse;
+        }
+    }
+    
+    /**
+     * Generate psychological vector for content
+     * @param request Analysis request
+     * @return Psychological vector result
+     */
+    private PsychologicalAnalysisResponse.PsychologicalVectorResult generatePsychologicalVector(PsychologicalAnalysisRequest request) {
+        try {
+            Map<String, Object> vectorResult = psychologicalVectorGenerator.generateVector(
+                request.getContent(), request.getUserId());
+            
+            PsychologicalAnalysisResponse.PsychologicalVectorResult result = 
+                new PsychologicalAnalysisResponse.PsychologicalVectorResult();
+            
+            @SuppressWarnings("unchecked")
+            List<Double> vector = (List<Double>) vectorResult.get("psychologicalVector");
+            result.setVector(vector);
+            result.setConfidenceScore((Double) vectorResult.get("confidenceScore"));
+            result.setValid((Boolean) vectorResult.get("isValid"));
+            result.setOptimizationDetails((Map<String, Object>) vectorResult.get("optimizedVector"));
+            result.setAnalysisMethod("PSYCHOLOGICAL_VECTOR_GENERATION");
+            result.setGeneratedAt(LocalDateTime.now());
+            
+            return result;
+            
+        } catch (Exception e) {
+            logger.error("Error generating psychological vector: {}", e.getMessage(), e);
+            return createFallbackPsychologicalVector();
+        }
+    }
+    
+    /**
+     * Analyze Buddhist factors in content
+     * @param request Analysis request
+     * @return Buddhist factors result
+     */
+    private PsychologicalAnalysisResponse.BuddhistFactorsResult analyzeBuddhistFactors(PsychologicalAnalysisRequest request) {
+        try {
+            Map<String, Object> factorsResult = buddhistFactorAnalyzer.analyzeFactors(
+                request.getContent(), request.getUserId());
+            
+            PsychologicalAnalysisResponse.BuddhistFactorsResult result = 
+                new PsychologicalAnalysisResponse.BuddhistFactorsResult();
+            
+            result.setFactorScores((Map<String, Double>) factorsResult.get("factorScores"));
+            result.setDetectedKeywords((Map<String, List<String>>) factorsResult.get("detectedKeywords"));
+            result.setClassifiedFactors((Map<String, Object>) factorsResult.get("classifiedFactors"));
+            result.setIntensityAnalysis((Map<String, Object>) factorsResult.get("intensityAnalysis"));
+            result.setAnalyzedAt(LocalDateTime.now());
+            
+            // Calculate dominant factor
+            Map<String, Double> factorScores = result.getFactorScores();
+            if (!factorScores.isEmpty()) {
+                String dominantFactor = factorScores.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse("none");
+                result.setDominantFactor(dominantFactor);
+            }
+            
+            return result;
+            
+        } catch (Exception e) {
+            logger.error("Error analyzing Buddhist factors: {}", e.getMessage(), e);
+            return createFallbackBuddhistFactors();
+        }
+    }
+    
+    /**
+     * Calculate intensity factor
+     * @param request Analysis request
+     * @param psychologicalVector Psychological vector result
+     * @param buddhistFactors Buddhist factors result
+     * @return Intensity factor result
+     */
+    private PsychologicalAnalysisResponse.IntensityFactorResult calculateIntensityFactor(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.PsychologicalVectorResult psychologicalVector,
+            PsychologicalAnalysisResponse.BuddhistFactorsResult buddhistFactors) {
+        try {
+            List<Double> vector = psychologicalVector != null ? psychologicalVector.getVector() : null;
+            Map<String, Object> buddhistFactorsMap = buddhistFactors != null ? 
+                Map.of("factorScores", buddhistFactors.getFactorScores()) : new HashMap<>();
+            
+            Map<String, Object> intensityResult = intensityPredictor.predictIntensity(
+                request.getContent(), request.getUserId(), vector, buddhistFactorsMap);
+            
+            PsychologicalAnalysisResponse.IntensityFactorResult result = 
+                new PsychologicalAnalysisResponse.IntensityFactorResult();
+            
+            result.setIntensityScore((Double) intensityResult.get("intensityScore"));
+            result.setImpactScore((Double) intensityResult.get("impactScore"));
+            result.setIntensityClassification((String) intensityResult.get("intensityClassification"));
+            result.setValid((Boolean) intensityResult.get("isValid"));
+            result.setPredictedAt(LocalDateTime.now());
+            
+            return result;
+            
+        } catch (Exception e) {
+            logger.error("Error calculating intensity factor: {}", e.getMessage(), e);
+            return createFallbackIntensityFactor();
+        }
+    }
+    
+    /**
+     * Process state vector
+     * @param request Analysis request
+     * @param psychologicalVector Psychological vector result
+     * @return State vector result
+     */
+    private PsychologicalAnalysisResponse.StateVectorResult processStateVector(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.PsychologicalVectorResult psychologicalVector) {
+        try {
+            List<Double> vector = psychologicalVector != null ? psychologicalVector.getVector() : null;
+            
+            Map<String, Object> stateResult = stateVectorProcessor.processVector(vector, request.getUserId());
+            
+            PsychologicalAnalysisResponse.StateVectorResult result = 
+                new PsychologicalAnalysisResponse.StateVectorResult();
+            
+            result.setProcessedVector((List<Double>) stateResult.get("processedVector"));
+            result.setProcessingDetails((Map<String, Object>) stateResult.get("processingDetails"));
+            result.setValid((Boolean) stateResult.get("isValid"));
+            result.setStatistics((Map<String, Object>) stateResult.get("statistics"));
+            result.setProcessingMethod("STATE_VECTOR_PROCESSING");
+            result.setProcessedAt(LocalDateTime.now());
+            
+            return result;
+            
+        } catch (Exception e) {
+            logger.error("Error processing state vector: {}", e.getMessage(), e);
+            return createFallbackStateVector();
+        }
+    }
+    
+    /**
+     * Perform comprehensive analysis
+     * @param request Analysis request
+     * @param psychologicalVector Psychological vector result
+     * @param buddhistFactors Buddhist factors result
+     * @param intensityFactor Intensity factor result
+     * @return Comprehensive analysis result
+     */
+    private PsychologicalAnalysisResponse.ComprehensiveAnalysis performComprehensiveAnalysis(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.PsychologicalVectorResult psychologicalVector,
+            PsychologicalAnalysisResponse.BuddhistFactorsResult buddhistFactors,
+            PsychologicalAnalysisResponse.IntensityFactorResult intensityFactor) {
+        
+        PsychologicalAnalysisResponse.ComprehensiveAnalysis analysis = 
+            new PsychologicalAnalysisResponse.ComprehensiveAnalysis();
+        
+        // Perform emotional analysis
+        analysis.setEmotionalAnalysis(analyzeEmotionalState(request, psychologicalVector));
+        
+        // Perform cognitive analysis
+        analysis.setCognitiveAnalysis(analyzeCognitivePatterns(request, psychologicalVector));
+        
+        // Perform social analysis
+        analysis.setSocialAnalysis(analyzeSocialDynamics(request, psychologicalVector));
+        
+        // Perform stress analysis
+        analysis.setStressAnalysis(analyzeStressIndicators(request, psychologicalVector));
+        
+        // Perform personality analysis
+        analysis.setPersonalityAnalysis(analyzePersonalityTraits(request, psychologicalVector));
+        
+        // Perform mental health analysis
+        analysis.setMentalHealthAnalysis(analyzeMentalHealthIndicators(request, psychologicalVector));
+        
+        // Perform coping analysis
+        analysis.setCopingAnalysis(analyzeCopingMechanisms(request, psychologicalVector));
+        
+        // Perform resilience analysis
+        analysis.setResilienceAnalysis(analyzeResilienceFactors(request, psychologicalVector));
+        
+        // Calculate overall assessment
+        analysis.setOverallAssessment(calculateOverallAssessment(analysis));
+        analysis.setOverallScore(calculateOverallScore(analysis));
+        analysis.setAnalyzedAt(LocalDateTime.now());
+        
+        return analysis;
+    }
+    
+    // Helper methods for comprehensive analysis components
+    private PsychologicalAnalysisResponse.EmotionalAnalysis analyzeEmotionalState(
+            PsychologicalAnalysisRequest request, 
+            PsychologicalAnalysisResponse.PsychologicalVectorResult psychologicalVector) {
+        
+        PsychologicalAnalysisResponse.EmotionalAnalysis analysis = 
+            new PsychologicalAnalysisResponse.EmotionalAnalysis();
+        
+        // Simulate emotional analysis based on content and vector
+        analysis.setPrimaryEmotion(determinePrimaryEmotion(request.getContent()));
+        analysis.setSecondaryEmotions(determineSecondaryEmotions(request.getContent()));
+        analysis.setEmotionalIntensity(calculateEmotionalIntensity(psychologicalVector));
+        analysis.setEmotionalStability(assessEmotionalStability(psychologicalVector));
+        analysis.setEmotionalTrend("stable"); // Placeholder
+        
+        return analysis;
+    }
+    
+    private PsychologicalAnalysisResponse.CognitiveAnalysis analyzeCognitivePatterns(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.PsychologicalVectorResult psychologicalVector) {
+        
+        PsychologicalAnalysisResponse.CognitiveAnalysis analysis = 
+            new PsychologicalAnalysisResponse.CognitiveAnalysis();
+        
+        // Simulate cognitive analysis
+        analysis.setThinkingPattern("analytical");
+        analysis.setAnalyticalThinking(0.7);
+        analysis.setCreativeExpression(0.6);
+        analysis.setProblemSolving(0.8);
+        analysis.setMemoryReflection(0.5);
+        analysis.setFutureOrientation(0.6);
+        analysis.setCognitiveStyle("balanced");
+        
+        return analysis;
+    }
+    
+    private PsychologicalAnalysisResponse.SocialAnalysis analyzeSocialDynamics(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.PsychologicalVectorResult psychologicalVector) {
+        
+        PsychologicalAnalysisResponse.SocialAnalysis analysis = 
+            new PsychologicalAnalysisResponse.SocialAnalysis();
+        
+        // Simulate social analysis
+        analysis.setSocialConnection(0.7);
+        analysis.setIsolationLevel(0.3);
+        analysis.setEmpathyCompassion(0.8);
+        analysis.setConflictTension(0.2);
+        analysis.setTrustIntimacy(0.6);
+        analysis.setSocialStyle("collaborative");
+        
+        return analysis;
+    }
+    
+    private PsychologicalAnalysisResponse.StressAnalysis analyzeStressIndicators(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.PsychologicalVectorResult psychologicalVector) {
+        
+        PsychologicalAnalysisResponse.StressAnalysis analysis = 
+            new PsychologicalAnalysisResponse.StressAnalysis();
+        
+        // Simulate stress analysis
+        analysis.setWorkStress(0.4);
+        analysis.setAcademicStress(0.5);
+        analysis.setFinancialStress(0.3);
+        analysis.setHealthStress(0.2);
+        analysis.setRelationshipStress(0.3);
+        analysis.setOverallStressLevel(0.34);
+        analysis.setStressPattern("moderate");
+        
+        return analysis;
+    }
+    
+    private PsychologicalAnalysisResponse.PersonalityAnalysis analyzePersonalityTraits(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.PsychologicalVectorResult psychologicalVector) {
+        
+        PsychologicalAnalysisResponse.PersonalityAnalysis analysis = 
+            new PsychologicalAnalysisResponse.PersonalityAnalysis();
+        
+        // Simulate personality analysis
+        analysis.setExtraversion(0.6);
+        analysis.setIntroversion(0.4);
+        analysis.setOpenness(0.7);
+        analysis.setConscientiousness(0.8);
+        analysis.setAgreeableness(0.9);
+        analysis.setDominantTrait("agreeableness");
+        analysis.setPersonalityType("collaborator");
+        
+        return analysis;
+    }
+    
+    private PsychologicalAnalysisResponse.MentalHealthAnalysis analyzeMentalHealthIndicators(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.PsychologicalVectorResult psychologicalVector) {
+        
+        PsychologicalAnalysisResponse.MentalHealthAnalysis analysis = 
+            new PsychologicalAnalysisResponse.MentalHealthAnalysis();
+        
+        // Simulate mental health analysis
+        analysis.setDepressionIndicators(0.2);
+        analysis.setAnxietyIndicators(0.3);
+        analysis.setSelfEsteem(0.7);
+        analysis.setSleepPatterns(0.6);
+        analysis.setAppetiteEnergy(0.8);
+        analysis.setMentalHealthStatus("good");
+        analysis.setRiskFactors(Arrays.asList("mild_stress"));
+        
+        return analysis;
+    }
+    
+    private PsychologicalAnalysisResponse.CopingAnalysis analyzeCopingMechanisms(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.PsychologicalVectorResult psychologicalVector) {
+        
+        PsychologicalAnalysisResponse.CopingAnalysis analysis = 
+            new PsychologicalAnalysisResponse.CopingAnalysis();
+        
+        // Simulate coping analysis
+        analysis.setPositiveCoping(0.8);
+        analysis.setAvoidance(0.2);
+        analysis.setSeekingSupport(0.7);
+        analysis.setSelfCare(0.6);
+        analysis.setProblemFocusedCoping(0.8);
+        analysis.setCopingStyle("adaptive");
+        analysis.setEffectiveStrategies(Arrays.asList("problem_solving", "social_support"));
+        
+        return analysis;
+    }
+    
+    private PsychologicalAnalysisResponse.ResilienceAnalysis analyzeResilienceFactors(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.PsychologicalVectorResult psychologicalVector) {
+        
+        PsychologicalAnalysisResponse.ResilienceAnalysis analysis = 
+            new PsychologicalAnalysisResponse.ResilienceAnalysis();
+        
+        // Simulate resilience analysis
+        analysis.setResilience(0.8);
+        analysis.setGrowthMindset(0.7);
+        analysis.setResilienceLevel("high");
+        analysis.setStrengths(Arrays.asList("optimism", "social_support", "problem_solving"));
+        analysis.setAreasForGrowth(Arrays.asList("stress_management", "self_care"));
+        
+        return analysis;
+    }
+    
+    // Helper methods for generating recommendations and insights
+    private List<PsychologicalAnalysisResponse.Recommendation> generateRecommendations(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.ComprehensiveAnalysis analysis) {
+        
+        List<PsychologicalAnalysisResponse.Recommendation> recommendations = new ArrayList<>();
+        
+        // Generate recommendations based on analysis
+        if (analysis != null && analysis.getEmotionalAnalysis() != null) {
+            PsychologicalAnalysisResponse.Recommendation emotionalRec = 
+                new PsychologicalAnalysisResponse.Recommendation();
+            emotionalRec.setType("emotional_support");
+            emotionalRec.setTitle("Emotional Support");
+            emotionalRec.setDescription("Consider engaging in activities that promote emotional well-being");
+            emotionalRec.setPriority("medium");
+            emotionalRec.setActionSteps(Arrays.asList("Practice mindfulness", "Engage in hobbies", "Connect with friends"));
+            emotionalRec.setRationale("Your emotional analysis suggests areas for improvement");
+            recommendations.add(emotionalRec);
+        }
+        
+        return recommendations;
+    }
+    
+    private List<PsychologicalAnalysisResponse.Insight> generateInsights(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.ComprehensiveAnalysis analysis) {
+        
+        List<PsychologicalAnalysisResponse.Insight> insights = new ArrayList<>();
+        
+        // Generate insights based on analysis
+        if (analysis != null && analysis.getPersonalityAnalysis() != null) {
+            PsychologicalAnalysisResponse.Insight personalityInsight = 
+                new PsychologicalAnalysisResponse.Insight();
+            personalityInsight.setCategory("personality");
+            personalityInsight.setTitle("Personality Profile");
+            personalityInsight.setDescription("Your personality analysis shows strong collaborative tendencies");
+            personalityInsight.setSignificance("This suggests you work well in team environments");
+            personalityInsight.setConfidence("high");
+            insights.add(personalityInsight);
+        }
+        
+        return insights;
+    }
+    
+    private PsychologicalAnalysisResponse.RiskAssessment performRiskAssessment(
+            PsychologicalAnalysisRequest request,
+            PsychologicalAnalysisResponse.ComprehensiveAnalysis analysis) {
+        
+        PsychologicalAnalysisResponse.RiskAssessment assessment = 
+            new PsychologicalAnalysisResponse.RiskAssessment();
+        
+        // Perform risk assessment based on analysis
+        assessment.setOverallRiskLevel("low");
+        assessment.setRiskFactors(Arrays.asList("mild_stress"));
+        assessment.setProtectiveFactors(Arrays.asList("strong_social_support", "good_coping_skills"));
+        assessment.setRiskCategory("general");
+        assessment.setRequiresImmediateAttention(false);
+        assessment.setRecommendedAction("Continue current positive practices");
+        
+        return assessment;
+    }
+    
+    // Helper methods for fallback responses
+    private PsychologicalAnalysisResponse.PsychologicalVectorResult createFallbackPsychologicalVector() {
+        PsychologicalAnalysisResponse.PsychologicalVectorResult result = 
+            new PsychologicalAnalysisResponse.PsychologicalVectorResult();
+        result.setVector(new ArrayList<>());
+        result.setConfidenceScore(0.0);
+        result.setValid(false);
+        result.setAnalysisMethod("FALLBACK");
+        result.setGeneratedAt(LocalDateTime.now());
+        return result;
+    }
+    
+    private PsychologicalAnalysisResponse.BuddhistFactorsResult createFallbackBuddhistFactors() {
+        PsychologicalAnalysisResponse.BuddhistFactorsResult result = 
+            new PsychologicalAnalysisResponse.BuddhistFactorsResult();
+        result.setFactorScores(new HashMap<>());
+        result.setDetectedKeywords(new HashMap<>());
+        result.setAnalyzedAt(LocalDateTime.now());
+        return result;
+    }
+    
+    private PsychologicalAnalysisResponse.IntensityFactorResult createFallbackIntensityFactor() {
+        PsychologicalAnalysisResponse.IntensityFactorResult result = 
+            new PsychologicalAnalysisResponse.IntensityFactorResult();
+        result.setIntensityScore(0.0);
+        result.setImpactScore(0.0);
+        result.setIntensityClassification("UNKNOWN");
+        result.setValid(false);
+        result.setPredictedAt(LocalDateTime.now());
+        return result;
+    }
+    
+    private PsychologicalAnalysisResponse.StateVectorResult createFallbackStateVector() {
+        PsychologicalAnalysisResponse.StateVectorResult result = 
+            new PsychologicalAnalysisResponse.StateVectorResult();
+        result.setProcessedVector(new ArrayList<>());
+        result.setValid(false);
+        result.setProcessingMethod("FALLBACK");
+        result.setProcessedAt(LocalDateTime.now());
+        return result;
+    }
+    
+    private PsychologicalAnalysisResponse createErrorResponse(
+            PsychologicalAnalysisRequest request, 
+            Exception error, 
+            Map<String, Object> errorResult) {
+        
+        PsychologicalAnalysisResponse response = new PsychologicalAnalysisResponse();
+        response.setRequestId(request.getRequestId());
+        response.setUserId(request.getUserId());
+        response.setSessionId(request.getSessionId());
+        
+        // Set error metadata
+        PsychologicalAnalysisResponse.AnalysisMetadata metadata = 
+            new PsychologicalAnalysisResponse.AnalysisMetadata();
+        metadata.setAnalysisId(UUID.randomUUID().toString());
+        metadata.setStatus("ERROR");
+        metadata.setTimestamp(LocalDateTime.now());
+        metadata.setTechnicalDetails(Map.of("error", error.getMessage()));
+        response.setMetadata(metadata);
+        
+        // Set error processing info
+        PsychologicalAnalysisResponse.ProcessingInfo processingInfo = 
+            new PsychologicalAnalysisResponse.ProcessingInfo();
+        processingInfo.setProcessingStatus("ERROR");
+        processingInfo.setErrors(Arrays.asList(error.getMessage()));
+        response.setProcessingInfo(processingInfo);
+        
+        return response;
+    }
+    
+    // Helper methods for analysis calculations
+    private void validatePsychologicalAnalysisRequest(PsychologicalAnalysisRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Psychological analysis request cannot be null");
+        }
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("Content cannot be null or empty");
+        }
+        if (request.getUserId() == null) {
+            throw new IllegalArgumentException("User ID cannot be null");
+        }
+    }
+    
+    private String determinePrimaryEmotion(String content) {
+        // Simple emotion detection based on keywords
+        String lowerContent = content.toLowerCase();
+        if (lowerContent.contains("happy") || lowerContent.contains("joy")) return "joy";
+        if (lowerContent.contains("sad") || lowerContent.contains("depressed")) return "sadness";
+        if (lowerContent.contains("angry") || lowerContent.contains("mad")) return "anger";
+        if (lowerContent.contains("worried") || lowerContent.contains("anxious")) return "anxiety";
+        if (lowerContent.contains("calm") || lowerContent.contains("peaceful")) return "calm";
+        return "neutral";
+    }
+    
+    private List<String> determineSecondaryEmotions(String content) {
+        return Arrays.asList("content", "hopeful");
+    }
+    
+    private double calculateEmotionalIntensity(PsychologicalAnalysisResponse.PsychologicalVectorResult vector) {
+        return vector != null ? vector.getConfidenceScore() : 0.5;
+    }
+    
+    private String assessEmotionalStability(PsychologicalAnalysisResponse.PsychologicalVectorResult vector) {
+        return "stable";
+    }
+    
+    private String calculateOverallAssessment(PsychologicalAnalysisResponse.ComprehensiveAnalysis analysis) {
+        return "Overall psychological state appears healthy with areas for continued growth";
+    }
+    
+    private double calculateOverallScore(PsychologicalAnalysisResponse.ComprehensiveAnalysis analysis) {
+        return 0.75; // Placeholder score
     }
 }

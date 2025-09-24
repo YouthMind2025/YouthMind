@@ -11,8 +11,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -34,6 +37,18 @@ public class AIPostAnalysisService {
     
     @Autowired
     private PostService postService;
+    
+    @Autowired
+    private PsychologicalVectorGenerator psychologicalVectorGenerator;
+    
+    @Autowired
+    private BuddhistFactorAnalyzer buddhistFactorAnalyzer;
+    
+    @Autowired
+    private IntensityPredictor intensityPredictor;
+    
+    @Autowired
+    private StateVectorProcessor stateVectorProcessor;
     
     /**
      * Trigger AI analysis for a post asynchronously
@@ -98,6 +113,121 @@ public class AIPostAnalysisService {
         } catch (Exception e) {
             logger.error("Error analyzing post {}: {}", postId, e.getMessage(), e);
             throw new RuntimeException("Failed to analyze post: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Generate psychological vector for post content
+     * @param content Text content to analyze
+     * @param userId User ID for personalization
+     * @return Psychological vector result
+     */
+    public Map<String, Object> generatePsychologicalVector(String content, UUID userId) {
+        try {
+            logger.info("Generating psychological vector for user {} with content length {}", userId, content.length());
+            
+            Map<String, Object> psychologicalVector = psychologicalVectorGenerator.generateVector(content, userId);
+            
+            logger.info("Psychological vector generated for user {}: {} dimensions", userId, 
+                ((List<Double>) psychologicalVector.get("psychologicalVector")).size());
+            
+            return psychologicalVector;
+            
+        } catch (Exception e) {
+            logger.error("Error generating psychological vector for user {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Failed to generate psychological vector: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Analyze Buddhist factors in post content
+     * @param content Text content to analyze
+     * @param userId User ID for personalization
+     * @return Buddhist factors analysis result
+     */
+    public Map<String, Object> analyzeBuddhistFactors(String content, UUID userId) {
+        try {
+            logger.info("Analyzing Buddhist factors for user {} with content length {}", userId, content.length());
+            
+            Map<String, Object> buddhistFactors = buddhistFactorAnalyzer.analyzeFactors(content, userId);
+            
+            logger.info("Buddhist factors analysis completed for user {}", userId);
+            
+            return buddhistFactors;
+            
+        } catch (Exception e) {
+            logger.error("Error analyzing Buddhist factors for user {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Failed to analyze Buddhist factors: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Calculate intensity factor for post content
+     * @param content Text content to analyze
+     * @param userId User ID for personalization
+     * @param psychologicalVector 37-dimensional psychological vector
+     * @param buddhistFactors Buddhist factors analysis
+     * @return Intensity factor result
+     */
+    public Map<String, Object> calculateIntensityFactor(String content, UUID userId, 
+                                                       List<Double> psychologicalVector, 
+                                                       Map<String, Object> buddhistFactors) {
+        try {
+            logger.info("Calculating intensity factor for user {} with content length {}", userId, content.length());
+            
+            Map<String, Object> intensityFactor = intensityPredictor.predictIntensity(content, userId, psychologicalVector, buddhistFactors);
+            
+            logger.info("Intensity factor calculated for user {}: intensity={}, impact={}", userId, 
+                intensityFactor.get("intensityScore"), intensityFactor.get("impactScore"));
+            
+            return intensityFactor;
+            
+        } catch (Exception e) {
+            logger.error("Error calculating intensity factor for user {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Failed to calculate intensity factor: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Process psychological content comprehensively
+     * @param content Text content to analyze
+     * @param userId User ID for personalization
+     * @return Comprehensive psychological analysis result
+     */
+    public Map<String, Object> processPsychologicalContent(String content, UUID userId) {
+        try {
+            logger.info("Processing psychological content for user {} with content length {}", userId, content.length());
+            
+            // Generate psychological vector
+            Map<String, Object> psychologicalVector = generatePsychologicalVector(content, userId);
+            List<Double> vector = (List<Double>) psychologicalVector.get("psychologicalVector");
+            
+            // Analyze Buddhist factors
+            Map<String, Object> buddhistFactors = analyzeBuddhistFactors(content, userId);
+            
+            // Calculate intensity factor
+            Map<String, Object> intensityFactor = calculateIntensityFactor(content, userId, vector, buddhistFactors);
+            
+            // Process vector
+            Map<String, Object> processedVector = stateVectorProcessor.processVector(vector, userId);
+            
+            // Create comprehensive result
+            Map<String, Object> result = new HashMap<>();
+            result.put("userId", userId.toString());
+            result.put("content", content);
+            result.put("psychologicalVector", psychologicalVector);
+            result.put("buddhistFactors", buddhistFactors);
+            result.put("intensityFactor", intensityFactor);
+            result.put("processedVector", processedVector);
+            result.put("analysisMethod", "COMPREHENSIVE_PSYCHOLOGICAL_ANALYSIS");
+            result.put("timestamp", LocalDateTime.now());
+            
+            logger.info("Comprehensive psychological content processing completed for user {}", userId);
+            return result;
+            
+        } catch (Exception e) {
+            logger.error("Error processing psychological content for user {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Failed to process psychological content: " + e.getMessage());
         }
     }
     
