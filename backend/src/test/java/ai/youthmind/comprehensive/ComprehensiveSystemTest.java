@@ -9,7 +9,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -80,14 +82,14 @@ public class ComprehensiveSystemTest {
         post.setContent("This is a test post with enhanced moderation fields");
         post.setEmotion("HAPPY");
         post.setModerationLayer("AI_PRIMARY");
-        post.setModerationConfidence(0.95);
+        post.setModerationConfidence(BigDecimal.valueOf(0.95));
         post.setModerationDetails("{\"categories\": [\"safe\"], \"confidence\": 0.95}");
         
         Post savedPost = postRepository.save(post);
         
         assertThat(savedPost.getId()).isNotNull();
         assertThat(savedPost.getModerationLayer()).isEqualTo("AI_PRIMARY");
-        assertThat(savedPost.getModerationConfidence()).isEqualTo(0.95);
+        assertThat(savedPost.getModerationConfidence()).isEqualTo(BigDecimal.valueOf(0.95));
         assertThat(savedPost.getContentHash()).isNotNull(); // Should be auto-generated
         
         System.out.println("✓ Enhanced post entity test passed");
@@ -248,7 +250,7 @@ public class ComprehensiveSystemTest {
         post.setContent("This post tests the complete integration flow");
         post.setEmotion("EXCITED");
         post.setModerationLayer("AI_PRIMARY");
-        post.setModerationConfidence(0.88);
+        post.setModerationConfidence(BigDecimal.valueOf(0.88));
         Post savedPost = postRepository.save(post);
         
         // 2. Store memory about this interaction

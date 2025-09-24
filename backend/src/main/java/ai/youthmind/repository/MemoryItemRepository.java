@@ -45,7 +45,7 @@ public interface MemoryItemRepository extends JpaRepository<MemoryItem, UUID> {
     
     // Context-based retrieval
     @Query("SELECT m FROM MemoryItem m WHERE m.userId = :userId AND m.archivedAt IS NULL " +
-           "AND (m.content ILIKE %:context% OR m.contextTags::text ILIKE %:context%) " +
+           "AND (m.content ILIKE %:context% OR m.contextTags ILIKE %:context%) " +
            "ORDER BY m.weightScore DESC")
     List<MemoryItem> findByUserIdAndContext(@Param("userId") UUID userId, 
                                            @Param("context") String context);

@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Service
+@Service("memoryPackageService")
 public class MemoryService {
     private final AiMemoryRepository memRepo;
     private final UserPreferenceRepository prefRepo;

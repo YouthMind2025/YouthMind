@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -65,7 +66,7 @@ public class Post {
     private String moderationLayer;
     
     @Column(name = "moderation_confidence", precision = 5, scale = 4)
-    private Double moderationConfidence = 0.0;
+    private BigDecimal moderationConfidence = BigDecimal.ZERO;
     
     @Column(name = "moderation_details", columnDefinition = "jsonb")
     private String moderationDetails;
