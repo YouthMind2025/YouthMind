@@ -13,6 +13,10 @@ import java.util.UUID;
 @Repository
 public interface UserEngagementRepository extends JpaRepository<UserEngagement, UUID> {
     
+    List<UserEngagement> findByUserId(UUID userId);
+    
+    List<UserEngagement> findByPostId(UUID postId);
+    
     Optional<UserEngagement> findByUserIdAndPostIdAndType(UUID userId, UUID postId, UserEngagement.EngagementType type);
     
     List<UserEngagement> findByUserIdAndType(UUID userId, UserEngagement.EngagementType type);

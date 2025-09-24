@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -125,7 +126,7 @@ public class FrontendDatabaseIntegrationTest {
         
         // Add moderation fields (what happens in real system)
         newPost.setModerationLayer("AI_PRIMARY");
-        newPost.setModerationConfidence(0.95);
+        newPost.setModerationConfidence(BigDecimal.valueOf(0.95));
         newPost.setModerationDetails("{\"safe\": true, \"confidence\": 0.95}");
         
         Post savedPost = postRepository.save(newPost);
@@ -135,7 +136,7 @@ public class FrontendDatabaseIntegrationTest {
         assertThat(savedPost.getId()).isNotNull();
         assertThat(savedPost.getContentHash()).isNotNull(); // Auto-generated
         assertThat(savedPost.getModerationLayer()).isEqualTo("AI_PRIMARY");
-        assertThat(savedPost.getModerationConfidence()).isEqualTo(0.95);
+        assertThat(savedPost.getModerationConfidence()).isEqualTo(BigDecimal.valueOf(0.95));
         assertThat(saveTime).isLessThan(200); // Should save in under 200ms
         
         // Test post retrieval efficiency

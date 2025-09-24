@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "user_preferences", indexes = {
-        @Index(name = "idx_pref_user_key", columnList = "userId,prefKey", unique = true)
+@Table(name = "user_memory_preferences", indexes = {
+        @Index(name = "idx_memory_pref_user_key", columnList = "userId,prefKey", unique = true)
 })
 public class UserPreference {
     @Id @GeneratedValue
