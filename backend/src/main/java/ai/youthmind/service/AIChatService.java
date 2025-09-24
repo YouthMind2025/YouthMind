@@ -11,6 +11,7 @@ import ai.youthmind.util.NLPAnalyzer;
 import ai.youthmind.util.PersonalityAdapter;
 import ai.youthmind.util.SafetyFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.scheduling.annotation.Async;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +68,24 @@ public class AIChatService {
     @Autowired
     private UserPersonalityService userPersonalityService;
     
+    @Autowired
+    private PsychologicalVectorGenerator psychologicalVectorGenerator;
+    
+    @Autowired
+    private BuddhistFactorAnalyzer buddhistFactorAnalyzer;
+    
+    @Autowired
+    private IntensityPredictor intensityPredictor;
+    
+    @Autowired
+    private StateVectorProcessor stateVectorProcessor;
+    
+    @Autowired
+    private PsychologicalStateCacheService psychologicalStateCacheService;
+    
+    @Autowired
+    private PsychologicalAnalysisBatchProcessor batchProcessor;
+    
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     // Personality system prompts
@@ -97,6 +116,150 @@ public class AIChatService {
             """
     );
     
+    /**
+     * Analyze and update psychological state asynchronously (Youseef's approach)
+     */
+    @Async
+    public CompletableFuture<Void> analyzeAndUpdatePsychologicalState(String userId, String message) {
+        try {
+            logger.info("Enqueuing psychological analysis for user: {}", userId);
+            
+            // Enqueue analysis task for batch processing
+            batchProcessor.enqueueAnalysis(UUID.fromString(userId), message, "session_" + System.currentTimeMillis());
+            
+            logger.debug("Enqueued psychological analysis task for user: {}", userId);
+            return CompletableFuture.completedFuture(null);
+            
+        } catch (Exception e) {
+            logger.error("Error enqueuing psychological analysis for user {}: {}", userId, e.getMessage(), e);
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+    
+    /**
+     * Update personality profile with psychological insights
+     */
+    private void updatePersonalityWithPsychologicalInsights(String userId, List<Double> psychologicalVector, 
+                                                         Map<String, Double> buddhistFactors, 
+                                                         Map<String, Double> stateFactors) {
+        try {
+            UserPersonalityProfile currentProfile = getUserPersonalityProfile(UUID.fromString(userId));
+            
+            // Update emotional state based on psychological analysis
+            double stress = stateFactors.get("stress");
+            double mindfulness = stateFactors.get("mindfulness");
+            double compassion = stateFactors.get("compassion");
+            
+            String emotionalState = determineEmotionalState(stress, mindfulness, compassion);
+            currentProfile.setEmotionalState(emotionalState);
+            
+            // Update communication style based on Buddhist factors
+            String communicationStyle = determineCommunicationStyle(buddhistFactors);
+            currentProfile.setCommunicationStyle(communicationStyle);
+            
+            // Update personality type based on psychological state
+            String personalityType = determinePersonalityType(stress, mindfulness, compassion);
+            currentProfile.setPreferredPersonalityType(personalityType);
+            
+            // Update interests based on psychological factors
+            List<String> interests = extractInterestsFromPsychologicalState(psychologicalVector);
+            currentProfile.setInterests(interests);
+            
+            // Update profile
+            userPersonalityService.updateUserPersonalityProfile(UUID.fromString(userId), currentProfile);
+            
+            logger.debug("Updated personality profile with psychological insights for user: {}", userId);
+            
+        } catch (Exception e) {
+            logger.error("Error updating personality with psychological insights: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Determine emotional state from psychological metrics
+     */
+    private String determineEmotionalState(double stress, double mindfulness, double compassion) {
+        if (stress > 0.7) {
+            return "anxious";
+        } else if (mindfulness > 0.6 && compassion > 0.5) {
+            return "peaceful";
+        } else if (compassion > 0.7) {
+            return "empathetic";
+        } else if (mindfulness > 0.5) {
+            return "mindful";
+        } else {
+            return "neutral";
+        }
+    }
+    
+    /**
+     * Determine communication style from Buddhist factors
+     */
+    private String determineCommunicationStyle(Map<String, Double> buddhistFactors) {
+        double mindfulness = buddhistFactors.getOrDefault("mindfulness", 0.0);
+        double compassion = buddhistFactors.getOrDefault("compassion", 0.0);
+        double equanimity = buddhistFactors.getOrDefault("equanimity", 0.0);
+        
+        if (mindfulness > 0.6 && compassion > 0.5) {
+            return "gentle";
+        } else if (equanimity > 0.6) {
+            return "balanced";
+        } else if (compassion > 0.7) {
+            return "warm";
+        } else {
+            return "supportive";
+        }
+    }
+    
+    /**
+     * Determine personality type from psychological state
+     */
+    private String determinePersonalityType(double stress, double mindfulness, double compassion) {
+        if (stress > 0.7) {
+            return "empathetic";
+        } else if (mindfulness > 0.6 && compassion > 0.5) {
+            return "reflective";
+        } else if (compassion > 0.7) {
+            return "empathetic";
+        } else if (mindfulness > 0.5) {
+            return "mindful";
+        } else {
+            return "supportive";
+        }
+    }
+    
+    /**
+     * Extract interests from psychological state vector
+     */
+    private List<String> extractInterestsFromPsychologicalState(List<Double> psychologicalVector) {
+        List<String> interests = new ArrayList<>();
+        
+        // Map vector indices to interests based on Buddhist factors
+        if (psychologicalVector.size() > 0 && psychologicalVector.get(0) > 0.5) { // Attention
+            interests.add("mindfulness");
+        }
+        if (psychologicalVector.size() > 6 && psychologicalVector.get(6) > 0.5) { // Faith
+            interests.add("spirituality");
+        }
+        if (psychologicalVector.size() > 7 && psychologicalVector.get(7) > 0.5) { // Vigor
+            interests.add("personal growth");
+        }
+        if (psychologicalVector.size() > 12 && psychologicalVector.get(12) > 0.5) { // Non-harming
+            interests.add("compassion");
+        }
+        if (psychologicalVector.size() > 13 && psychologicalVector.get(13) > 0.5) { // Light ease
+            interests.add("wellness");
+        }
+        
+        // Default interests if none detected
+        if (interests.isEmpty()) {
+            interests.add("general support");
+            interests.add("emotional well-being");
+        }
+        
+        return interests;
+    }
+
     /**
      * Process AI chat request asynchronously for better performance
      */
@@ -210,6 +373,176 @@ public class AIChatService {
         }
     }
     
+    /**
+     * Generate psychological state-aware AI response using Youseef's approach
+     */
+    public Map<String, Object> generatePsychologicalStateAwareResponse(String userId, String userMessage) {
+        try {
+            logger.info("Generating psychological state-aware response for user: {}", userId);
+            
+            // Get psychological state vector (43-dimensional)
+            Map<String, Object> vectorResult = psychologicalVectorGenerator.generateVector(userMessage, UUID.fromString(userId));
+            @SuppressWarnings("unchecked")
+            List<Double> psychologicalVector = (List<Double>) vectorResult.get("vector");
+            
+            // Analyze Buddhist factors
+            Map<String, Object> factorsResult = buddhistFactorAnalyzer.analyzeFactors(userMessage, UUID.fromString(userId));
+            @SuppressWarnings("unchecked")
+            Map<String, Double> buddhistFactors = (Map<String, Double>) factorsResult.get("factors");
+            
+            // Calculate intensity factor
+            double intensityFactor = intensityPredictor.calculateImpactScore(0.5, psychologicalVector, factorsResult);
+            
+                // Process state vector
+                Map<String, Object> processedResult = stateVectorProcessor.processVector(psychologicalVector, UUID.fromString(userId));
+                @SuppressWarnings("unchecked")
+                List<Double> processedStateVector = (List<Double>) processedResult.get("processedVector");
+            
+            // Extract key psychological metrics
+            double stress = getPsychologicalMetric(psychologicalVector, "stress");
+            double mindfulness = getPsychologicalMetric(psychologicalVector, "mindfulness");
+            double compassion = getPsychologicalMetric(psychologicalVector, "compassion");
+            double equanimity = getPsychologicalMetric(psychologicalVector, "equanimity");
+            
+            // Apply Buddhist factor weights
+            double weightedMindfulness = mindfulness * buddhistFactors.getOrDefault("mindfulness", 0.4);
+            double weightedCompassion = compassion * buddhistFactors.getOrDefault("compassion", 0.3);
+            double weightedEquanimity = equanimity * buddhistFactors.getOrDefault("equanimity", 0.2);
+            
+            // Determine response tone based on psychological state
+            String tone = determineResponseTone(stress, weightedMindfulness, weightedCompassion, intensityFactor);
+            
+            // Generate response based on tone and psychological state
+            String reply = generateToneBasedResponse(tone, stress, weightedMindfulness, weightedCompassion, userMessage);
+            
+            // Create comprehensive response
+            Map<String, Object> response = new HashMap<>();
+            response.put("reply", reply);
+            response.put("tone", tone);
+            response.put("psychologicalState", Map.of(
+                "stress", stress,
+                "mindfulness", weightedMindfulness,
+                "compassion", weightedCompassion,
+                "equanimity", weightedEquanimity,
+                "intensityFactor", intensityFactor
+            ));
+            response.put("buddhistFactors", buddhistFactors);
+            response.put("psychologicalVector", psychologicalVector);
+            response.put("processedStateVector", processedStateVector);
+            response.put("timestamp", LocalDateTime.now());
+            
+            // Cache the psychological state for future use
+            cachePsychologicalState(userId, psychologicalVector, buddhistFactors);
+            
+            logger.debug("Generated psychological state-aware response with tone: {}", tone);
+            return response;
+            
+        } catch (Exception e) {
+            logger.error("Error generating psychological state-aware response: {}", e.getMessage(), e);
+            return createFallbackPsychologicalResponse(userId, userMessage);
+        }
+    }
+    
+    /**
+     * Extract psychological metric from 43-dimensional vector
+     */
+    private double getPsychologicalMetric(List<Double> vector, String metric) {
+        // Map psychological metrics to vector indices based on our 43 Buddhist factors
+        Map<String, Integer> metricIndices = Map.of(
+            "stress", 16, // Anger index
+            "mindfulness", 0, // Attention index
+            "compassion", 6, // Faith index
+            "equanimity", 12, // Non-harming index
+            "anxiety", 17, // Greed index
+            "depression", 18, // Anger index
+            "joy", 1, // Contact index
+            "calm", 13, // Light ease index
+            "focus", 2, // Feeling index
+            "wisdom", 11 // Absence of ignorance index
+        );
+        
+        int index = metricIndices.getOrDefault(metric, 0);
+        return index < vector.size() ? vector.get(index) : 0.0;
+    }
+    
+    /**
+     * Determine response tone based on psychological state
+     */
+    private String determineResponseTone(double stress, double mindfulness, double compassion, double intensityFactor) {
+        if (stress > 0.7 || intensityFactor > 0.8) {
+            return "calming";
+        } else if (mindfulness > 0.6 && compassion > 0.5) {
+            return "reflective";
+        } else if (compassion > 0.7) {
+            return "empathetic";
+        } else if (mindfulness > 0.5) {
+            return "mindful";
+        } else {
+            return "supportive";
+        }
+    }
+    
+    /**
+     * Generate tone-based response
+     */
+    private String generateToneBasedResponse(String tone, double stress, double mindfulness, 
+                                           double compassion, String userMessage) {
+        switch (tone) {
+            case "calming":
+                return "I can sense you're going through something intense right now. Let's take a moment to breathe together. " +
+                       "What feels most overwhelming at this moment?";
+            case "reflective":
+                return "Let's gently observe what's arising within you. What changes when we sit with this feeling for a moment?";
+            case "empathetic":
+                return "I feel the weight of what you're carrying. You're not alone in this. " +
+                       "What would feel most supportive for you right now?";
+            case "mindful":
+                return "Let's bring awareness to this moment. What do you notice when you pause and observe your experience?";
+            case "supportive":
+            default:
+                return "I'm here with you through whatever you're experiencing. " +
+                       "Take your time and share what's on your heart - I'm listening.";
+        }
+    }
+    
+    /**
+     * Cache psychological state for future use
+     */
+    private void cachePsychologicalState(String userId, List<Double> psychologicalVector, Map<String, Double> buddhistFactors) {
+        try {
+            // Use the enhanced cache service
+            psychologicalStateCacheService.cachePsychologicalState(UUID.fromString(userId), psychologicalVector, buddhistFactors);
+            logger.debug("Cached psychological state for user: {}", userId);
+        } catch (Exception e) {
+            logger.warn("Failed to cache psychological state: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * Create fallback psychological response
+     */
+    private Map<String, Object> createFallbackPsychologicalResponse(String userId, String userMessage) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("reply", "I'm here with you. If things feel tough, consider taking a gentle breath and reaching out for support.");
+        response.put("tone", "supportive");
+        response.put("psychologicalState", Map.of(
+            "stress", 0.3,
+            "mindfulness", 0.5,
+            "compassion", 0.6,
+            "equanimity", 0.4,
+            "intensityFactor", 0.5
+        ));
+        response.put("buddhistFactors", Map.of(
+            "mindfulness", 0.4,
+            "compassion", 0.3,
+            "equanimity", 0.2,
+            "nonAttachment", 0.1
+        ));
+        response.put("fallback", true);
+        response.put("timestamp", LocalDateTime.now());
+        return response;
+    }
+
     /**
      * Generate AI response using DeepSeek API with Redis caching
      */
@@ -1155,6 +1488,13 @@ public class AIChatService {
             logger.error("Error analyzing user personality: {}", e.getMessage(), e);
             return "Error analyzing user personality: " + e.getMessage();
         }
+    }
+    
+    /**
+     * Get Redis template for external access
+     */
+    public RedisTemplate<String, Object> getRedisTemplate() {
+        return redisTemplate;
     }
     
     /**

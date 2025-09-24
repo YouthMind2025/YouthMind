@@ -167,6 +167,38 @@ export const articlesApi = {
   },
 };
 
+// Psychological Analysis API methods (Youseef's Integration)
+export const psychologicalApi = {
+  // Get psychological state for a user
+  getPsychologicalState: (userId: string) => 
+    api.get(`/api/ai/psychology/state/${userId}`),
+  
+  // Generate psychological state-aware response
+  generatePsychologicalResponse: (userId: string, message: string) =>
+    api.post(`/api/ai/psychology/chat/${userId}`, { message }),
+  
+  // Analyze message for psychological insights
+  analyzeMessage: (userId: string, message: string) =>
+    api.post(`/api/ai/psychology/analyze/${userId}`, { message }),
+  
+  // Get psychological analysis health status
+  getHealth: () => api.get('/api/ai/psychology/health'),
+  
+  // Get batch processing statistics
+  getBatchStatistics: () => api.get('/api/ai/psychology/batch/statistics'),
+  
+  // Get cache statistics
+  getCacheStatistics: () => api.get('/api/ai/psychology/cache/statistics'),
+  
+  // Invalidate user's psychological state cache
+  invalidateUserCache: (userId: string) =>
+    api.delete(`/api/ai/psychology/cache/${userId}`),
+  
+  // Warm up cache for a user
+  warmUpCache: (userId: string) =>
+    api.post(`/api/ai/psychology/cache/warmup/${userId}`),
+};
+
 // System health and monitoring
 export const systemApi = {
   /**
