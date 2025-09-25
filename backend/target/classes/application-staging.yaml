@@ -1,0 +1,88 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: youthmind-backend
+  
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:youthmind_db}
+    username: ${DB_USERNAME:youthmind_user}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+    
+    # HikariCP Connection Pool Configuration (Task 3 Requirement)
+    hikari:
+      minimum-idle: 10
+      maximum-pool-size: 30               # Task 3 Connection pool size tuning
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      
+      # PostgreSQL Performance Properties (Task 3 Requirements)
+      data-source-properties:
+        work_mem: '4MB'                   # Task 3 work_mem tuning
+        shared_buffers: '256MB'           # Task 3 shared_buffers tuning
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+  
+  # Flyway Configuration
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:production_secret_key_here}
+  expiration: ${JWT_EXPIRATION:86400000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+# Admin Configuration
+admin:
+  secret-key: ${ADMIN_SECRET_KEY:YOUTHMIND_ADMIN_2024}
+
+# Staging CORS Configuration
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:https://staging.youthmind.ai,https://staging-api.youthmind.ai,http://localhost:3000,http://localhost:3001}
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+    allowed-headers: Authorization,Content-Type,X-Requested-With,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers
+    exposed-headers: Authorization,Content-Type,X-Total-Count
+    allow-credentials: true
+    max-age: 1800
+
+# Actuator Configuration for Staging/Production Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      environment: staging
+
+# Logging
+logging:
+  level:
+    org.springframework.security: WARN
+    ai.youthmind: INFO 
