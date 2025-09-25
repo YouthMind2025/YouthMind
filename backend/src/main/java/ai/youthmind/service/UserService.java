@@ -54,6 +54,12 @@ public class UserService {
     @Autowired
     private CommentRepository commentRepository;
     
+    @Autowired
+    private PsychologicalStateCacheService psychologicalStateCacheService;
+    
+    @Autowired
+    private UserPersonalityService userPersonalityService;
+    
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
@@ -67,7 +73,14 @@ public class UserService {
     }
     
     public User saveUser(User user) {
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        
+        // Initialize psychological state for new users
+        if (savedUser.getCreatedAt().equals(savedUser.getUpdatedAt())) {
+            initializePsychologicalState(savedUser.getId());
+        }
+        
+        return savedUser;
     }
     
     public void deleteUser(UUID id) {
@@ -304,5 +317,99 @@ public class UserService {
         }
         
         return streakDays;
+    }
+    
+    // ===== PSYCHOLOGICAL STATE INITIALIZATION =====
+    
+    /**
+     * Initialize psychological state for a new user
+     * Creates default state vectors and personality parameters
+     */
+    public void initializePsychologicalState(UUID userId) {
+        try {
+            // Create default psychological state
+            Map<String, Object> defaultState = new HashMap<>();
+            
+            // Initialize 43-dimensional psychological vector with neutral values
+            List<Double> defaultVector = new ArrayList<>();
+            for (int i = 0; i < 43; i++) {
+                defaultVector.add(0.5); // Neutral value for all dimensions
+            }
+            
+            defaultState.put("psychological_vector", defaultVector);
+            defaultState.put("intensity_factor", 0.5);
+            defaultState.put("base_alpha", 0.5);
+            defaultState.put("updated_at", LocalDateTime.now());
+            defaultState.put("initialized", true);
+            
+            // Initialize Buddhist factors with neutral values
+            Map<String, Double> buddhistFactors = new HashMap<>();
+            String[] positiveFactors = {
+                "attention", "contact", "feeling", "thinking", "deliberation", "faith", "vigor",
+                "inner_shame", "shame", "absence_of_craving", "absence_of_hatred", "absence_of_ignorance",
+                "light_ease", "non_laxness", "renunciation", "non_harming"
+            };
+            String[] negativeFactors = {
+                "greed", "anger", "arrogance", "foolishness", "doubt", "improper_views", "wrath",
+                "hatred", "rage", "covering", "deceit", "flattery", "conceit", "harming", "jealousy",
+                "stinginess", "lack_of_remorse", "lack_of_shame", "lack_of_faith", "laziness",
+                "laxness", "torpor", "restlessness", "distraction", "improper_knowledge",
+                "scatteredness", "regret"
+            };
+            
+            // Set neutral values for all factors
+            for (String factor : positiveFactors) {
+                buddhistFactors.put(factor, 0.5);
+            }
+            for (String factor : negativeFactors) {
+                buddhistFactors.put(factor, 0.5);
+            }
+            
+            defaultState.put("buddhist_factors", buddhistFactors);
+            
+            // Store initial psychological state
+            psychologicalStateCacheService.cachePsychologicalState(userId, defaultVector, buddhistFactors);
+            
+            // Initialize personality profile (this will create a default profile if none exists)
+            userPersonalityService.getUserPersonalityProfile(userId);
+            
+        } catch (Exception e) {
+            System.err.println("Failed to initialize psychological state for user " + userId + ": " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Get user psychological insights for analytics
+     */
+    public Map<String, Object> getUserPsychologicalInsights(UUID userId) {
+        try {
+            Map<String, Object> psychologicalState = psychologicalStateCacheService.getPsychologicalState(userId);
+            if (psychologicalState == null) {
+                return new HashMap<>();
+            }
+            
+            Map<String, Object> insights = new HashMap<>();
+            insights.put("psychological_state", psychologicalState);
+            insights.put("last_updated", psychologicalState.get("updated_at"));
+            insights.put("has_analysis", psychologicalState.containsKey("psychological_vector"));
+            
+            return insights;
+            
+        } catch (Exception e) {
+            System.err.println("Failed to get psychological insights for user " + userId + ": " + e.getMessage());
+            return new HashMap<>();
+        }
+    }
+    
+    /**
+     * Update user psychological state based on content
+     */
+    public void updateUserPsychologicalState(UUID userId, String content) {
+        try {
+            // For now, we'll just warm up the cache since we don't have an update method
+            psychologicalStateCacheService.warmUpCache(userId);
+        } catch (Exception e) {
+            System.err.println("Failed to update psychological state for user " + userId + ": " + e.getMessage());
+        }
     }
 } 

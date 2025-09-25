@@ -8,6 +8,8 @@ import ai.youthmind.dto.FeedResponse;
 import ai.youthmind.dto.FlaggedPostDto;
 import ai.youthmind.dto.PostViewStats;
 import ai.youthmind.dto.PostUpdateRequest;
+import ai.youthmind.dto.PsychologicalAnalysisRequest;
+import ai.youthmind.dto.PsychologicalAnalysisResponse;
 import ai.youthmind.util.ModerationUtils;
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
@@ -37,8 +39,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 import java.util.Set;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @Transactional
@@ -64,6 +68,12 @@ public class PostService {
     
     //@Autowired
     //private RedisService redisService;
+    
+    @Autowired
+    private PsychologicalStateCacheService psychologicalStateCacheService;
+    
+    @Autowired
+    private AIServiceClient aiServiceClient;
     
     /**
      * Update or insert AI analysis result for a post
@@ -167,6 +177,77 @@ public class PostService {
         }
         
         Post savedPost = postRepository.save(post);
+        
+        // Trigger psychological analysis for the post content
+        try {
+            // Create psychological analysis request
+            PsychologicalAnalysisRequest analysisRequest = new PsychologicalAnalysisRequest();
+            analysisRequest.setUserId(userId);
+            analysisRequest.setContent(savedPost.getContent());
+            analysisRequest.setContentType("post");
+            analysisRequest.setTimestamp(LocalDateTime.now());
+            
+            // Set analysis configuration
+            PsychologicalAnalysisRequest.AnalysisConfig config = new PsychologicalAnalysisRequest.AnalysisConfig();
+            config.setGeneratePsychologicalVector(true);
+            config.setAnalyzeBuddhistFactors(true);
+            config.setCalculateIntensityFactor(true);
+            config.setProcessStateVector(true);
+            config.setIncludeDetailedAnalysis(true);
+            config.setIncludeRecommendations(false); // Skip recommendations for post creation
+            config.setMaxAnalysisDepth(3);
+            config.setAnalysisMode("standard");
+            analysisRequest.setAnalysisConfig(config);
+            
+            // Perform psychological analysis asynchronously
+            PsychologicalAnalysisResponse analysisResponse = aiServiceClient.performPsychologicalAnalysis(analysisRequest);
+            
+            // Store psychological analysis results in post metadata
+            String aiMetadataJson = savedPost.getAiMetadata();
+            Map<String, Object> aiMetadata = new HashMap<>();
+            if (aiMetadataJson != null && !aiMetadataJson.isEmpty()) {
+                try {
+                    // Parse existing JSON metadata
+                    ObjectMapper mapper = new ObjectMapper();
+                    aiMetadata = mapper.readValue(aiMetadataJson, Map.class);
+                } catch (Exception e) {
+                    // If parsing fails, start with empty map
+                    aiMetadata = new HashMap<>();
+                }
+            }
+            
+            // Add psychological analysis results to metadata
+            if (analysisResponse.getPsychologicalVector() != null) {
+                aiMetadata.put("psychological_vector", analysisResponse.getPsychologicalVector().getVector());
+                aiMetadata.put("psychological_confidence", analysisResponse.getPsychologicalVector().getConfidenceScore());
+            }
+            
+            if (analysisResponse.getBuddhistFactors() != null) {
+                aiMetadata.put("buddhist_factors", analysisResponse.getBuddhistFactors().getFactorScores());
+            }
+            
+            if (analysisResponse.getIntensityFactor() != null) {
+                aiMetadata.put("intensity_factor", analysisResponse.getIntensityFactor().getIntensityScore());
+            }
+            
+            aiMetadata.put("analysis_timestamp", LocalDateTime.now());
+            aiMetadata.put("analysis_version", "1.0");
+            
+            // Convert metadata back to JSON string
+            ObjectMapper mapper2 = new ObjectMapper();
+            String aiMetadataJsonFinal = mapper2.writeValueAsString(aiMetadata);
+            
+            // Update post with psychological metadata
+            savedPost.setAiMetadata(aiMetadataJsonFinal);
+            postRepository.save(savedPost);
+            
+            // Update user's psychological state based on post content
+            psychologicalStateCacheService.warmUpCache(userId);
+            
+        } catch (Exception e) {
+            // Log error but don't fail post creation
+            System.err.println("Failed to perform psychological analysis for post " + savedPost.getId() + ": " + e.getMessage());
+        }
         
         // Invalidate feed cache after creating a post
         // // redisService.invalidateFeedCache();
