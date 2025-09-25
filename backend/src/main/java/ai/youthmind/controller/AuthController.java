@@ -1,23 +1,11 @@
 package ai.youthmind.controller;
 
 import ai.youthmind.config.AdminConfig;
-import ai.youthmind.dto.AdminLoginRequest;
-import ai.youthmind.dto.AdminLoginResponse;
-import ai.youthmind.dto.AdminRegisterRequest;
-import ai.youthmind.dto.AdminRegisterResponse;
-import ai.youthmind.dto.ApiResponse;
-import ai.youthmind.dto.AuthResponse;
-import ai.youthmind.dto.LoginRequest;
-import ai.youthmind.dto.LogoutResponse;
-import ai.youthmind.dto.RefreshTokenResponse;
-import ai.youthmind.dto.RegisterRequest;
-import ai.youthmind.dto.RegisterResponse;
-import ai.youthmind.dto.SendOtpRequest;
-import ai.youthmind.dto.SendOtpResponse;
-import ai.youthmind.dto.UserDto;
+import ai.youthmind.dto.*;
 import ai.youthmind.entity.User;
 import ai.youthmind.service.JWTService;
 import ai.youthmind.service.UserService;
+import ai.youthmind.util.AuthenticationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -399,6 +387,49 @@ public class AuthController {
             AdminLoginResponse error = new AdminLoginResponse();
             error.setMessage("Admin login failed: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(error, 500));
+        }
+    }
+
+    @PostMapping("/admin/revoke-token")
+    @Operation(
+            summary = "Revoke User Tokens",
+            description = "Blacklist all JWT Tokens of a user"
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Tokens revoked successful"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid credentials"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "User is not an admin")
+    })
+    public ResponseEntity<ApiResponse<RevokeUserTokensResponse>> revokeUserTokens(
+            @Valid @RequestBody @Parameter(description = "User Tokens Revocation credentials", required = true)
+            RevokeUserTokensRequest request
+    ) {
+        RevokeUserTokensResponse response = new RevokeUserTokensResponse();
+
+        try {
+            // Find user by email or id
+            Optional<User> userOpt = userService.getUserByEmail(request.getEmail())
+                    .or(() -> userService.getUserById(request.getUserId()));
+
+            if (userOpt.isEmpty()) {
+                response.setMessage("Invalid credentials");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error(response, 401));
+            }
+
+            User user = userOpt.get();
+            String email = user.getEmail();
+            jwtService.blacklistUserTokens(email);
+
+            response.setUserId(user.getId());
+            response.setMessage("User Tokens revoked successful");
+            return ResponseEntity.ok(ApiResponse.success(response));
+
+        } catch (Exception e) {
+            response.setMessage("Admin login failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(response, 500));
         }
     }
 

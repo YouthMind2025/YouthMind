@@ -2,6 +2,7 @@ package ai.youthmind.controller;
 
 import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.dto.FeedResponse;
+import ai.youthmind.service.JWTService;
 import ai.youthmind.service.RedisService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,6 +28,9 @@ public class TestController {
 
     @Autowired
     private RedisService redisService;
+
+    @Autowired
+    private JWTService jwtService;
 
     @GetMapping("/hello")
     @Operation(
@@ -198,4 +202,32 @@ public class TestController {
         
         return ApiResponse.success(result, 200);
     }
-} 
+
+    @GetMapping("/redis/jwt-token")
+    @Operation(
+            summary = "Test Token Management",
+            description = "Test Redis JWT Blacklist Token"
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Token Management test completed successfully")
+    })
+    public ApiResponse<String> testTokenManagement() {
+        String email = "test@redis.com";
+
+        try {
+            String token = jwtService.generateToken(email).getFirst();
+            jwtService.blacklistToken(token);
+
+            if (jwtService.isTokenBlacklisted(token))  {
+                String message = "✅ Token Management is working! Successfully blacklisted : '" + email + "'";
+                return ApiResponse.success(message, 200);
+            } else {
+                String message = "⚠️ Token Management test failed - '" + email + "' isn't blacklisted";
+                return ApiResponse.error(message, 500);
+            }
+        } catch (Exception e) {
+            String message = "ℹ️ Redis Token Management is not available or test failed: " + e.getMessage();
+            return ApiResponse.error(message, 200);
+        }
+    }
+}
