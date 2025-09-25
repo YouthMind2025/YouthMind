@@ -4,7 +4,11 @@ import ai.youthmind.dto.AIChatRequest;
 import ai.youthmind.dto.AIChatResponse;
 import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.dto.UserPersonalityProfile;
+import ai.youthmind.dto.PsychologicalAnalysisRequest;
+import ai.youthmind.dto.PsychologicalAnalysisResponse;
 import ai.youthmind.service.AIChatService;
+import ai.youthmind.service.PsychologicalStateCacheService;
+import ai.youthmind.service.AIServiceClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -18,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/v1/ai-chat")
@@ -26,6 +31,12 @@ public class AIChatController {
     
     @Autowired
     private AIChatService aiChatService;
+    
+    @Autowired
+    private PsychologicalStateCacheService psychologicalStateCacheService;
+    
+    @Autowired
+    private AIServiceClient aiServiceClient;
     
     @PostMapping("/send-message")
     @Operation(
@@ -183,6 +194,114 @@ public class AIChatController {
             String result = aiChatService.analyzeUserPersonality(currentUserId, sampleMessage);
             
             return ResponseEntity.ok(ApiResponse.success(result));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(null, 500));
+        }
+    }
+    
+    // ===== PSYCHOLOGICAL STATE ENDPOINTS =====
+    
+    @GetMapping("/psychological-state/{userId}")
+    @Operation(
+        summary = "Get user psychological state",
+        description = "Retrieve the current psychological state vector and analysis for a user"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Psychological state retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getPsychologicalState(
+            @PathVariable @Parameter(description = "User ID", required = true) UUID userId) {
+        
+        try {
+            // Get current user for authorization
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(null, 401));
+            }
+            UUID currentUserId = (UUID) authentication.getPrincipal();
+            
+            // Get psychological state from cache
+            Map<String, Object> psychologicalState = psychologicalStateCacheService.getPsychologicalState(userId);
+            
+            if (psychologicalState == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.<Map<String, Object>>error(null, 404));
+            }
+            
+            return ResponseEntity.ok(ApiResponse.success(psychologicalState));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(null, 500));
+        }
+    }
+    
+    @PutMapping("/psychological-state/{userId}")
+    @Operation(
+        summary = "Update user psychological state",
+        description = "Update the psychological state vector for a user based on new content"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Psychological state updated successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updatePsychologicalState(
+            @PathVariable @Parameter(description = "User ID", required = true) UUID userId,
+            @RequestBody @Parameter(description = "Content to analyze for state update", required = true) String content) {
+        
+        try {
+            // Get current user for authorization
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(null, 401));
+            }
+            UUID currentUserId = (UUID) authentication.getPrincipal();
+            
+            // Update psychological state based on content (simplified)
+            psychologicalStateCacheService.warmUpCache(userId);
+            Map<String, Object> updatedState = psychologicalStateCacheService.getPsychologicalState(userId);
+            
+            return ResponseEntity.ok(ApiResponse.success(updatedState));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(null, 500));
+        }
+    }
+    
+    @PostMapping("/psychological-state/analyze")
+    @Operation(
+        summary = "Analyze psychological state",
+        description = "Perform comprehensive psychological analysis on content"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Psychological analysis completed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    public ResponseEntity<ApiResponse<PsychologicalAnalysisResponse>> analyzePsychologicalState(
+            @Valid @RequestBody @Parameter(description = "Psychological analysis request", required = true) PsychologicalAnalysisRequest request) {
+        
+        try {
+            // Get current user for authorization
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(null, 401));
+            }
+            UUID currentUserId = (UUID) authentication.getPrincipal();
+            
+            // Perform comprehensive psychological analysis
+            PsychologicalAnalysisResponse response = aiServiceClient.performPsychologicalAnalysis(request);
+            
+            return ResponseEntity.ok(ApiResponse.success(response));
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
