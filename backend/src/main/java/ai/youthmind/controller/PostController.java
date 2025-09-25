@@ -8,10 +8,14 @@ import ai.youthmind.dto.PostDto;
 import ai.youthmind.dto.PostDtoBuilder;
 import ai.youthmind.dto.PostUpdateRequest;
 import ai.youthmind.dto.PostViewStats;
+import ai.youthmind.dto.PsychologicalAnalysisRequest;
+import ai.youthmind.dto.PsychologicalAnalysisResponse;
 import ai.youthmind.entity.Post;
 import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.service.PostService;
 import ai.youthmind.service.RedisService;
+import ai.youthmind.service.PsychologicalStateCacheService;
+import ai.youthmind.service.AIServiceClient;
 import ai.youthmind.util.AuthenticationUtils;
 import ai.youthmind.util.ResponseBuilder;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Post Controller - Unified endpoint for all post-related operations
@@ -73,6 +78,12 @@ public class PostController {
 
     //@Autowired
     //private RedisService redisService;
+    
+    @Autowired
+    private PsychologicalStateCacheService psychologicalStateCacheService;
+    
+    @Autowired
+    private AIServiceClient aiServiceClient;
 
     @PostMapping("/create")
     @Operation(
@@ -108,6 +119,38 @@ public class PostController {
         
         // Build response with full post data
         PostCreateResponse response = new PostCreateResponse(postDto, "Post created successfully");
+
+        // Trigger psychological analysis for the post content
+        try {
+            // Create psychological analysis request
+            PsychologicalAnalysisRequest analysisRequest = new PsychologicalAnalysisRequest();
+            analysisRequest.setUserId(userId);
+            analysisRequest.setContent(savedPost.getContent());
+            analysisRequest.setContentType("post");
+            analysisRequest.setTimestamp(LocalDateTime.now());
+            
+            // Set analysis configuration
+            PsychologicalAnalysisRequest.AnalysisConfig config = new PsychologicalAnalysisRequest.AnalysisConfig();
+            config.setGeneratePsychologicalVector(true);
+            config.setAnalyzeBuddhistFactors(true);
+            config.setCalculateIntensityFactor(true);
+            config.setProcessStateVector(true);
+            config.setIncludeDetailedAnalysis(true);
+            config.setIncludeRecommendations(false); // Skip recommendations for post creation
+            config.setMaxAnalysisDepth(3);
+            config.setAnalysisMode("standard");
+            analysisRequest.setAnalysisConfig(config);
+            
+            // Perform psychological analysis asynchronously
+            aiServiceClient.performPsychologicalAnalysis(analysisRequest);
+            
+            // Update user's psychological state based on post content (simplified)
+            psychologicalStateCacheService.warmUpCache(userId);
+            
+        } catch (Exception e) {
+            // Log error but don't fail post creation
+            System.err.println("Failed to trigger psychological analysis for post: " + e.getMessage());
+        }
 
         // Publish enhanced event with structured data
         // redisService.publishPostCreatedEvent(
@@ -453,4 +496,112 @@ public class PostController {
             return ResponseBuilder.internalServerError("Failed to retrieve view statistics");
         }
     }
-} 
+    
+    // ===== PSYCHOLOGICAL ANALYSIS ENDPOINTS =====
+    
+    @PostMapping("/{id}/analyze-psychological")
+    @Operation(
+        summary = "Analyze post psychological content",
+        description = "Perform psychological analysis on a specific post's content"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Psychological analysis completed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<PsychologicalAnalysisResponse>> analyzePostPsychological(
+            @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID id,
+            @RequestBody(required = false) @Parameter(description = "Optional analysis configuration") Map<String, Object> config) {
+        
+        try {
+            // Extract user from authentication
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            
+            // Get the post
+            Optional<Post> postOpt = postService.getPostById(id);
+            if (postOpt.isEmpty()) {
+                return ResponseBuilder.notFound("Post not found");
+            }
+            
+            Post post = postOpt.get();
+            
+            // Create psychological analysis request
+            PsychologicalAnalysisRequest analysisRequest = new PsychologicalAnalysisRequest();
+            analysisRequest.setUserId(post.getUserId());
+            analysisRequest.setContent(post.getContent());
+            analysisRequest.setContentType("post");
+            analysisRequest.setTimestamp(LocalDateTime.now());
+            
+            // Set analysis configuration
+            PsychologicalAnalysisRequest.AnalysisConfig analysisConfig = new PsychologicalAnalysisRequest.AnalysisConfig();
+            analysisConfig.setGeneratePsychologicalVector(true);
+            analysisConfig.setAnalyzeBuddhistFactors(true);
+            analysisConfig.setCalculateIntensityFactor(true);
+            analysisConfig.setProcessStateVector(true);
+            analysisConfig.setIncludeDetailedAnalysis(true);
+            analysisConfig.setIncludeRecommendations(true);
+            analysisConfig.setMaxAnalysisDepth(4);
+            analysisConfig.setAnalysisMode("comprehensive");
+            analysisRequest.setAnalysisConfig(analysisConfig);
+            
+            // Perform psychological analysis
+            PsychologicalAnalysisResponse response = aiServiceClient.performPsychologicalAnalysis(analysisRequest);
+            
+            return ResponseBuilder.success(response, "Psychological analysis completed successfully");
+            
+        } catch (Exception e) {
+            return ResponseBuilder.internalServerError("Failed to perform psychological analysis");
+        }
+    }
+    
+    @GetMapping("/{id}/psychological-metadata")
+    @Operation(
+        summary = "Get post psychological metadata",
+        description = "Retrieve psychological analysis metadata stored with the post"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Psychological metadata retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getPostPsychologicalMetadata(
+            @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID id) {
+        
+        try {
+            // Extract user from authentication
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            
+            // Get the post
+            Optional<Post> postOpt = postService.getPostById(id);
+            if (postOpt.isEmpty()) {
+                return ResponseBuilder.notFound("Post not found");
+            }
+            
+            Post post = postOpt.get();
+            
+            // Extract psychological metadata from AI metadata
+            Map<String, Object> psychologicalMetadata = new HashMap<>();
+            if (post.getAiMetadata() != null && !post.getAiMetadata().isEmpty()) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    Map<String, Object> aiMetadata = mapper.readValue(post.getAiMetadata(), Map.class);
+                    psychologicalMetadata.put("psychological_vector", aiMetadata.get("psychological_vector"));
+                    psychologicalMetadata.put("intensity_factor", aiMetadata.get("intensity_factor"));
+                    psychologicalMetadata.put("buddhist_factors", aiMetadata.get("buddhist_factors"));
+                    psychologicalMetadata.put("analysis_timestamp", aiMetadata.get("analysis_timestamp"));
+                } catch (Exception e) {
+                    psychologicalMetadata.put("message", "Failed to parse psychological metadata");
+                }
+            } else {
+                psychologicalMetadata.put("message", "No psychological metadata available");
+            }
+            
+            return ResponseBuilder.success(psychologicalMetadata, "Psychological metadata retrieved successfully");
+            
+        } catch (Exception e) {
+            return ResponseBuilder.internalServerError("Failed to retrieve psychological metadata");
+        }
+    }
+}
