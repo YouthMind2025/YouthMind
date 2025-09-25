@@ -1,8 +1,6 @@
 package ai.youthmind.repository;
 
 import ai.youthmind.entity.PsychologicalStateVector;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,167 +12,157 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Repository for managing psychological state vectors.
- * Provides custom queries for finding by user_id, date ranges, and state similarity search using PostgreSQL vector operations.
+ * Repository for psychological state vectors
+ * Provides database access for 43-dimensional psychological state vectors
  */
 @Repository
 public interface PsychologicalStateVectorRepository extends JpaRepository<PsychologicalStateVector, UUID> {
-
-    // Basic queries by user
-    List<PsychologicalStateVector> findByUserId(UUID userId);
     
-    Page<PsychologicalStateVector> findByUserId(UUID userId, Pageable pageable);
-    
-    List<PsychologicalStateVector> findByUserIdOrderByCreatedAtDesc(UUID userId);
-    
-    // Queries by vector type
+    /**
+     * Find vectors by user ID and vector type
+     * 
+     * @param userId User ID
+     * @param vectorType Vector type
+     * @return List of psychological state vectors
+     */
     List<PsychologicalStateVector> findByUserIdAndVectorType(UUID userId, PsychologicalStateVector.VectorType vectorType);
     
-    Page<PsychologicalStateVector> findByUserIdAndVectorType(UUID userId, PsychologicalStateVector.VectorType vectorType, Pageable pageable);
-    
-    List<PsychologicalStateVector> findByVectorType(PsychologicalStateVector.VectorType vectorType);
-    
-    // Queries by source
-    List<PsychologicalStateVector> findByUserIdAndSourceType(UUID userId, PsychologicalStateVector.SourceType sourceType);
-    
-    List<PsychologicalStateVector> findByUserIdAndSourceId(UUID userId, UUID sourceId);
-    
-    List<PsychologicalStateVector> findByUserIdAndSourceTypeAndSourceId(UUID userId, PsychologicalStateVector.SourceType sourceType, UUID sourceId);
-    
-    // Date range queries
-    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.createdAt >= :startDate AND psv.createdAt <= :endDate ORDER BY psv.createdAt DESC")
-    List<PsychologicalStateVector> findByUserIdAndDateRange(@Param("userId") UUID userId, 
-                                                           @Param("startDate") LocalDateTime startDate, 
-                                                           @Param("endDate") LocalDateTime endDate);
-    
-    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType = :vectorType AND psv.createdAt >= :startDate AND psv.createdAt <= :endDate ORDER BY psv.createdAt DESC")
-    List<PsychologicalStateVector> findByUserIdAndVectorTypeAndDateRange(@Param("userId") UUID userId, 
-                                                                        @Param("vectorType") PsychologicalStateVector.VectorType vectorType,
-                                                                        @Param("startDate") LocalDateTime startDate, 
-                                                                        @Param("endDate") LocalDateTime endDate);
-    
-    // Recent vectors queries
-    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.createdAt >= :since ORDER BY psv.createdAt DESC")
-    List<PsychologicalStateVector> findRecentByUserId(@Param("userId") UUID userId, @Param("since") LocalDateTime since);
-    
-    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType = :vectorType AND psv.createdAt >= :since ORDER BY psv.createdAt DESC")
-    List<PsychologicalStateVector> findRecentByUserIdAndVectorType(@Param("userId") UUID userId, 
-                                                                  @Param("vectorType") PsychologicalStateVector.VectorType vectorType,
-                                                                  @Param("since") LocalDateTime since);
-    
-    // Latest vector queries
+    /**
+     * Find the latest vector by user ID and vector type
+     * 
+     * @param userId User ID
+     * @param vectorType Vector type
+     * @return Latest psychological state vector
+     */
     @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType = :vectorType ORDER BY psv.createdAt DESC")
     Optional<PsychologicalStateVector> findLatestByUserIdAndVectorType(@Param("userId") UUID userId, 
                                                                       @Param("vectorType") PsychologicalStateVector.VectorType vectorType);
     
-    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId ORDER BY psv.createdAt DESC")
-    Optional<PsychologicalStateVector> findLatestByUserId(@Param("userId") UUID userId);
+    /**
+     * Find vectors by user ID and source type
+     * 
+     * @param userId User ID
+     * @param sourceType Source type
+     * @return List of psychological state vectors
+     */
+    List<PsychologicalStateVector> findByUserIdAndSourceType(UUID userId, PsychologicalStateVector.SourceType sourceType);
     
-    // Intensity factor queries
-    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType = 'V_RAW' AND psv.intensityFactor >= :minIntensity ORDER BY psv.intensityFactor DESC")
-    List<PsychologicalStateVector> findByUserIdAndMinIntensity(@Param("userId") UUID userId, @Param("minIntensity") Double minIntensity);
+    /**
+     * Find vectors by user ID within a time range
+     * 
+     * @param userId User ID
+     * @param startTime Start time
+     * @param endTime End time
+     * @return List of psychological state vectors
+     */
+    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.createdAt BETWEEN :startTime AND :endTime ORDER BY psv.createdAt DESC")
+    List<PsychologicalStateVector> findByUserIdAndCreatedAtBetween(@Param("userId") UUID userId,
+                                                                  @Param("startTime") LocalDateTime startTime,
+                                                                  @Param("endTime") LocalDateTime endTime);
     
-    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType = 'V_RAW' AND psv.intensityFactor BETWEEN :minIntensity AND :maxIntensity ORDER BY psv.intensityFactor DESC")
-    List<PsychologicalStateVector> findByUserIdAndIntensityRange(@Param("userId") UUID userId, 
-                                                                @Param("minIntensity") Double minIntensity, 
-                                                                @Param("maxIntensity") Double maxIntensity);
+    /**
+     * Find vectors by source ID
+     * 
+     * @param sourceId Source ID (post ID, interaction ID, etc.)
+     * @return List of psychological state vectors
+     */
+    List<PsychologicalStateVector> findBySourceId(UUID sourceId);
     
-    // Vector similarity search using PostgreSQL vector operations
-    @Query(value = "SELECT * FROM psychological_state_vectors psv " +
-                   "WHERE psv.user_id = :userId AND psv.vector_type = :vectorType " +
-                   "ORDER BY psv.vector_data <-> cast(:queryVector as vector) " +
-                   "LIMIT :limit", nativeQuery = true)
-    List<PsychologicalStateVector> findSimilarVectors(@Param("userId") UUID userId, 
-                                                     @Param("vectorType") String vectorType,
-                                                     @Param("queryVector") String queryVector, 
-                                                     @Param("limit") int limit);
+    /**
+     * Find vectors by vector type and source type
+     * 
+     * @param vectorType Vector type
+     * @param sourceType Source type
+     * @return List of psychological state vectors
+     */
+    List<PsychologicalStateVector> findByVectorTypeAndSourceType(PsychologicalStateVector.VectorType vectorType,
+                                                                PsychologicalStateVector.SourceType sourceType);
     
-    @Query(value = "SELECT * FROM psychological_state_vectors psv " +
-                   "WHERE psv.user_id = :userId " +
-                   "ORDER BY psv.vector_data <-> cast(:queryVector as vector) " +
-                   "LIMIT :limit", nativeQuery = true)
-    List<PsychologicalStateVector> findSimilarVectorsByUser(@Param("userId") UUID userId, 
-                                                           @Param("queryVector") String queryVector, 
-                                                           @Param("limit") int limit);
+    /**
+     * Count vectors by user ID and vector type
+     * 
+     * @param userId User ID
+     * @param vectorType Vector type
+     * @return Count of vectors
+     */
+    long countByUserIdAndVectorType(UUID userId, PsychologicalStateVector.VectorType vectorType);
     
-    // Cosine similarity search
-    @Query(value = "SELECT *, (1 - (psv.vector_data <=> cast(:queryVector as vector))) as similarity " +
-                   "FROM psychological_state_vectors psv " +
-                   "WHERE psv.user_id = :userId AND psv.vector_type = :vectorType " +
-                   "AND (1 - (psv.vector_data <=> cast(:queryVector as vector))) >= :minSimilarity " +
-                   "ORDER BY similarity DESC " +
-                   "LIMIT :limit", nativeQuery = true)
-    List<Object[]> findVectorsByCosineSimilarity(@Param("userId") UUID userId, 
-                                                 @Param("vectorType") String vectorType,
-                                                 @Param("queryVector") String queryVector, 
-                                                 @Param("minSimilarity") Double minSimilarity,
-                                                 @Param("limit") int limit);
+    /**
+     * Find vectors with intensity factor above threshold
+     * 
+     * @param threshold Intensity factor threshold
+     * @return List of psychological state vectors
+     */
+    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.intensityFactor >= :threshold ORDER BY psv.intensityFactor DESC")
+    List<PsychologicalStateVector> findByIntensityFactorAboveThreshold(@Param("threshold") Double threshold);
     
-    // Dot product search
-    @Query(value = "SELECT *, (psv.vector_data <#> cast(:queryVector as vector)) as dot_product " +
-                   "FROM psychological_state_vectors psv " +
-                   "WHERE psv.user_id = :userId AND psv.vector_type = :vectorType " +
-                   "ORDER BY dot_product DESC " +
-                   "LIMIT :limit", nativeQuery = true)
-    List<Object[]> findVectorsByDotProduct(@Param("userId") UUID userId, 
-                                          @Param("vectorType") String vectorType,
-                                          @Param("queryVector") String queryVector, 
-                                          @Param("limit") int limit);
+    /**
+     * Find vectors by user ID with intensity factor
+     * 
+     * @param userId User ID
+     * @return List of psychological state vectors with intensity factor
+     */
+    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.intensityFactor IS NOT NULL ORDER BY psv.createdAt DESC")
+    List<PsychologicalStateVector> findByUserIdWithIntensityFactor(@Param("userId") UUID userId);
     
-    // Vector magnitude queries
-    @Query(value = "SELECT *, sqrt((psv.vector_data <#> psv.vector_data)) as magnitude " +
-                   "FROM psychological_state_vectors psv " +
-                   "WHERE psv.user_id = :userId AND psv.vector_type = :vectorType " +
-                   "ORDER BY magnitude DESC " +
-                   "LIMIT :limit", nativeQuery = true)
-    List<Object[]> findVectorsByMagnitude(@Param("userId") UUID userId, 
-                                         @Param("vectorType") String vectorType,
-                                         @Param("limit") int limit);
+    /**
+     * Delete old vectors by user ID and vector type before a specific date
+     * 
+     * @param userId User ID
+     * @param vectorType Vector type
+     * @param beforeDate Date before which to delete
+     * @return Number of deleted vectors
+     */
+    @Query("DELETE FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType = :vectorType AND psv.createdAt < :beforeDate")
+    int deleteByUserIdAndVectorTypeAndCreatedAtBefore(@Param("userId") UUID userId,
+                                                     @Param("vectorType") PsychologicalStateVector.VectorType vectorType,
+                                                     @Param("beforeDate") LocalDateTime beforeDate);
     
-    // Statistical queries
-    @Query("SELECT COUNT(psv) FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType = :vectorType")
-    Long countByUserIdAndVectorType(@Param("userId") UUID userId, @Param("vectorType") PsychologicalStateVector.VectorType vectorType);
+    /**
+     * Find vectors by user ID ordered by creation time descending
+     * 
+     * @param userId User ID
+     * @return List of psychological state vectors
+     */
+    List<PsychologicalStateVector> findByUserIdOrderByCreatedAtDesc(UUID userId);
     
-    @Query("SELECT AVG(psv.intensityFactor) FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType = 'V_RAW' AND psv.intensityFactor IS NOT NULL")
-    Double getAverageIntensityByUserId(@Param("userId") UUID userId);
+    /**
+     * Find vectors by user ID and vector type ordered by creation time descending
+     * 
+     * @param userId User ID
+     * @param vectorType Vector type
+     * @return List of psychological state vectors
+     */
+    List<PsychologicalStateVector> findByUserIdAndVectorTypeOrderByCreatedAtDesc(UUID userId, 
+                                                                                PsychologicalStateVector.VectorType vectorType);
     
-    @Query("SELECT MAX(psv.intensityFactor) FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType = 'V_RAW' AND psv.intensityFactor IS NOT NULL")
-    Double getMaxIntensityByUserId(@Param("userId") UUID userId);
+    /**
+     * Check if vector exists by user ID and vector type
+     * 
+     * @param userId User ID
+     * @param vectorType Vector type
+     * @return true if vector exists
+     */
+    boolean existsByUserIdAndVectorType(UUID userId, PsychologicalStateVector.VectorType vectorType);
     
-    @Query("SELECT MIN(psv.intensityFactor) FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType = 'V_RAW' AND psv.intensityFactor IS NOT NULL")
-    Double getMinIntensityByUserId(@Param("userId") UUID userId);
+    /**
+     * Find vectors by user ID and source ID
+     * 
+     * @param userId User ID
+     * @param sourceId Source ID
+     * @return List of psychological state vectors
+     */
+    List<PsychologicalStateVector> findByUserIdAndSourceId(UUID userId, UUID sourceId);
     
-    // Vector evolution queries
-    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType = :vectorType ORDER BY psv.createdAt ASC")
-    List<PsychologicalStateVector> findVectorEvolutionByUserIdAndType(@Param("userId") UUID userId, 
-                                                                     @Param("vectorType") PsychologicalStateVector.VectorType vectorType);
-    
-    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType = :vectorType AND psv.createdAt >= :since ORDER BY psv.createdAt ASC")
-    List<PsychologicalStateVector> findVectorEvolutionSince(@Param("userId") UUID userId, 
-                                                           @Param("vectorType") PsychologicalStateVector.VectorType vectorType,
-                                                           @Param("since") LocalDateTime since);
-    
-    // Cleanup queries
-    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.createdAt < :cutoffDate ORDER BY psv.createdAt ASC")
-    List<PsychologicalStateVector> findOldVectorsByUserId(@Param("userId") UUID userId, @Param("cutoffDate") LocalDateTime cutoffDate);
-    
-    @Query("SELECT COUNT(psv) FROM PsychologicalStateVector psv WHERE psv.userId = :userId")
-    Long countByUserId(@Param("userId") UUID userId);
-    
-    // Batch operations
-    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.vectorType IN :vectorTypes ORDER BY psv.createdAt DESC")
-    List<PsychologicalStateVector> findByUserIdAndVectorTypes(@Param("userId") UUID userId, 
-                                                             @Param("vectorTypes") List<PsychologicalStateVector.VectorType> vectorTypes);
-    
-    @Query("SELECT psv FROM PsychologicalStateVector psv WHERE psv.userId = :userId AND psv.sourceType = :sourceType AND psv.sourceId IN :sourceIds ORDER BY psv.createdAt DESC")
-    List<PsychologicalStateVector> findByUserIdAndSourceTypeAndSourceIds(@Param("userId") UUID userId, 
-                                                                        @Param("sourceType") PsychologicalStateVector.SourceType sourceType,
-                                                                        @Param("sourceIds") List<UUID> sourceIds);
-    
-    // Delete operations
-    void deleteByUserId(UUID userId);
-    
-    void deleteByUserIdAndVectorType(UUID userId, PsychologicalStateVector.VectorType vectorType);
-    
-    void deleteByUserIdAndCreatedAtBefore(UUID userId, LocalDateTime cutoffDate);
+    /**
+     * Find vectors by user ID and vector type and source type
+     * 
+     * @param userId User ID
+     * @param vectorType Vector type
+     * @param sourceType Source type
+     * @return List of psychological state vectors
+     */
+    List<PsychologicalStateVector> findByUserIdAndVectorTypeAndSourceType(UUID userId,
+                                                                          PsychologicalStateVector.VectorType vectorType,
+                                                                          PsychologicalStateVector.SourceType sourceType);
 }

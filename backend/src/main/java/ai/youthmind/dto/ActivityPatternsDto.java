@@ -28,6 +28,19 @@ public class ActivityPatternsDto {
     private Double postAverageWords;
     private Double postAverageCharacters;
 
+    // Additional setter methods for individual frequency fields
+    public void setPostFrequencyDay(double postFrequencyDay) {
+        this.postFrequencyDay = postFrequencyDay;
+    }
+    
+    public void setPostFrequencyWeek(double postFrequencyWeek) {
+        this.postFrequencyWeek = postFrequencyWeek;
+    }
+    
+    public void setPostFrequencyMonth(double postFrequencyMonth) {
+        this.postFrequencyMonth = postFrequencyMonth;
+    }
+    
     public void setPostFrequencies(double postFrequencyDay) {
         setPostFrequencyDay(postFrequencyDay);
         setPostFrequencyWeek(7 * postFrequencyDay);
