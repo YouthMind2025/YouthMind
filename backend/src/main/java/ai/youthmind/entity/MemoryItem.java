@@ -88,7 +88,7 @@ public class MemoryItem {
     @Column(name = "source_context", columnDefinition = "TEXT")
     private String sourceContext;
     
-    @Column(name = "embedding_vector", columnDefinition = "vector(384)")
+    @Column(name = "embedding_vector", columnDefinition = "TEXT")
     private String embeddingVector; // For semantic search
     
     @Column(name = "created_at", nullable = false)

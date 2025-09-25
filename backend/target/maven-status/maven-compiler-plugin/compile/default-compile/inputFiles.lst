@@ -16,6 +16,7 @@ C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\controller\WelcomeCo
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\DeepSixModerationResponse.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\analytics\service\BehaviorAnalyticsService.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\ConversationDto.java
+C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\StateVectorCalculator.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\UserStatisticsDto.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\MemoryService.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\PersonalityScheduler.java
@@ -38,6 +39,7 @@ C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\AIChatRequest.ja
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\ApiCostCalculationService.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\util\AuthenticationUtils.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\VectorSearchService.java
+C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\controller\PsychologicalStateController.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\PsychologicalStateCacheService.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\AdminLoginResponse.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\util\ResponseBuilder.java
@@ -66,6 +68,7 @@ C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\entity\PostResonance
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\entity\UserEngagement.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\entity\AiApiUsage.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\controller\PsychologicalAIChatController.java
+C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\StateUpdateRuleEngine.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\config\MetricsConfig.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\StateVectorProcessor.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\entity\ModerationAudit.java
@@ -78,6 +81,7 @@ C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\config\CacheConfig.j
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\entity\UserInteractionModulation.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\analytics\dto\BehaviorSummaryResponse.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\UserPersonalityService.java
+C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\config\PsychologicalStateConfig.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\TrendingResponse.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\UserPostsResponse.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\CommentService.java
@@ -184,6 +188,7 @@ C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\ArticleServi
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\config\OpenApiConfig.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\DocumentParseResponse.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\EmotionalAnalysisResponse.java
+C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\StateNormalizationService.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\entity\PsychologicalStateVector.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\controller\PostController.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\AIChatService.java
@@ -226,6 +231,7 @@ C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\WordMaskingS
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\memory\repository\AiMemoryRepository.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\repository\ConversationRepository.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\util\CircuitBreaker.java
+C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\IntensityFactorCalculator.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\AIDatabaseOptimizationService.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\repository\CommentEngagementRepository.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\config\ModerationQueueConfig.java
@@ -256,6 +262,7 @@ C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\repository\DraftRepo
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\controller\ConversationController.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\config\AdminConfig.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\entity\WarningHistory.java
+C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\PsychologicalStateService.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\ContentPatternsDto.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\config\RedisHealthIndicator.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\config\SecurityConfig.java

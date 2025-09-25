@@ -39,3 +39,4 @@ ai\youthmind\repository\UserRepositoryTest.class
 ai\youthmind\service\ModelTrainingIntegrationTest.class
 ai\youthmind\repository\PostResonanceRepositoryTest.class
 ai\youthmind\config\CorsComprehensiveTest$ProductionCorsTests.class
+ai\youthmind\service\PsychologicalStateIntegrationTest.class
