@@ -55,6 +55,15 @@ jwt:
   expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days in milliseconds
 
+rate:
+  limit:
+    anonymous:
+      default: 100
+      sensitive: 10
+    authenticated:
+      default: 10
+      sensitive: 5
+
 # Admin Configuration
 admin:
   secret-key: ${ADMIN_SECRET_KEY:YOUTHMIND_ADMIN_2024}
@@ -63,6 +72,53 @@ admin:
 app:
   upload:
     dir: ${UPLOAD_DIR:uploads}
+
+# Embedding Model Configuration
+embedding:
+  versioning:
+    enabled: true
+    default-version: "v1"
+    auto-migration: false
+    max-versions: 5
+    version-header: "X-Model-Version"
+    version-param: "modelVersion"
+  models:
+    v1:
+      path: "classpath:models/bge-small-v1/model.onnx"
+      vocab-file: "classpath:models/bge-small-v1/vocab.txt"
+      tokenizer-config: "classpath:model/bge-small-v1/tokenizer_config.json"
+      name: "BGE-Small-v1"
+      enabled: true
+      max-length: 512
+      normalize: true
+  validation:
+    enabled: true
+    pre-inference-validation: true
+    post-inference-validation: true
+    quality-thresholds:
+      min-cosine-similarity: 0.7
+      max-zero-ratio: 0.3
+      min-norm: 0.8
+      max-norm: 1.2
+      max-nan-ratio: 0.0
+      max-duplicate-ratio: 0.1
+    test-cases:
+      similarity-pairs:
+        - "cat|kitten"
+        - "car|vehicle"
+        - "happy|joyful"
+        - "big|large"
+        - "small|tiny"
+      dissimilarity-pairs:
+        - "cat|computer"
+        - "happy|sad"
+        - "hot|cold"
+        - "day|night"
+        - "fast|slow"
+      duplicate-texts:
+        - "The quick brown fox jumps over the lazy dog"
+        - "The quick brown fox jumps over the lazy dog"
+        - "Pancakes made by granny are so delicious"
 
 # Qdrant Vector Database Configuration
 qdrant:
