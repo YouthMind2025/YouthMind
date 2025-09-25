@@ -64,6 +64,7 @@ ai\youthmind\analytics\service\BehaviorAnalyticsService.class
 ai\youthmind\controller\EnhancedModerationTestController$EnhancedModerationTestResult.class
 ai\youthmind\service\VectorDatabaseService$CollectionStats$CollectionStatsBuilder.class
 ai\youthmind\dto\CommentReportRequest.class
+ai\youthmind\dto\PersonalityProfileDto.class
 ai\youthmind\service\DeepSeekRateLimitService$RateLimitBucket.class
 ai\youthmind\controller\PersonalityComputationController.class
 ai\youthmind\service\StateVectorProcessor.class
@@ -137,6 +138,7 @@ ai\youthmind\dto\DeepSeekModerationResponse$Message.class
 ai\youthmind\dto\ModerationHistoryResponse.class
 ai\youthmind\config\OpenApiConfig.class
 ai\youthmind\entity\Post.class
+ai\youthmind\repository\BuddhistPsychologyFactorRepository.class
 ai\youthmind\dto\ModerationStatusResponse.class
 ai\youthmind\repository\AIAnalysisRepository.class
 ai\youthmind\dto\PostDto$PostDtoBuilder.class
@@ -240,6 +242,7 @@ ai\youthmind\entity\Comment.class
 ai\youthmind\service\PsychologicalStateCacheService.class
 ai\youthmind\service\RequestQueueService$RequestStatus.class
 ai\youthmind\service\WarningService$1.class
+ai\youthmind\dto\StateUpdateRequest.class
 ai\youthmind\service\DeepSeekRateLimitService$RateLimitResult.class
 ai\youthmind\dto\ConversationDto.class
 ai\youthmind\entity\User$Role.class
@@ -275,6 +278,7 @@ ai\youthmind\dto\ArticleCreateRequest.class
 ai\youthmind\util\CircuitBreaker$CircuitBreakerOpenException.class
 ai\youthmind\service\QdrantRestClient.class
 ai\youthmind\config\DeepSeekConfig.class
+ai\youthmind\repository\PsychologicalStateVectorRepository.class
 ai\youthmind\service\AutoScalingService$ScalingDecision.class
 ai\youthmind\service\ConcurrencyManager$SystemHealth.class
 ai\youthmind\service\AutoScalingService$ScalingDecision$ScalingDecisionBuilder.class
@@ -286,6 +290,7 @@ ai\youthmind\dto\UserStatisticsDto.class
 ai\youthmind\entity\MemoryItem.class
 ai\youthmind\entity\VectorEmbedding$VectorEmbeddingBuilder.class
 ai\youthmind\service\UserService.class
+ai\youthmind\dto\StateUpdateResponse.class
 ai\youthmind\service\CircuitBreakerService$CircuitBreaker.class
 ai\youthmind\service\ConversationService.class
 ai\youthmind\service\PostModerationService.class
@@ -364,9 +369,11 @@ ai\youthmind\service\CircuitBreakerService.class
 ai\youthmind\config\QdrantConfig.class
 ai\youthmind\controller\WarningController.class
 ai\youthmind\entity\PostView.class
+ai\youthmind\dto\PsychologicalStateDto.class
 ai\youthmind\util\CircuitBreaker$CircuitBreakerHealth.class
 ai\youthmind\entity\MemoryItem$MemoryType.class
 ai\youthmind\service\InteractionModulationService$InteractionModulationResult.class
+ai\youthmind\repository\PersonalityComputationRepository.class
 ai\youthmind\dto\DraftDto.class
 ai\youthmind\config\CorsConfig.class
 ai\youthmind\service\ActivePersonalityCalculator.class
@@ -488,6 +495,7 @@ ai\youthmind\entity\UserModerationStatus$ModerationStatus.class
 ai\youthmind\service\DeepSeekUsageMonitoringService.class
 ai\youthmind\exception\AIServiceException.class
 ai\youthmind\service\AIRequestBatchingService$BatchRequest.class
+ai\youthmind\repository\UserInteractionModulationRepository.class
 ai\youthmind\service\DeepSeekCostOptimizationService$CostOptimizationResult.class
 ai\youthmind\service\InsightsService.class
 ai\youthmind\service\MemoryService.class
@@ -552,6 +560,7 @@ ai\youthmind\service\WordMaskingService$MaskedWord.class
 ai\youthmind\dto\SearchResponse$SearchResult$SearchResultBuilder.class
 ai\youthmind\service\AdvancedModerationPipelineService$ModerationAction.class
 ai\youthmind\dto\QueueRequest.class
+ai\youthmind\repository\StateUpdateHistoryRepository.class
 ai\youthmind\dto\ModerationResult$SeverityLevel.class
 ai\youthmind\service\RequestQueueService$RequestQueueItem$RequestQueueItemBuilder.class
 ai\youthmind\dto\TokenizerDto.class
