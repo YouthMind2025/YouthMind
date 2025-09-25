@@ -27,8 +27,8 @@ public class SecurityConfig {
     @Qualifier("corsConfigurationSource")
     private CorsConfigurationSource corsConfigurationSource;
 
-    //@Autowired
-    //private RateFilter rateFilter;
+    @Autowired
+    private RateFilter rateFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -104,14 +104,16 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/mappings").hasRole("ADMIN")
                 .requestMatchers("/actuator/conditions").hasRole("ADMIN")
                 .requestMatchers("/actuator/**").hasRole("ADMIN")
+                // Admin auth endpoints
+                .requestMatchers("/v1/auth/admin/revoke-token").hasRole("ADMIN")
                 // Protected endpoints
                 .requestMatchers("/v1/auth/test").authenticated()
                 .requestMatchers("/v1/posts/create").authenticated()
                 .requestMatchers("/v1/conversations/**").authenticated()
                 .requestMatchers("/v1/ai-chat/**").authenticated()
                 .anyRequest().authenticated())
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-            //.addFilterAfter(rateFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(rateFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

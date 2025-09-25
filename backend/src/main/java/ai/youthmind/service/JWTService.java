@@ -12,9 +12,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.sql.Timestamp;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -24,10 +22,11 @@ public class JWTService {
     @Autowired
     private JwtConfig jwtConfig;
 
-    //@Autowired
-    //private RedisService redisService;
+    @Autowired
+    private RedisService redisService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
+    private static final String USER_TOKENS_PREFIX = "jwt:user_tokens:";
 
     public Pair<String, Timestamp> generateToken(String email) {
         return generateToken(email, "USER");
@@ -39,7 +38,7 @@ public class JWTService {
         long currentTime = System.currentTimeMillis();
         Timestamp expiration = new Timestamp(currentTime + jwtConfig.getExpiration());
 
-        String tokenString = Jwts.builder()
+        String token = Jwts.builder()
                 .claims()
                 .add(claims)
                 .subject(email)
@@ -48,7 +47,9 @@ public class JWTService {
                 .and()
                 .signWith(getKey())
                 .compact();
-        return Pair.of(tokenString, expiration);
+
+        updateUserTokens(email, token);
+        return Pair.of(token, expiration);
     }
 
     private SecretKey getKey() {
@@ -99,15 +100,34 @@ public class JWTService {
         long ttl = extractExpiration(token).getTime() - System.currentTimeMillis();
 
         if (ttl > 0) {
-            // redisService.setValue(blacklistKey, "true");
-            // redisService.setExpiration(blacklistKey, ttl, TimeUnit.MILLISECONDS);
+             redisService.setValue(blacklistKey, true);
+             redisService.setExpiration(blacklistKey, ttl, TimeUnit.MILLISECONDS);
         }
     }
 
     public boolean isTokenBlacklisted(String token) {
-        // Since Redis is temporarily disabled, always return false (no tokens are blacklisted)
-        return false;
-        // return Boolean.TRUE.equals(redisService.hasKey(BLACKLIST_PREFIX + token));
+        String key = BLACKLIST_PREFIX + token;
+        return redisService.hasKey(key) && (boolean) redisService.getValue(key);
+    }
+
+    public void updateUserTokens(String email, String token) {
+        String key = USER_TOKENS_PREFIX + email;
+        List<String> tokens = redisService.hasKey(key)?
+                (List<String>) redisService.getValue(key) : new ArrayList<>();
+
+        tokens.add(token);
+        tokens.removeIf(this::validateToken);
+
+        redisService.setValue(key, tokens);
+    }
+
+    public void blacklistUserTokens(String email) {
+        String key = USER_TOKENS_PREFIX + email;
+        if (redisService.hasKey(key)) {
+            List<String> tokens = (List<String>) redisService.getValue(key);
+            tokens.forEach(this::blacklistUserTokens);
+            redisService.setValue(key, new ArrayList<>());
+        }
     }
 
 }

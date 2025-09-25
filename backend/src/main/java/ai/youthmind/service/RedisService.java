@@ -26,7 +26,6 @@ public class RedisService {
     private static final long FEED_CACHE_TTL_MINUTES = 5;
     private static final long POST_CACHE_TTL_HOURS = 24;
     private static final long USER_SESSION_TTL_HOURS = 24;
-    private static final long RATE_LIMIT_TTL_MINUTES = 5;
 
     // Cache key structure (coordinated with Harley)
     private static final String FEED_KEY_PREFIX = "youthmind:feed:";
@@ -126,15 +125,20 @@ public class RedisService {
     }
 
     // Rate limiting (coordinated with Harley)
-    public void setRateLimit(String identifier, int count) {
+    public void setRateLimit(String identifier, int count, int expiration) {
         String key = RATE_KEY_PREFIX + identifier;
-        setValue(key, count, RATE_LIMIT_TTL_MINUTES, TimeUnit.MINUTES);
+        setValue(key, count, expiration, TimeUnit.SECONDS);
     }
 
     public Integer getRateLimit(String identifier) {
         String key = RATE_KEY_PREFIX + identifier;
         Object value = getValue(key);
         return value instanceof Integer ? (Integer) value : null;
+    }
+
+    public Long getRateLimitTTL(String identifier) {
+        String key = RATE_KEY_PREFIX + identifier;
+        return hasKey(key)? redisTemplate.getExpire(key, TimeUnit.SECONDS) : null;
     }
 
     public void incrementRateLimit(String identifier) {
