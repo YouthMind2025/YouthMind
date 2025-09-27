@@ -5,8 +5,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * Retry utility with exponential backoff for AI service calls
@@ -23,6 +27,9 @@ public class RetryUtil {
     private static final double DEFAULT_BACKOFF_MULTIPLIER = 2.0;
     private static final Duration DEFAULT_MAX_DELAY = Duration.ofSeconds(30);
     private static final double DEFAULT_JITTER_FACTOR = 0.1;
+    
+    // Enhanced features for service-specific configurations
+    private static final Map<String, RetryConfig> serviceConfigs = new ConcurrentHashMap<>();
     
     /**
      * Execute operation with retry logic
@@ -228,6 +235,139 @@ public class RetryUtil {
             }
             return false;
         };
+    }
+    
+    /**
+     * Enhanced execute with service-specific configuration
+     */
+    public static <T> CompletableFuture<T> executeWithRetryAsync(
+            String serviceName,
+            String operationName,
+            Supplier<T> operation) {
+        
+        return executeWithRetryAsync(serviceName, operationName, operation, null);
+    }
+    
+    /**
+     * Enhanced execute with custom retry configuration
+     */
+    public static <T> CompletableFuture<T> executeWithRetryAsync(
+            String serviceName,
+            String operationName,
+            Supplier<T> operation,
+            RetryConfig customConfig) {
+        
+        return CompletableFuture.supplyAsync(() -> {
+            RetryConfig config = customConfig != null ? customConfig : getServiceConfig(serviceName);
+            
+            try {
+                return executeWithRetry(
+                    () -> operation.get(),
+                    config.getMaxAttempts(),
+                    config.getBaseDelay(),
+                    config.getBackoffMultiplier(),
+                    config.getMaxDelay(),
+                    config.getJitterFactor()
+                );
+            } catch (Exception e) {
+                throw new RuntimeException("Retry operation failed for service '" + serviceName + "': " + e.getMessage(), e);
+            }
+        });
+    }
+    
+    /**
+     * Execute operation with retry and circuit breaker integration
+     */
+    public static <T> CompletableFuture<T> executeWithRetryAndCircuitBreaker(
+            String serviceName,
+            String operationName,
+            Supplier<T> operation,
+            CircuitBreaker circuitBreaker,
+            Supplier<T> fallback) {
+        
+        return circuitBreaker.executeWithCircuitBreaker(
+            serviceName,
+            () -> executeWithRetryAsync(serviceName, operationName, operation).join(),
+            () -> fallback.get()
+        );
+    }
+    
+    /**
+     * Get service-specific retry configuration
+     */
+    private static RetryConfig getServiceConfig(String serviceName) {
+        return serviceConfigs.computeIfAbsent(serviceName, name -> {
+            return createDefaultRetryConfig(name);
+        });
+    }
+    
+    /**
+     * Create default retry configuration for service
+     */
+    private static RetryConfig createDefaultRetryConfig(String serviceName) {
+        return switch (serviceName.toLowerCase()) {
+            case "ai_analysis" -> RetryConfig.builder()
+                .maxAttempts(3)
+                .baseDelay(Duration.ofMillis(500))
+                .maxDelay(Duration.ofSeconds(10))
+                .backoffMultiplier(2.0)
+                .jitterFactor(0.1)
+                .build();
+                
+            case "vector_search" -> RetryConfig.builder()
+                .maxAttempts(2)
+                .baseDelay(Duration.ofMillis(200))
+                .maxDelay(Duration.ofSeconds(5))
+                .backoffMultiplier(1.5)
+                .jitterFactor(0.05)
+                .build();
+                
+            case "moderation" -> RetryConfig.builder()
+                .maxAttempts(4)
+                .baseDelay(Duration.ofMillis(1000))
+                .maxDelay(Duration.ofSeconds(30))
+                .backoffMultiplier(2.5)
+                .jitterFactor(0.15)
+                .build();
+                
+            default -> RetryConfig.builder()
+                .maxAttempts(DEFAULT_MAX_ATTEMPTS)
+                .baseDelay(DEFAULT_INITIAL_DELAY)
+                .maxDelay(DEFAULT_MAX_DELAY)
+                .backoffMultiplier(DEFAULT_BACKOFF_MULTIPLIER)
+                .jitterFactor(DEFAULT_JITTER_FACTOR)
+                .build();
+        };
+    }
+    
+    /**
+     * Update retry configuration for service
+     */
+    public static void updateServiceConfig(String serviceName, RetryConfig config) {
+        serviceConfigs.put(serviceName, config);
+        logger.info("Updated retry configuration for service '{}'", serviceName);
+    }
+    
+    /**
+     * Get retry configuration for service
+     */
+    public static RetryConfig getRetryConfig(String serviceName) {
+        return serviceConfigs.get(serviceName);
+    }
+    
+    /**
+     * Retry configuration class
+     */
+    @lombok.Data
+    @lombok.Builder
+    public static class RetryConfig {
+        private int maxAttempts;
+        private Duration baseDelay;
+        private Duration maxDelay;
+        private double backoffMultiplier;
+        private double jitterFactor;
+        private Duration maxRetryTimeout;
+        private boolean enableMetrics;
     }
     
     /**

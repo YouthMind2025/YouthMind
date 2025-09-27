@@ -32,6 +32,17 @@ public class RequestQueueService {
     private static final String BATCH_QUEUE = "queue:batch";
     private static final String AI_QUEUE = "queue:ai";
     private static final String VECTOR_SEARCH_QUEUE = "queue:vector_search";
+    
+    // Psychological state update queues with user group partitioning
+    private static final String STATE_UPDATE_HIGH_QUEUE = "queue:state_update:high";
+    private static final String STATE_UPDATE_NORMAL_QUEUE = "queue:state_update:normal";
+    private static final String STATE_UPDATE_LOW_QUEUE = "queue:state_update:low";
+    private static final String STATE_UPDATE_BATCH_QUEUE = "queue:state_update:batch";
+    
+    // User group partitioned queues
+    private static final String USER_GROUP_PREFIX = "queue:user_group:";
+    private static final String DEAD_LETTER_QUEUE = "queue:dead_letter";
+    private static final String RETRY_QUEUE = "queue:retry";
 
     // Metrics
     private final AtomicLong totalQueuedRequests = new AtomicLong(0);
@@ -236,7 +247,7 @@ public class RequestQueueService {
                 // Select instance using round-robin or least-loaded strategy
                 String selectedInstance = selectInstance(availableInstances, request);
                 
-                // Route request to selected instance
+                // Route request to specific instance
                 return routeRequestToInstance(request, selectedInstance);
                 
             } catch (Exception e) {
@@ -245,6 +256,187 @@ public class RequestQueueService {
                 return queueRequest(request).join();
             }
         });
+    }
+
+    /**
+     * Queue psychological state update with priority and user group partitioning
+     */
+    public CompletableFuture<String> queueStateUpdate(StateUpdateRequest stateUpdateRequest) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                PerformanceMonitor.start("state_update_queuing");
+                
+                // Generate request ID
+                String requestId = generateRequestId();
+                stateUpdateRequest.setRequestId(requestId);
+                stateUpdateRequest.setQueuedAt(LocalDateTime.now());
+                stateUpdateRequest.setStatus(StateUpdateStatus.QUEUED);
+                
+                // Determine queue based on priority and user group
+                String queueName = determineStateUpdateQueue(stateUpdateRequest);
+                
+                // Add to appropriate queue with priority score
+                double priorityScore = calculateStateUpdatePriorityScore(stateUpdateRequest);
+                redisTemplate.opsForZSet().add(queueName, stateUpdateRequest, priorityScore);
+                
+                // Set TTL for request (2 hours for state updates)
+                redisTemplate.expire(requestId, 7200, TimeUnit.SECONDS);
+                
+                // Update metrics
+                totalQueuedRequests.incrementAndGet();
+                
+                PerformanceMonitor.end("state_update_queuing");
+                log.debug("State update {} queued in {} with priority {}", 
+                    requestId, queueName, priorityScore);
+                
+                return requestId;
+                
+            } catch (Exception e) {
+                log.error("Error queuing state update: {}", e.getMessage(), e);
+                throw new RuntimeException("State update queuing failed", e);
+            }
+        });
+    }
+
+    /**
+     * Process psychological state updates from queue with batch processing
+     */
+    public CompletableFuture<List<StateUpdateRequest>> processStateUpdateBatch(String queueName, int batchSize) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                PerformanceMonitor.start("state_update_batch_processing");
+                
+                // Get batch of highest priority requests from queue
+                Set<Object> requests = redisTemplate.opsForZSet().range(queueName, 0, batchSize - 1);
+                
+                if (requests.isEmpty()) {
+                    return new ArrayList<>(); // No requests in queue
+                }
+                
+                List<StateUpdateRequest> batch = new ArrayList<>();
+                for (Object requestObj : requests) {
+                    StateUpdateRequest request = (StateUpdateRequest) requestObj;
+                    
+                    // Check if system can handle the request
+                    if (concurrencyManager.canHandleRequest(request.getUserId())) {
+                        // Remove from queue
+                        redisTemplate.opsForZSet().remove(queueName, request);
+                        
+                        // Update request status
+                        request.setStatus(StateUpdateStatus.PROCESSING);
+                        request.setProcessingStartedAt(LocalDateTime.now());
+                        
+                        batch.add(request);
+                    } else {
+                        // Move to back of queue with lower priority
+                        redisTemplate.opsForZSet().remove(queueName, request);
+                        redisTemplate.opsForZSet().add(queueName, request, 
+                            calculateStateUpdatePriorityScore(request) - 1);
+                    }
+                }
+                
+                // Update metrics
+                totalProcessedRequests.addAndGet(batch.size());
+                
+                PerformanceMonitor.end("state_update_batch_processing");
+                log.debug("Processing batch of {} state updates from queue {}", batch.size(), queueName);
+                
+                return batch;
+                
+            } catch (Exception e) {
+                log.error("Error processing state update batch from queue {}: {}", queueName, e.getMessage(), e);
+                totalFailedRequests.incrementAndGet();
+                return new ArrayList<>();
+            }
+        });
+    }
+
+    /**
+     * Handle failed state update with retry logic
+     */
+    public CompletableFuture<Void> handleFailedStateUpdate(StateUpdateRequest request, Exception error) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                request.setRetryCount(request.getRetryCount() + 1);
+                request.setErrorMessage(error.getMessage());
+                
+                if (request.getRetryCount() <= 3) {
+                    // Move to retry queue with exponential backoff
+                    long delaySeconds = (long) Math.pow(2, request.getRetryCount()) * 60; // 2, 4, 8 minutes
+                    request.setRetryAfter(LocalDateTime.now().plusSeconds(delaySeconds));
+                    
+                    redisTemplate.opsForZSet().add(RETRY_QUEUE, request, 
+                        System.currentTimeMillis() + delaySeconds * 1000);
+                    
+                    log.warn("State update {} moved to retry queue (attempt {})", 
+                        request.getRequestId(), request.getRetryCount());
+                } else {
+                    // Move to dead letter queue
+                    request.setStatus(StateUpdateStatus.FAILED);
+                    redisTemplate.opsForZSet().add(DEAD_LETTER_QUEUE, request, 
+                        System.currentTimeMillis());
+                    
+                    log.error("State update {} moved to dead letter queue after {} retries", 
+                        request.getRequestId(), request.getRetryCount());
+                }
+                
+            } catch (Exception e) {
+                log.error("Error handling failed state update {}: {}", request.getRequestId(), e.getMessage(), e);
+            }
+        });
+    }
+
+    /**
+     * Get queue health status for monitoring
+     */
+    public QueueHealthStatus getQueueHealthStatus() {
+        try {
+            Map<String, Long> queueSizes = new HashMap<>();
+            Map<String, Double> queueDepths = new HashMap<>();
+            
+            // Get all queue sizes
+            queueSizes.put("high_priority", redisTemplate.opsForZSet().size(HIGH_PRIORITY_QUEUE));
+            queueSizes.put("normal_priority", redisTemplate.opsForZSet().size(NORMAL_PRIORITY_QUEUE));
+            queueSizes.put("low_priority", redisTemplate.opsForZSet().size(LOW_PRIORITY_QUEUE));
+            queueSizes.put("state_update_high", redisTemplate.opsForZSet().size(STATE_UPDATE_HIGH_QUEUE));
+            queueSizes.put("state_update_normal", redisTemplate.opsForZSet().size(STATE_UPDATE_NORMAL_QUEUE));
+            queueSizes.put("state_update_low", redisTemplate.opsForZSet().size(STATE_UPDATE_LOW_QUEUE));
+            queueSizes.put("retry", redisTemplate.opsForZSet().size(RETRY_QUEUE));
+            queueSizes.put("dead_letter", redisTemplate.opsForZSet().size(DEAD_LETTER_QUEUE));
+            
+            // Calculate queue depths (percentage of capacity)
+            long totalCapacity = 10000; // Total queue capacity
+            for (Map.Entry<String, Long> entry : queueSizes.entrySet()) {
+                queueDepths.put(entry.getKey(), (double) entry.getValue() / totalCapacity * 100);
+            }
+            
+            // Calculate overall health score
+            double healthScore = calculateHealthScore(queueSizes, queueDepths);
+            
+            return QueueHealthStatus.builder()
+                .overallHealth(healthScore)
+                .queueSizes(queueSizes)
+                .queueDepths(queueDepths)
+                .totalQueuedRequests(totalQueuedRequests.get())
+                .totalProcessedRequests(totalProcessedRequests.get())
+                .totalFailedRequests(totalFailedRequests.get())
+                .averageProcessingTime(calculateAverageProcessingTime())
+                .timestamp(LocalDateTime.now())
+                .build();
+                
+        } catch (Exception e) {
+            log.error("Error getting queue health status: {}", e.getMessage());
+            return QueueHealthStatus.builder()
+                .overallHealth(0.0)
+                .queueSizes(new HashMap<>())
+                .queueDepths(new HashMap<>())
+                .totalQueuedRequests(0)
+                .totalProcessedRequests(0)
+                .totalFailedRequests(0)
+                .averageProcessingTime(0.0)
+                .timestamp(LocalDateTime.now())
+                .build();
+        }
     }
 
     // Private helper methods
@@ -263,6 +455,84 @@ public class RequestQueueService {
             default:
                 return NORMAL_PRIORITY_QUEUE;
         }
+    }
+
+    private String determineStateUpdateQueue(StateUpdateRequest request) {
+        // Determine queue based on priority and user group
+        String baseQueue;
+        switch (request.getPriority()) {
+            case HIGH:
+                baseQueue = STATE_UPDATE_HIGH_QUEUE;
+                break;
+            case LOW:
+                baseQueue = STATE_UPDATE_LOW_QUEUE;
+                break;
+            case BATCH:
+                baseQueue = STATE_UPDATE_BATCH_QUEUE;
+                break;
+            default:
+                baseQueue = STATE_UPDATE_NORMAL_QUEUE;
+                break;
+        }
+        
+        // Add user group partitioning if specified
+        if (request.getUserGroup() != null && !request.getUserGroup().isEmpty()) {
+            return USER_GROUP_PREFIX + request.getUserGroup() + ":" + baseQueue.replace("queue:state_update:", "");
+        }
+        
+        return baseQueue;
+    }
+
+    private double calculateStateUpdatePriorityScore(StateUpdateRequest request) {
+        double baseScore = request.getPriority().getScore();
+        
+        // Adjust based on user tier
+        if (request.getUserTier() != null) {
+            baseScore += request.getUserTier().getPriorityBoost();
+        }
+        
+        // Adjust based on request age (older requests get higher priority)
+        long ageMinutes = java.time.Duration.between(request.getQueuedAt(), LocalDateTime.now()).toMinutes();
+        baseScore += ageMinutes * 0.1;
+        
+        // Adjust based on retry count (retried requests get lower priority)
+        baseScore -= request.getRetryCount() * 0.5;
+        
+        // Adjust based on state update urgency
+        if (request.getUrgency() != null) {
+            baseScore += request.getUrgency().getScore();
+        }
+        
+        return Math.max(0, baseScore);
+    }
+
+    private double calculateHealthScore(Map<String, Long> queueSizes, Map<String, Double> queueDepths) {
+        double healthScore = 1.0;
+        
+        // Penalize high queue depths
+        for (Double depth : queueDepths.values()) {
+            if (depth > 80) {
+                healthScore -= 0.3; // Critical
+            } else if (depth > 60) {
+                healthScore -= 0.2; // Warning
+            } else if (depth > 40) {
+                healthScore -= 0.1; // Caution
+            }
+        }
+        
+        // Penalize high failure rate
+        long totalRequests = totalQueuedRequests.get();
+        long failedRequests = totalFailedRequests.get();
+        if (totalRequests > 0) {
+            double failureRate = (double) failedRequests / totalRequests;
+            if (failureRate > 0.1) {
+                healthScore -= 0.2; // High failure rate
+            } else if (failureRate > 0.05) {
+                healthScore -= 0.1; // Moderate failure rate
+            }
+        }
+        
+        return Math.max(0.0, healthScore);
     }
 
     private double calculatePriorityScore(RequestQueueItem request) {
@@ -454,5 +724,95 @@ public class RequestQueueService {
         private double averageTime;
         private long totalRequests;
         private long totalTime;
+    }
+
+    // Psychological State Update specific enums and classes
+    public enum StateUpdatePriority {
+        HIGH(10.0),
+        NORMAL(5.0),
+        LOW(1.0),
+        BATCH(3.0);
+
+        private final double score;
+
+        StateUpdatePriority(double score) {
+            this.score = score;
+        }
+
+        public double getScore() {
+            return score;
+        }
+    }
+
+    public enum StateUpdateStatus {
+        QUEUED,
+        PROCESSING,
+        COMPLETED,
+        FAILED,
+        RETRYING,
+        DEAD_LETTER
+    }
+
+    public enum StateUpdateUrgency {
+        CRITICAL(5.0),
+        HIGH(3.0),
+        NORMAL(1.0),
+        LOW(0.5);
+
+        private final double score;
+
+        StateUpdateUrgency(double score) {
+            this.score = score;
+        }
+
+        public double getScore() {
+            return score;
+        }
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class StateUpdateRequest {
+        private String requestId;
+        private String userId;
+        private String userGroup;
+        private StateUpdateType updateType;
+        private Object updateData;
+        private StateUpdatePriority priority;
+        private StateUpdateUrgency urgency;
+        private UserTier userTier;
+        private StateUpdateStatus status;
+        private LocalDateTime queuedAt;
+        private LocalDateTime processingStartedAt;
+        private LocalDateTime completedAt;
+        private LocalDateTime retryAfter;
+        private Object result;
+        private int retryCount;
+        private String errorMessage;
+        private Long processingTimeMs;
+        private Map<String, Object> metadata;
+    }
+
+    public enum StateUpdateType {
+        POST_CREATION,
+        INTERACTION_RESONANCE,
+        INTERACTION_LINGER,
+        PERSONALITY_UPDATE,
+        MOOD_ANALYSIS,
+        BATCH_UPDATE,
+        EMERGENCY_UPDATE
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class QueueHealthStatus {
+        private double overallHealth;
+        private Map<String, Long> queueSizes;
+        private Map<String, Double> queueDepths;
+        private long totalQueuedRequests;
+        private long totalProcessedRequests;
+        private long totalFailedRequests;
+        private double averageProcessingTime;
+        private LocalDateTime timestamp;
     }
 }

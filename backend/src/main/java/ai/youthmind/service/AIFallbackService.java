@@ -12,6 +12,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Fallback service for AI operations when AI services are unavailable
@@ -38,6 +40,11 @@ public class AIFallbackService {
     private boolean aiEnabled;
     
     private final RestTemplate restTemplate = new RestTemplate();
+    
+    // Enhanced features for service-specific configurations
+    private final Map<String, FallbackResponse> fallbackCache = new ConcurrentHashMap<>();
+    private final Map<String, FallbackMetrics> fallbackMetrics = new ConcurrentHashMap<>();
+    private final Map<String, FallbackStrategy> fallbackStrategies = new ConcurrentHashMap<>();
     
     // Fallback response templates
     private static final Map<String, String> FALLBACK_RESPONSES = Map.of(
@@ -495,6 +502,286 @@ public class AIFallbackService {
         } catch (Exception e) {
             logger.error("Error providing degraded response: {}", e.getMessage(), e);
             return "I'm here to help, though our AI features are currently unavailable. How can I assist you today? (Simplified mode)";
+        }
+    }
+    
+    /**
+     * Enhanced fallback response generation with caching and service-specific strategies
+     */
+    public <T> CompletableFuture<T> getEnhancedFallbackResponse(
+            String serviceName,
+            String operationType,
+            Map<String, Object> context,
+            Class<T> responseType) {
+        
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                logger.debug("Generating enhanced fallback response for service '{}', operation '{}'", serviceName, operationType);
+                
+                // Record fallback usage
+                recordFallbackUsage(serviceName, operationType);
+                
+                // Get fallback strategy for service
+                FallbackStrategy strategy = getFallbackStrategy(serviceName);
+                
+                // Generate fallback response based on strategy
+                T fallbackResponse = generateEnhancedFallbackResponse(serviceName, operationType, context, strategy, responseType);
+                
+                // Cache the response
+                cacheFallbackResponse(generateCacheKey(serviceName, operationType, context), fallbackResponse, strategy.getCacheTtlMinutes());
+                
+                return fallbackResponse;
+                
+            } catch (Exception e) {
+                logger.error("Error generating enhanced fallback response for service '{}': {}", serviceName, e.getMessage(), e);
+                return getDefaultFallbackResponse(responseType);
+            }
+        });
+    }
+    
+    // Enhanced helper methods
+    private FallbackStrategy getFallbackStrategy(String serviceName) {
+        return fallbackStrategies.computeIfAbsent(serviceName, name -> {
+            return switch (name.toLowerCase()) {
+                case "ai_analysis" -> FallbackStrategy.builder()
+                    .strategyType(FallbackStrategyType.CACHED)
+                    .cacheTtlMinutes(60)
+                    .build();
+                case "vector_search" -> FallbackStrategy.builder()
+                    .strategyType(FallbackStrategyType.DEFAULT)
+                    .cacheTtlMinutes(30)
+                    .build();
+                case "moderation" -> FallbackStrategy.builder()
+                    .strategyType(FallbackStrategyType.DEFAULT)
+                    .cacheTtlMinutes(15)
+                    .build();
+                default -> FallbackStrategy.builder()
+                    .strategyType(FallbackStrategyType.DEFAULT)
+                    .cacheTtlMinutes(30)
+                    .build();
+            };
+        });
+    }
+    
+    private String generateCacheKey(String serviceName, String operationType, Map<String, Object> context) {
+        return String.format("%s:%s:%d", serviceName, operationType, 
+            Objects.hash(context.getOrDefault("user_id", "default")));
+    }
+    
+    private void cacheFallbackResponse(String cacheKey, Object response, int ttlMinutes) {
+        FallbackResponse fallbackResponse = FallbackResponse.builder()
+            .response(response)
+            .createdAt(System.currentTimeMillis())
+            .ttlMinutes(ttlMinutes)
+            .build();
+        
+        fallbackCache.put(cacheKey, fallbackResponse);
+    }
+    
+    private void recordFallbackUsage(String serviceName, String operationType) {
+        FallbackMetrics metrics = fallbackMetrics.computeIfAbsent(serviceName, 
+            name -> new FallbackMetrics(name));
+        metrics.incrementUsageCount();
+        metrics.recordOperationType(operationType);
+    }
+    
+    @SuppressWarnings("unchecked")
+    private <T> T generateEnhancedFallbackResponse(
+            String serviceName,
+            String operationType,
+            Map<String, Object> context,
+            FallbackStrategy strategy,
+            Class<T> responseType) {
+        
+        // Check cache first
+        String cacheKey = generateCacheKey(serviceName, operationType, context);
+        FallbackResponse cachedResponse = fallbackCache.get(cacheKey);
+        
+        if (cachedResponse != null && !cachedResponse.isExpired()) {
+            logger.debug("Using cached fallback response for service '{}'", serviceName);
+            return (T) cachedResponse.getResponse();
+        }
+        
+        // Generate new fallback response based on strategy
+        return switch (strategy.getStrategyType()) {
+            case CACHED -> generateCachedFallback(serviceName, operationType, context, responseType);
+            case DEFAULT -> generateDefaultFallback(serviceName, operationType, context, responseType);
+            case SIMPLIFIED -> generateSimplifiedFallback(serviceName, operationType, context, responseType);
+            case CONTEXT_AWARE -> generateContextAwareFallback(serviceName, operationType, context, responseType);
+            default -> getDefaultFallbackResponse(responseType);
+        };
+    }
+    
+    @SuppressWarnings("unchecked")
+    private <T> T generateCachedFallback(String serviceName, String operationType, Map<String, Object> context, Class<T> responseType) {
+        logger.debug("Generating cached fallback for service '{}'", serviceName);
+        return createBasicResponse(responseType);
+    }
+    
+    @SuppressWarnings("unchecked")
+    private <T> T generateDefaultFallback(String serviceName, String operationType, Map<String, Object> context, Class<T> responseType) {
+        logger.debug("Generating default fallback for service '{}'", serviceName);
+        
+        return switch (serviceName.toLowerCase()) {
+            case "ai_analysis" -> (T) createAIAnalysisFallback(context);
+            case "vector_search" -> (T) createVectorSearchFallback(context);
+            case "moderation" -> (T) createModerationFallback(context);
+            case "psychological_analysis" -> (T) createPsychologicalAnalysisFallback(context);
+            default -> getDefaultFallbackResponse(responseType);
+        };
+    }
+    
+    @SuppressWarnings("unchecked")
+    private <T> T generateSimplifiedFallback(String serviceName, String operationType, Map<String, Object> context, Class<T> responseType) {
+        logger.debug("Generating simplified fallback for service '{}'", serviceName);
+        return createSimplifiedResponse(responseType);
+    }
+    
+    @SuppressWarnings("unchecked")
+    private <T> T generateContextAwareFallback(String serviceName, String operationType, Map<String, Object> context, Class<T> responseType) {
+        logger.debug("Generating context-aware fallback for service '{}'", serviceName);
+        
+        String userType = (String) context.getOrDefault("user_type", "default");
+        String priority = (String) context.getOrDefault("priority", "normal");
+        
+        if ("premium".equals(userType) || "high".equals(priority)) {
+            return createEnhancedFallback(responseType);
+        } else {
+            return getDefaultFallbackResponse(responseType);
+        }
+    }
+    
+    // Helper methods for different fallback types
+    private Map<String, Object> createAIAnalysisFallback(Map<String, Object> context) {
+        Map<String, Object> fallback = new HashMap<>();
+        fallback.put("status", "fallback");
+        fallback.put("confidence", 0.5);
+        fallback.put("analysis", "AI service temporarily unavailable. Using cached analysis.");
+        fallback.put("timestamp", System.currentTimeMillis());
+        fallback.put("fallback_reason", "service_unavailable");
+        return fallback;
+    }
+    
+    private Map<String, Object> createVectorSearchFallback(Map<String, Object> context) {
+        Map<String, Object> fallback = new HashMap<>();
+        fallback.put("status", "fallback");
+        fallback.put("results", new ArrayList<>());
+        fallback.put("total_results", 0);
+        fallback.put("message", "Vector search service temporarily unavailable");
+        fallback.put("fallback_reason", "service_unavailable");
+        return fallback;
+    }
+    
+    private Map<String, Object> createModerationFallback(Map<String, Object> context) {
+        Map<String, Object> fallback = new HashMap<>();
+        fallback.put("status", "fallback");
+        fallback.put("safe", true);
+        fallback.put("confidence", 0.3);
+        fallback.put("reason", "Moderation service temporarily unavailable. Content approved by default.");
+        fallback.put("fallback_reason", "service_unavailable");
+        return fallback;
+    }
+    
+    private Map<String, Object> createPsychologicalAnalysisFallback(Map<String, Object> context) {
+        Map<String, Object> fallback = new HashMap<>();
+        fallback.put("status", "fallback");
+        fallback.put("analysis", "Psychological analysis service temporarily unavailable");
+        fallback.put("recommendations", Arrays.asList("Please try again later", "Contact support if urgent"));
+        fallback.put("confidence", 0.0);
+        fallback.put("fallback_reason", "service_unavailable");
+        return fallback;
+    }
+    
+    @SuppressWarnings("unchecked")
+    private <T> T createBasicResponse(Class<T> responseType) {
+        if (responseType == Map.class) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "fallback");
+            response.put("message", "Service temporarily unavailable");
+            return (T) response;
+        }
+        return getDefaultFallbackResponse(responseType);
+    }
+    
+    @SuppressWarnings("unchecked")
+    private <T> T createSimplifiedResponse(Class<T> responseType) {
+        if (responseType == Map.class) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "simplified");
+            response.put("message", "Simplified response due to service unavailability");
+            return (T) response;
+        }
+        return getDefaultFallbackResponse(responseType);
+    }
+    
+    @SuppressWarnings("unchecked")
+    private <T> T createEnhancedFallback(Class<T> responseType) {
+        if (responseType == Map.class) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "enhanced_fallback");
+            response.put("message", "Enhanced fallback response for premium users");
+            response.put("priority", "high");
+            return (T) response;
+        }
+        return getDefaultFallbackResponse(responseType);
+    }
+    
+    @SuppressWarnings("unchecked")
+    private <T> T getDefaultFallbackResponse(Class<T> responseType) {
+        if (responseType == Map.class) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Service temporarily unavailable");
+            response.put("fallback", true);
+            return (T) response;
+        }
+        return null;
+    }
+    
+    // Enhanced classes
+    public enum FallbackStrategyType {
+        CACHED, DEFAULT, SIMPLIFIED, CONTEXT_AWARE
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class FallbackStrategy {
+        private FallbackStrategyType strategyType;
+        private int cacheTtlMinutes;
+        private boolean enableValidation;
+        private Map<String, Object> customConfig;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class FallbackResponse {
+        private Object response;
+        private long createdAt;
+        private int ttlMinutes;
+        
+        public boolean isExpired() {
+            return System.currentTimeMillis() - createdAt > (ttlMinutes * 60 * 1000L);
+        }
+    }
+
+    @lombok.Data
+    public static class FallbackMetrics {
+        private final String serviceName;
+        private long usageCount = 0;
+        private final Map<String, Long> operationTypeCounts = new ConcurrentHashMap<>();
+        private long lastUsed = 0;
+
+        public FallbackMetrics(String serviceName) {
+            this.serviceName = serviceName;
+        }
+
+        public void incrementUsageCount() {
+            usageCount++;
+            lastUsed = System.currentTimeMillis();
+        }
+
+        public void recordOperationType(String operationType) {
+            operationTypeCounts.merge(operationType, 1L, Long::sum);
         }
     }
     

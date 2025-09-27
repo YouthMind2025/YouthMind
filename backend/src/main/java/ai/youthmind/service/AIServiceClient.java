@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
 /**
@@ -79,6 +81,12 @@ public class AIServiceClient {
     
     @Autowired
     private AIErrorHandler aiErrorHandler;
+    
+    @Autowired
+    private AIServiceConnectionPoolManager connectionPoolManager;
+    
+    @Autowired
+    private AIServiceLoadBalancer loadBalancer;
     
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -1414,6 +1422,132 @@ public class AIServiceClient {
         response.setProcessingInfo(processingInfo);
         
         return response;
+    }
+    
+    /**
+     * Execute AI service operation with connection pooling and load balancing
+     */
+    public <T> CompletableFuture<T> executeWithConnectionPool(
+            String serviceType,
+            String operation,
+            Supplier<T> operationSupplier,
+            Supplier<T> fallbackSupplier) {
+        
+        return connectionPoolManager.executeWithConnection(
+            serviceType,
+            operation,
+            operationSupplier,
+            fallbackSupplier
+        );
+    }
+    
+    /**
+     * Get AI service connection pool health status
+     */
+    public AIServiceConnectionPoolManager.ConnectionPoolHealthStatus getConnectionPoolHealth() {
+        return connectionPoolManager.getHealthStatus();
+    }
+    
+    /**
+     * Get AI service connection pool metrics
+     */
+    public AIServiceConnectionPoolManager.ConnectionPoolMetrics getConnectionPoolMetrics() {
+        return connectionPoolManager.getMetrics();
+    }
+    
+    /**
+     * Get load balancing metrics for AI services
+     */
+    public AIServiceLoadBalancer.LoadBalancingMetrics getLoadBalancingMetrics(String serviceType) {
+        return loadBalancer.getMetrics(serviceType);
+    }
+    
+    /**
+     * Scale AI service connection pool
+     */
+    public void scaleConnectionPool(String serviceType, int targetConnections) {
+        connectionPoolManager.scalePool(serviceType, targetConnections);
+    }
+
+    /**
+     * Execute AI operation with load balancing for psychological analysis services
+     */
+    public <T> CompletableFuture<T> executeWithLoadBalancing(
+            String serviceType,
+            String userId,
+            String operation,
+            Supplier<T> operationSupplier,
+            Supplier<T> fallbackSupplier) {
+        
+        try {
+            // Select optimal endpoint using load balancer
+            AIServiceLoadBalancer.ServiceEndpoint endpoint = loadBalancer.selectEndpoint(serviceType, userId, operation);
+            
+            // Execute operation with circuit breaker protection
+            return circuitBreaker.executeWithCircuitBreaker(
+                serviceType,
+                () -> {
+                    long startTime = System.currentTimeMillis();
+                    try {
+                        T result = operationSupplier.get();
+                        long responseTime = System.currentTimeMillis() - startTime;
+                        
+                        // Record successful request
+                        loadBalancer.recordRequestResult(serviceType, endpoint.getEndpointId(), true, responseTime);
+                        
+                        return result;
+                    } catch (Exception e) {
+                        long responseTime = System.currentTimeMillis() - startTime;
+                        
+                        // Record failed request
+                        loadBalancer.recordRequestResult(serviceType, endpoint.getEndpointId(), false, responseTime);
+                        
+                        throw e;
+                    }
+                },
+                () -> fallbackSupplier.get()
+            );
+            
+        } catch (Exception e) {
+            logger.error("Error executing operation with load balancing for service: {} user: {} operation: {}", 
+                       serviceType, userId, operation, e);
+            return CompletableFuture.completedFuture(fallbackSupplier.get());
+        }
+    }
+
+    /**
+     * Get service discovery information for psychological analysis services
+     */
+    public AIServiceLoadBalancer.ServiceDiscoveryInfo getServiceDiscoveryInfo(String serviceType) {
+        return loadBalancer.getServiceDiscoveryInfo(serviceType);
+    }
+
+    /**
+     * Auto-scale psychological analysis service
+     */
+    public void autoScalePsychologicalService(String serviceType, int targetInstances) {
+        loadBalancer.autoScaleService(serviceType, targetInstances);
+    }
+
+    /**
+     * Perform failover for failed psychological analysis service endpoint
+     */
+    public AIServiceLoadBalancer.ServiceEndpoint performServiceFailover(String serviceType, String failedEndpointId) {
+        return loadBalancer.performFailover(serviceType, failedEndpointId);
+    }
+
+    /**
+     * Get comprehensive load balancing health status
+     */
+    public AIServiceLoadBalancer.LoadBalancingHealthStatus getLoadBalancingHealthStatus() {
+        return loadBalancer.getLoadBalancingHealthStatus();
+    }
+
+    /**
+     * Update load balancing configuration for psychological analysis services
+     */
+    public void updateLoadBalancingConfig(String serviceType, AIServiceLoadBalancer.LoadBalancingConfig config) {
+        loadBalancer.updateLoadBalancingConfig(serviceType, config);
     }
     
     // Helper methods for analysis calculations

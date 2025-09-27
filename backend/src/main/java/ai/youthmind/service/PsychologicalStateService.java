@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.Optional;
 
@@ -99,9 +100,15 @@ public class PsychologicalStateService {
     @Autowired
     private PersonalityComputationService personalityComputationService;
     
-    // Using existing services instead of missing ones
     @Autowired
     private AIServiceClient aiServiceClient;
+    
+    // Enhanced queuing system integration
+    @Autowired
+    private RequestQueueService requestQueueService;
+    
+    @Autowired
+    private StateUpdateBatchProcessor stateUpdateBatchProcessor;
     
     @Autowired
     private InteractionModulationService interactionModulationService;
@@ -986,5 +993,347 @@ public class PsychologicalStateService {
         } catch (Exception e) {
             logger.warn("Error applying Buddhist factor adjustments: {}", e.getMessage());
         }
+    }
+
+    // ===== ENHANCED QUEUING SYSTEM INTEGRATION =====
+
+    /**
+     * Queue psychological state update for asynchronous processing
+     */
+    public CompletableFuture<String> queueStateUpdateFromPost(UUID userId, String postContent, UUID postId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                logger.info("Queuing state update from post for user: {}", userId);
+                
+                // Create state update request
+                RequestQueueService.StateUpdateRequest stateUpdateRequest = RequestQueueService.StateUpdateRequest.builder()
+                    .userId(userId.toString())
+                    .userGroup(determineUserGroup(userId))
+                    .updateType(RequestQueueService.StateUpdateType.POST_CREATION)
+                    .updateData(createPostUpdateData(postContent, postId))
+                    .priority(RequestQueueService.StateUpdatePriority.NORMAL)
+                    .urgency(RequestQueueService.StateUpdateUrgency.NORMAL)
+                    .userTier(determineUserTier(userId))
+                    .metadata(createPostMetadata(postContent, userId))
+                    .build();
+                
+                // Queue the request
+                return requestQueueService.queueStateUpdate(stateUpdateRequest).join();
+                
+            } catch (Exception e) {
+                logger.error("Error queuing state update from post: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to queue state update", e);
+            }
+        });
+    }
+
+    /**
+     * Queue psychological state update for interaction
+     */
+    public CompletableFuture<String> queueStateUpdateFromInteraction(UUID userId, UUID targetPostId, 
+                                                                    String interactionType, double interactionWeight) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                logger.info("Queuing state update from interaction for user: {}", userId);
+                
+                // Create state update request
+                RequestQueueService.StateUpdateRequest stateUpdateRequest = RequestQueueService.StateUpdateRequest.builder()
+                    .userId(userId.toString())
+                    .userGroup(determineUserGroup(userId))
+                    .updateType(mapInteractionType(interactionType))
+                    .updateData(createInteractionUpdateData(targetPostId, interactionWeight))
+                    .priority(RequestQueueService.StateUpdatePriority.NORMAL)
+                    .urgency(RequestQueueService.StateUpdateUrgency.NORMAL)
+                    .userTier(determineUserTier(userId))
+                    .metadata(createInteractionMetadata(interactionType, interactionWeight))
+                    .build();
+                
+                // Queue the request
+                return requestQueueService.queueStateUpdate(stateUpdateRequest).join();
+                
+            } catch (Exception e) {
+                logger.error("Error queuing state update from interaction: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to queue state update", e);
+            }
+        });
+    }
+
+    /**
+     * Process queued state updates in batches
+     */
+    public CompletableFuture<StateUpdateBatchProcessor.BatchStateUpdateResult> processQueuedStateUpdates(
+            String queueName) {
+        return stateUpdateBatchProcessor.processQueuedStateUpdates(queueName, this::processQueuedStateUpdate);
+    }
+
+    /**
+     * Process a single queued state update request
+     */
+    public CompletableFuture<StateUpdateBatchProcessor.StateUpdateResult> processQueuedStateUpdate(
+            RequestQueueService.StateUpdateRequest request) {
+        return CompletableFuture.supplyAsync(() -> {
+            long startTime = System.currentTimeMillis();
+            try {
+                logger.debug("Processing queued state update: {}", request.getRequestId());
+                
+                UUID userId = UUID.fromString(request.getUserId());
+                StateUpdateBatchProcessor.StateUpdateResult result;
+                
+                switch (request.getUpdateType()) {
+                    case POST_CREATION:
+                        result = processPostCreationUpdate(userId, request);
+                        break;
+                    case INTERACTION_RESONANCE:
+                    case INTERACTION_LINGER:
+                        result = processInteractionUpdate(userId, request);
+                        break;
+                    case PERSONALITY_UPDATE:
+                        result = processPersonalityUpdate(userId, request);
+                        break;
+                    case MOOD_ANALYSIS:
+                        result = processMoodAnalysisUpdate(userId, request);
+                        break;
+                    case BATCH_UPDATE:
+                        result = processBatchUpdate(userId, request);
+                        break;
+                    case EMERGENCY_UPDATE:
+                        result = processEmergencyUpdate(userId, request);
+                        break;
+                    default:
+                        result = StateUpdateBatchProcessor.StateUpdateResult.builder()
+                            .success(false)
+                            .error("Unknown update type: " + request.getUpdateType())
+                            .build();
+                }
+                
+                long processingTime = System.currentTimeMillis() - startTime;
+                result.setProcessingTime(processingTime);
+                
+                // Complete the request in queue
+                requestQueueService.completeRequest(request.getRequestId(), result.isSuccess(), result);
+                
+                return result;
+                
+            } catch (Exception e) {
+                logger.error("Error processing queued state update {}: {}", request.getRequestId(), e.getMessage(), e);
+                
+                // Handle failed request
+                requestQueueService.handleFailedStateUpdate(request, e);
+                
+                return StateUpdateBatchProcessor.StateUpdateResult.builder()
+                    .success(false)
+                    .error("Processing failed: " + e.getMessage())
+                    .processingTime(System.currentTimeMillis() - startTime)
+                    .build();
+            }
+        });
+    }
+
+    /**
+     * Get queue health status for monitoring
+     */
+    public RequestQueueService.QueueHealthStatus getQueueHealthStatus() {
+        return requestQueueService.getQueueHealthStatus();
+    }
+
+    /**
+     * Get batch processing health status
+     */
+    public StateUpdateBatchProcessor.BatchProcessingHealthStatus getBatchProcessingHealthStatus() {
+        return stateUpdateBatchProcessor.getBatchProcessingHealthStatus();
+    }
+
+    // Private helper methods for queuing integration
+    private String determineUserGroup(UUID userId) {
+        try {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null) {
+                // Determine user group based on user characteristics
+                if (user.getCreatedAt().isAfter(LocalDateTime.now().minusMonths(1))) {
+                    return "new_users";
+                } else if (user.getCreatedAt().isBefore(LocalDateTime.now().minusYears(1))) {
+                    return "veteran_users";
+                } else {
+                    return "regular_users";
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Error determining user group for {}: {}", userId, e.getMessage());
+        }
+        return "default_group";
+    }
+
+    private RequestQueueService.UserTier determineUserTier(UUID userId) {
+        try {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null) {
+                // Determine user tier based on user characteristics
+                // This is a simplified implementation
+                return RequestQueueService.UserTier.FREE; // Default to FREE
+            }
+        } catch (Exception e) {
+            logger.warn("Error determining user tier for {}: {}", userId, e.getMessage());
+        }
+        return RequestQueueService.UserTier.FREE;
+    }
+
+    private Map<String, Object> createPostUpdateData(String postContent, UUID postId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("postContent", postContent);
+        data.put("postId", postId.toString());
+        data.put("timestamp", LocalDateTime.now());
+        return data;
+    }
+
+    private Map<String, Object> createInteractionUpdateData(UUID targetPostId, double interactionWeight) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("targetPostId", targetPostId.toString());
+        data.put("interactionWeight", interactionWeight);
+        data.put("timestamp", LocalDateTime.now());
+        return data;
+    }
+
+    private Map<String, Object> createPostMetadata(String postContent, UUID userId) {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("contentLength", postContent.length());
+        metadata.put("userId", userId.toString());
+        metadata.put("timestamp", LocalDateTime.now());
+        return metadata;
+    }
+
+    private Map<String, Object> createInteractionMetadata(String interactionType, double interactionWeight) {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("interactionType", interactionType);
+        metadata.put("interactionWeight", interactionWeight);
+        metadata.put("timestamp", LocalDateTime.now());
+        return metadata;
+    }
+
+    private RequestQueueService.StateUpdateType mapInteractionType(String interactionType) {
+        switch (interactionType.toLowerCase()) {
+            case "resonance":
+                return RequestQueueService.StateUpdateType.INTERACTION_RESONANCE;
+            case "linger":
+                return RequestQueueService.StateUpdateType.INTERACTION_LINGER;
+            default:
+                return RequestQueueService.StateUpdateType.INTERACTION_RESONANCE;
+        }
+    }
+
+    // Process different types of queued updates
+    private StateUpdateBatchProcessor.StateUpdateResult processPostCreationUpdate(UUID userId, RequestQueueService.StateUpdateRequest request) {
+        try {
+            Map<String, Object> data = (Map<String, Object>) request.getUpdateData();
+            String postContent = (String) data.get("postContent");
+            UUID postId = UUID.fromString((String) data.get("postId"));
+            
+            Map<String, Object> result = updateStateFromPost(userId, postContent, postId);
+            
+            return StateUpdateBatchProcessor.StateUpdateResult.builder()
+                .success(true)
+                .updatedState(extractStateVector(result))
+                .alpha(extractAlpha(result))
+                .build();
+                
+        } catch (Exception e) {
+            logger.error("Error processing post creation update: {}", e.getMessage(), e);
+            return StateUpdateBatchProcessor.StateUpdateResult.builder()
+                .success(false)
+                .error("Post creation update failed: " + e.getMessage())
+                .build();
+        }
+    }
+
+    private StateUpdateBatchProcessor.StateUpdateResult processInteractionUpdate(UUID userId, RequestQueueService.StateUpdateRequest request) {
+        try {
+            Map<String, Object> data = (Map<String, Object>) request.getUpdateData();
+            UUID targetPostId = UUID.fromString((String) data.get("targetPostId"));
+            double interactionWeight = (Double) data.get("interactionWeight");
+            
+            String interactionType = request.getUpdateType() == RequestQueueService.StateUpdateType.INTERACTION_RESONANCE 
+                ? "resonance" : "linger";
+            
+            Map<String, Object> result = updateStateFromInteraction(userId, targetPostId, interactionType, interactionWeight);
+            
+            return StateUpdateBatchProcessor.StateUpdateResult.builder()
+                .success(true)
+                .updatedState(extractStateVector(result))
+                .alpha(extractAlpha(result))
+                .build();
+                
+        } catch (Exception e) {
+            logger.error("Error processing interaction update: {}", e.getMessage(), e);
+            return StateUpdateBatchProcessor.StateUpdateResult.builder()
+                .success(false)
+                .error("Interaction update failed: " + e.getMessage())
+                .build();
+        }
+    }
+
+    private StateUpdateBatchProcessor.StateUpdateResult processPersonalityUpdate(UUID userId, RequestQueueService.StateUpdateRequest request) {
+        // Placeholder for personality update processing
+        return StateUpdateBatchProcessor.StateUpdateResult.builder()
+            .success(true)
+            .updatedState(convertDoubleListToFloatList(getCurrentState(userId)))
+            .alpha(DEFAULT_BASE_ALPHA)
+            .build();
+    }
+
+    private StateUpdateBatchProcessor.StateUpdateResult processMoodAnalysisUpdate(UUID userId, RequestQueueService.StateUpdateRequest request) {
+        // Placeholder for mood analysis update processing
+        return StateUpdateBatchProcessor.StateUpdateResult.builder()
+            .success(true)
+            .updatedState(convertDoubleListToFloatList(getCurrentState(userId)))
+            .alpha(DEFAULT_BASE_ALPHA)
+            .build();
+    }
+
+    private StateUpdateBatchProcessor.StateUpdateResult processBatchUpdate(UUID userId, RequestQueueService.StateUpdateRequest request) {
+        // Placeholder for batch update processing
+        return StateUpdateBatchProcessor.StateUpdateResult.builder()
+            .success(true)
+            .updatedState(convertDoubleListToFloatList(getCurrentState(userId)))
+            .alpha(DEFAULT_BASE_ALPHA)
+            .build();
+    }
+
+    private StateUpdateBatchProcessor.StateUpdateResult processEmergencyUpdate(UUID userId, RequestQueueService.StateUpdateRequest request) {
+        // Placeholder for emergency update processing
+        return StateUpdateBatchProcessor.StateUpdateResult.builder()
+            .success(true)
+            .updatedState(convertDoubleListToFloatList(getCurrentState(userId)))
+            .alpha(MAX_ALPHA) // Use maximum alpha for emergency updates
+            .build();
+    }
+
+    private List<Float> extractStateVector(Map<String, Object> result) {
+        if (result != null && result.containsKey("state")) {
+            Object stateObj = result.get("state");
+            if (stateObj instanceof List) {
+                return ((List<?>) stateObj).stream()
+                    .map(obj -> ((Number) obj).floatValue())
+                    .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+            }
+        }
+        return new ArrayList<>();
+    }
+
+    private double extractAlpha(Map<String, Object> result) {
+        if (result != null && result.containsKey("alpha")) {
+            Object alphaObj = result.get("alpha");
+            if (alphaObj instanceof Number) {
+                return ((Number) alphaObj).doubleValue();
+            }
+        }
+        return DEFAULT_BASE_ALPHA;
+    }
+
+    private List<Float> convertDoubleListToFloatList(List<Double> doubleList) {
+        if (doubleList == null) {
+            return new ArrayList<>();
+        }
+        return doubleList.stream()
+            .map(Double::floatValue)
+            .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
     }
 }

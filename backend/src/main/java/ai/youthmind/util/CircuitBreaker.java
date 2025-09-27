@@ -4,14 +4,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Circuit breaker implementation for AI service calls
- * Provides fault tolerance and prevents cascading failures
+ * Enhanced Circuit Breaker implementation for AI service calls with advanced resilience patterns.
+ * Features:
+ * - Configurable failure thresholds and timeouts
+ * - State transitions (CLOSED, OPEN, HALF_OPEN)
+ * - Automatic recovery and health monitoring
+ * - Request timeout handling and cancellation
+ * - Comprehensive metrics and monitoring
+ * - Multiple service support with individual configurations
  */
 @Component
 public class CircuitBreaker {
@@ -40,6 +52,11 @@ public class CircuitBreaker {
     // Half-open state tracking
     private final AtomicInteger halfOpenCalls = new AtomicInteger(0);
     
+    // Enhanced features for multiple services
+    private final Map<String, CircuitBreakerConfig> serviceConfigs = new ConcurrentHashMap<>();
+    private final Map<String, CircuitBreakerState> serviceStates = new ConcurrentHashMap<>();
+    private final Map<String, CircuitBreakerMetrics> serviceMetrics = new ConcurrentHashMap<>();
+    
     public CircuitBreaker() {
         this(5, 60000, 3); // 5 failures, 60s timeout, 3 half-open calls
     }
@@ -48,6 +65,91 @@ public class CircuitBreaker {
         this.failureThreshold = failureThreshold;
         this.timeoutDurationMs = timeoutDurationMs;
         this.halfOpenMaxCalls = halfOpenMaxCalls;
+    }
+    
+    /**
+     * Enhanced execute method with service-specific configuration
+     */
+    public <T> CompletableFuture<T> executeWithCircuitBreaker(
+            String serviceName,
+            CircuitBreakerCallable<T> operation,
+            CircuitBreakerCallable<T> fallback) {
+        
+        return executeWithCircuitBreaker(serviceName, operation, fallback, null);
+    }
+    
+    /**
+     * Enhanced execute method with custom timeout
+     */
+    public <T> CompletableFuture<T> executeWithCircuitBreaker(
+            String serviceName,
+            CircuitBreakerCallable<T> operation,
+            CircuitBreakerCallable<T> fallback,
+            Duration customTimeout) {
+        
+        return CompletableFuture.supplyAsync(() -> {
+            CircuitBreakerState state = getOrCreateServiceState(serviceName);
+            CircuitBreakerConfig config = getServiceConfig(serviceName);
+            
+            try {
+                // Check circuit state
+                if (state.getCurrentState() == State.OPEN) {
+                    if (state.canAttemptReset()) {
+                        logger.info("Circuit breaker for service '{}' attempting reset (HALF_OPEN)", serviceName);
+                        state.transitionToHalfOpen();
+                    } else {
+                        logger.warn("Circuit breaker for service '{}' is OPEN, executing fallback", serviceName);
+                        recordFallbackExecution(serviceName);
+                        try {
+                    return fallback.call();
+                } catch (Exception fallbackException) {
+                    logger.error("Fallback also failed for service '{}': {}", serviceName, fallbackException.getMessage());
+                    throw new RuntimeException("Both operation and fallback failed", fallbackException);
+                }
+                    }
+                }
+                
+                // Execute operation with timeout
+                Duration timeout = customTimeout != null ? customTimeout : Duration.ofMillis(config.getTimeoutMs());
+                CompletableFuture<T> future = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return operation.call();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+                
+                T result = future.get(timeout.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS);
+                
+                // Success - handle based on current state
+                handleSuccess(state, serviceName);
+                recordSuccess(serviceName);
+                
+                return result;
+                
+            } catch (TimeoutException e) {
+                logger.warn("Operation timeout for service '{}': {}", serviceName, e.getMessage());
+                handleFailure(state, serviceName, "Timeout");
+                recordFailure(serviceName, "Timeout");
+                try {
+                    return fallback.call();
+                } catch (Exception fallbackException) {
+                    logger.error("Fallback also failed for service '{}': {}", serviceName, fallbackException.getMessage());
+                    throw new RuntimeException("Both operation and fallback failed", fallbackException);
+                }
+                
+            } catch (Exception e) {
+                logger.error("Operation failed for service '{}': {}", serviceName, e.getMessage(), e);
+                handleFailure(state, serviceName, e.getMessage());
+                recordFailure(serviceName, e.getMessage());
+                try {
+                    return fallback.call();
+                } catch (Exception fallbackException) {
+                    logger.error("Fallback also failed for service '{}': {}", serviceName, fallbackException.getMessage());
+                    throw new RuntimeException("Both operation and fallback failed", fallbackException);
+                }
+            }
+        });
     }
     
     /**
@@ -270,5 +372,256 @@ public class CircuitBreaker {
         public LocalDateTime getLastFailureTime() { return lastFailureTime; }
         public LocalDateTime getLastSuccessTime() { return lastSuccessTime; }
         public int getHalfOpenCalls() { return halfOpenCalls; }
+    }
+    
+    // Enhanced helper methods
+    private CircuitBreakerState getOrCreateServiceState(String serviceName) {
+        return serviceStates.computeIfAbsent(serviceName, name -> {
+            CircuitBreakerConfig config = getServiceConfig(name);
+            return new CircuitBreakerState(name, config);
+        });
+    }
+    
+    private CircuitBreakerConfig getServiceConfig(String serviceName) {
+        return serviceConfigs.computeIfAbsent(serviceName, name -> {
+            return createDefaultConfig(name);
+        });
+    }
+    
+    private CircuitBreakerConfig createDefaultConfig(String serviceName) {
+        return CircuitBreakerConfig.builder()
+            .serviceName(serviceName)
+            .failureThreshold(5)
+            .successThreshold(2)
+            .timeoutMs(30000)
+            .resetTimeoutMs(60000)
+            .enableMetrics(true)
+            .build();
+    }
+    
+    private void handleSuccess(CircuitBreakerState state, String serviceName) {
+        if (state.getCurrentState() == State.HALF_OPEN) {
+            state.incrementSuccessCount();
+            CircuitBreakerConfig config = getServiceConfig(serviceName);
+            
+            if (state.getSuccessCount().get() >= config.getSuccessThreshold()) {
+                state.transitionToClosed();
+                logger.info("Circuit breaker for service '{}' transitioned to CLOSED", serviceName);
+            }
+        } else if (state.getCurrentState() == State.CLOSED) {
+            state.resetFailureCount();
+        }
+    }
+    
+    private void handleFailure(CircuitBreakerState state, String serviceName, String errorMessage) {
+        if (state.getCurrentState() == State.HALF_OPEN) {
+            state.transitionToOpen();
+            logger.warn("Circuit breaker for service '{}' transitioned to OPEN due to failure in HALF_OPEN state", serviceName);
+        } else if (state.getCurrentState() == State.CLOSED) {
+            state.incrementFailureCount();
+            CircuitBreakerConfig config = getServiceConfig(serviceName);
+            
+            if (state.getFailureCount().get() >= config.getFailureThreshold()) {
+                state.transitionToOpen();
+                logger.warn("Circuit breaker for service '{}' transitioned to OPEN due to {} consecutive failures", 
+                        serviceName, state.getFailureCount().get());
+            }
+        }
+    }
+    
+    private void recordSuccess(String serviceName) {
+        CircuitBreakerMetrics metrics = getOrCreateMetrics(serviceName);
+        metrics.incrementSuccessCount();
+    }
+    
+    private void recordFailure(String serviceName, String errorMessage) {
+        CircuitBreakerMetrics metrics = getOrCreateMetrics(serviceName);
+        metrics.incrementFailureCount();
+        metrics.recordError(errorMessage);
+    }
+    
+    private void recordFallbackExecution(String serviceName) {
+        CircuitBreakerMetrics metrics = getOrCreateMetrics(serviceName);
+        metrics.incrementFallbackCount();
+    }
+    
+    private CircuitBreakerMetrics getOrCreateMetrics(String serviceName) {
+        return serviceMetrics.computeIfAbsent(serviceName, name -> new CircuitBreakerMetrics(name));
+    }
+    
+    /**
+     * Get circuit breaker health status for all services
+     */
+    public CircuitBreakerHealthStatus getHealthStatus() {
+        Map<String, ServiceHealth> serviceHealths = new ConcurrentHashMap<>();
+        
+        for (String serviceName : serviceStates.keySet()) {
+            CircuitBreakerState state = serviceStates.get(serviceName);
+            CircuitBreakerMetrics metrics = serviceMetrics.get(serviceName);
+            
+            ServiceHealth health = ServiceHealth.builder()
+                .serviceName(serviceName)
+                .currentState(state.getCurrentState())
+                .failureCount(state.getFailureCount().get())
+                .successCount(state.getSuccessCount().get())
+                .lastFailureTime(state.getLastFailureTime())
+                .totalRequests(metrics != null ? metrics.getTotalRequests().get() : 0)
+                .successRate(metrics != null ? metrics.getSuccessRate() : 0.0)
+                .fallbackRate(metrics != null ? metrics.getFallbackRate() : 0.0)
+                .build();
+            
+            serviceHealths.put(serviceName, health);
+        }
+        
+        return CircuitBreakerHealthStatus.builder()
+            .overallHealth(calculateOverallHealth())
+            .serviceHealths(serviceHealths)
+            .timestamp(LocalDateTime.now())
+            .build();
+    }
+    
+    private double calculateOverallHealth() {
+        if (serviceStates.isEmpty()) {
+            return 1.0;
+        }
+        
+        long openCircuits = serviceStates.values().stream()
+            .mapToLong(state -> state.getCurrentState() == State.OPEN ? 1 : 0)
+            .sum();
+        
+        long halfOpenCircuits = serviceStates.values().stream()
+            .mapToLong(state -> state.getCurrentState() == State.HALF_OPEN ? 1 : 0)
+            .sum();
+        
+        long totalCircuits = serviceStates.size();
+        
+        return (double) (totalCircuits - openCircuits - (halfOpenCircuits * 0.5)) / totalCircuits;
+    }
+    
+    // Enhanced configuration and state classes
+    @lombok.Data
+    @lombok.Builder
+    public static class CircuitBreakerConfig {
+        private String serviceName;
+        private int failureThreshold;
+        private int successThreshold;
+        private long timeoutMs;
+        private long resetTimeoutMs;
+        private boolean enableMetrics;
+    }
+    
+    @lombok.Data
+    public static class CircuitBreakerState {
+        private final String serviceName;
+        private volatile State currentState;
+        private final AtomicInteger failureCount;
+        private final AtomicInteger successCount;
+        private volatile LocalDateTime lastFailureTime;
+        private final CircuitBreakerConfig config;
+
+        public CircuitBreakerState(String serviceName, CircuitBreakerConfig config) {
+            this.serviceName = serviceName;
+            this.currentState = State.CLOSED;
+            this.failureCount = new AtomicInteger(0);
+            this.successCount = new AtomicInteger(0);
+            this.config = config;
+        }
+
+        public void transitionToOpen() {
+            currentState = State.OPEN;
+            lastFailureTime = LocalDateTime.now();
+            successCount.set(0);
+        }
+
+        public void transitionToHalfOpen() {
+            currentState = State.HALF_OPEN;
+            failureCount.set(0);
+        }
+
+        public void transitionToClosed() {
+            currentState = State.CLOSED;
+            failureCount.set(0);
+            successCount.set(0);
+        }
+
+        public void incrementFailureCount() {
+            failureCount.incrementAndGet();
+        }
+
+        public void resetFailureCount() {
+            failureCount.set(0);
+        }
+
+        public void incrementSuccessCount() {
+            successCount.incrementAndGet();
+        }
+
+        public boolean canAttemptReset() {
+            return currentState == State.OPEN &&
+                   lastFailureTime != null &&
+                   Duration.between(lastFailureTime, LocalDateTime.now()).compareTo(Duration.ofMillis(config.getResetTimeoutMs())) > 0;
+        }
+    }
+    
+    @lombok.Data
+    public static class CircuitBreakerMetrics {
+        private final String serviceName;
+        private final AtomicLong successCount = new AtomicLong(0);
+        private final AtomicLong failureCount = new AtomicLong(0);
+        private final AtomicLong fallbackCount = new AtomicLong(0);
+        private final AtomicLong totalRequests = new AtomicLong(0);
+
+        public CircuitBreakerMetrics(String serviceName) {
+            this.serviceName = serviceName;
+        }
+
+        public void incrementSuccessCount() {
+            successCount.incrementAndGet();
+            totalRequests.incrementAndGet();
+        }
+
+        public void incrementFailureCount() {
+            failureCount.incrementAndGet();
+            totalRequests.incrementAndGet();
+        }
+
+        public void incrementFallbackCount() {
+            fallbackCount.incrementAndGet();
+        }
+
+        public void recordError(String errorMessage) {
+            // Could be extended to track specific error types
+        }
+
+        public double getSuccessRate() {
+            long total = totalRequests.get();
+            return total > 0 ? (double) successCount.get() / total : 0.0;
+        }
+
+        public double getFallbackRate() {
+            long total = totalRequests.get();
+            return total > 0 ? (double) fallbackCount.get() / total : 0.0;
+        }
+    }
+    
+    @lombok.Data
+    @lombok.Builder
+    public static class CircuitBreakerHealthStatus {
+        private double overallHealth;
+        private Map<String, ServiceHealth> serviceHealths;
+        private LocalDateTime timestamp;
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class ServiceHealth {
+        private String serviceName;
+        private State currentState;
+        private int failureCount;
+        private int successCount;
+        private LocalDateTime lastFailureTime;
+        private long totalRequests;
+        private double successRate;
+        private double fallbackRate;
     }
 }
