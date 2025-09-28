@@ -348,8 +348,10 @@ extension AppError {
         print("📊 Debug Info: \(debugInfo)")
         #endif
         
-        // TODO: Integrate with your analytics service
-        // Analytics.logError(self)
+        // Integrate with analytics service
+        Task {
+            await AnalyticsService.shared.trackError(self)
+        }
     }
 }
 
@@ -376,6 +378,15 @@ class AppErrorHandler: AppErrorHandling {
         // Log the error
         error.log()
         
+        // Track user behavior during error handling
+        Task {
+            await AnalyticsService.shared.trackUserBehavior(.errorEncountered, context: BehaviorContext(
+                errorCode: error.errorCode,
+                screenName: getCurrentScreenName(),
+                additionalData: ["severity": String(describing: error.severity)]
+            ))
+        }
+        
         // Handle critical errors immediately
         if error.isCritical {
             handleCriticalError(error)
@@ -387,6 +398,32 @@ class AppErrorHandler: AppErrorHandling {
     }
     
     private func handleCriticalError(_ error: AppError) {
+        // Track critical error behavior
+        Task {
+            await AnalyticsService.shared.trackUserBehavior(.errorEncountered, context: BehaviorContext(
+                errorCode: error.errorCode,
+                screenName: getCurrentScreenName(),
+                additionalData: ["severity": "critical", "type": "critical_error"]
+            ))
+        }
+        
+        // Report as crash if it's a system error
+        if case .system = error {
+            let crashReport = CrashReport(
+                error: error.errorDescription ?? "System Error",
+                stackTrace: Thread.callStackSymbols,
+                userInfo: UserInfo(
+                    userId: "unknown",
+                    sessionId: UUID().uuidString,
+                    isAnonymous: true
+                )
+            )
+            
+            Task {
+                await AnalyticsService.shared.reportCrash(crashReport)
+            }
+        }
+        
         // TODO: Implement critical error handling
         // - Show alert to user
         // - Log to crash reporting service
@@ -394,10 +431,25 @@ class AppErrorHandler: AppErrorHandling {
     }
     
     private func showErrorToUser(_ error: AppError, retryAction: (() -> Void)?) {
+        // Track error display to user
+        Task {
+            await AnalyticsService.shared.trackUserBehavior(.errorEncountered, context: BehaviorContext(
+                errorCode: error.errorCode,
+                screenName: getCurrentScreenName(),
+                additionalData: ["action": "error_displayed", "retryable": String(error.isRetryable)]
+            ))
+        }
+        
         // TODO: Implement user notification
         // - Show toast or alert
         // - Provide retry button if applicable
         // - Navigate to appropriate screen if needed
+    }
+    
+    private func getCurrentScreenName() -> String? {
+        // Get current screen name for analytics
+        // This should be implemented based on your navigation system
+        return "unknown"
     }
 } 
 

@@ -1,0 +1,273 @@
+1、用户发帖部分算法：
+当用户发帖时，微调模型会对文本进行心理分析，输出一个 43 维的原始心
+所向量 V_raw，代表这条帖子的心理成分。同时系统会输出一个强度因子 θ
+∈ [0, 1]，表示该帖对用户心理影响的显著程度（即“心理冲击量”）。
+随后系统更新当前用户的种子向量 S，方式如下：
+S_new = α · V_raw + (1 - α) · S_prev
+其中 α = base_alpha + θ（受发帖强度影响）
+θ：θ 是一个权重因子，表示“单条内容（如帖子、文档）对用户向量/
+语义空间的影响程度”。它取值在 [0,1]，数值越大，说明该内容越“重要”
+或“有冲击力”，对用户表示的更新贡献就越大。
+2、用户互动部分算法：
+当用户与他人的帖子产生互动（如共鸣、停留）时，平台直接使用被互动
+帖中已有的原始心所向量 R_raw，表示“他人的心理表达”。
+这时要将用户当前的心理状态 S_prev 和系统提供的正价平衡向量 B（例
+如抑制“瞋”“痴”，增强“喜”“舍”）共同作用于 R_raw，进行调制：
+R′ = R_raw × (1 + β · S_prev + μ · B)
+其中：
+β 是用户当前心理状态对外界共鸣影响的放大系数
+μ 是系统设置的正价心所放大因子
+B 是一个固定的 43 维向量，增强正面心所、削弱负面心所
+为了防止某些心所维度数值爆炸，进行 clip 限制：
+R′′ = clip(R′, lower_bound, upper_bound)
+之后，融合进用户状态：
+S_new = Ws · R′′ + (1 - Ws) · S_prev
+其中：
+Ws 是本次互动的行为权重（如共鸣 = 0.2，停留 = 0.01）
+S_prev 是当前用户心理状态
+3、更新机制：
+每一个用户在触发用户发帖或用户互动部分的算法后，会实时执行算法，
+实时更新 S 向量。
+发帖项：
+S_new = α · V_raw + (1 - α) · S_prev
+α = base_alpha + θ
+互动项：
+R′ = R_raw × (1 + β·S_prev + μ·B)
+R′′ = clip(R′)
+S_new = Ws · R′′ + (1 - Ws) · S_prev
+更新过程中，当前用户的 S 将用于推荐算法
+4、人格计算算法
+每周或每月将所有用户发帖中的 V_raw 集合（历史表达），用 θ 作为权
+重加权平均：
+μ_post = weighted_mean(V_raw_post_i, weight = θ_i)
+这个 μ_post 表示用户主动心理偏好，是“显性人格”。
+每周或每月从所有互动帖 R_raw 中，统计每一维出现较大值的频率，提取
+出 Top-K 高频共鸣心所维度 Ψ，然后构造一个只保留这些维度的“潜意识共
+鸣向量”Vshadow
+最终人格向量融合公式：
+μ = λ1 · μ_post + λ2 · V_shadow
+（如 λ1 = 0.7, λ2 = 0.3）
+μ 为用户人格中心向量（可映射至五大人格或平台的自定义维度）
+总结：
+1、用户发帖部分算法
+字段/步骤 内容说明
+触发行为 用户发布一条新帖
+生成向量 微调模型输出 V_raw（43 维心所向量）
+生成强度因子 系统输出 θ ∈ [0, 1] 表示发帖心理冲击强度
+更新用户状态
+S
+使用当前状态 S_prev 与 V_raw 融合更新 S
+融合公式 S_new = α · V_raw + (1 - α) · S_prev
+α = base_alpha + θ
+2、用户互动部分算法
+字段/步骤 内容说明
+触发行为 用户在他人帖子上停留、共鸣等互动行为发生
+获取目标帖向
+量
+读取目标帖的原始心所向量 R_raw（43 维）
+调制公式 R′ = R_raw × (1 + β · S_prev + μ · B)
+其中 B 为系统设定正价心所增强向量
+Clip 限制 R′ ′ = clip(R′ , lower_bound, upper_bound)
+防止数值爆炸
+行为融合 融合用户当前状态：S_new = Ws · R′ ′ + (1 - Ws) · S_prev
+3、更新机制：
+实时更新，只要用户触发发帖或互动，就启动对应算法实时更新出 S_new 向量
+4、人格计算算法
+字段/步骤 内容说明
+触发机制 每周或每月定期执行
+主动人格路径（μ_post） μ_post = weighted_mean(V_raw_post_i, weight = θ_i)
+表示用户主动表达的人格中心
+潜意识人格路径
+（V_shadow）
+从用户互动记录中提取共鸣特征构建 V_shadow
+共鸣维度提取 统计所有互动帖中各心所维度出现高值的频率，选出 Top-K 高频心所维度
+Ψ
+潜意识向量构造 V_shadow[i] = mean(R_raw[i]) if i ∈ Ψ else 0
+最终融合人格向量（μ） μ = λ1 · μ_post + λ2 · V_shadow（如 λ1=0.7，λ2=0.3）
+向量的用途：
+实时更新的 S_new 作为推荐算法和个性化 AI 的部分的参考
+每周或每月获取的 μ 作为人格计算的参考和个性化 AI 部分的参考
+V_raw 作为个性化 AI 的参考和主页的参考
+总结：
+用户发帖部分
+ 输入：用户发帖的文本 → 微调模型 → 输出 43 维心所向量 V_raw +
+强度因子 θ。
+ 更新机制：
+o 用公式
+𝑆𝑛𝑒𝑤 = 𝛼 ⋅ 𝑉𝑟𝑎𝑤 + (1 − 𝛼) ⋅ 𝑆𝑝𝑟𝑒𝑣
+o 其中 𝛼 = 𝑏𝑎𝑠𝑒_𝑎𝑙𝑝ℎ𝑎 + 𝜃，由 θ 来体现该帖的“心理冲击
+量”。
+ 作用：发帖行为直接推动用户心理状态向量 S 的更新，是用户“主动表
+达”的痕迹。
+2. 用户互动部分
+ 输入：互动对象的帖子 → 系统给出 原始心所向量 R_raw。
+ 调制机制：
+o 融合用户当前心理状态 S_prev 与正价平衡向量 B：
+𝑅' = 𝑅𝑟𝑎𝑤 × (1 + 𝛽 ⋅ 𝑆𝑝𝑟𝑒𝑣 + 𝜇 ⋅ 𝐵)
+o 再进行 clip 限制，得到 𝑅''。
+ 更新机制：
+o 融合公式：
+𝑆𝑛𝑒𝑤 = 𝑊𝑠
+⋅ 𝑅'' + (1 − 𝑊𝑠) ⋅ 𝑆𝑝𝑟𝑒𝑣
+o Ws 不同（共鸣、停留等），决定互动对用户心态的影响强弱。
+ 作用：体现用户“被动共鸣”的心理轨迹。
+3. 实时更新机制
+ 触发条件：发帖或互动时立即执行更新。
+ 共同点：发帖和互动部分的结果都实时改变用户的心理状态向量 S。
+ 延伸作用：更新后的 S 直接作为推荐系统的输入，影响个性化推荐。
+4. 人格计算部分
+ 周期性计算（周/月）：
+1. 显性人格（μ_post）：将历史发帖的 V_raw 加权平均（权重 =
+θ）。
+2. 潜意识人格（V_shadow）：从互动 R_raw 中提取高频共鸣维度，
+形成潜意识共鸣向量。
+ 人格融合公式：
+𝜇 = 𝜆1 ⋅ 𝜇𝑝𝑜𝑠𝑡 + 𝜆2 ⋅ 𝑉𝑠ℎ𝑎𝑑𝑜𝑤
+ 作用：得到用户的人格中心向量 μ，可映射到五大人格或平台定制维
+度。
+串联关系与逻辑闭环
+1. 发帖与互动 → 驱动心理状态向量 S 实时更新。
+2. S 的动态变化 → 作为推荐系统的输入，影响内容推送。
+3. 周期性回溯：对历史发帖和互动进行统计，提取人格向量 μ。
+4. 人格向量 μ → 是对长期心理偏好的总结和沉淀，既能刻画用户长期特
+征，也能反过来指导推荐或干预策略。
+总结一句话：
+ 发帖部分体现用户的主动心理表达，互动部分体现用户的被动心理共
+鸣，二者实时更新心理状态向量 S；
+ 周期性的人格计算则在长期尺度上沉淀出用户的显性与潜意识人格，形
+成更稳定的中心向量 μ，与实时的 S 共同作用于推荐和心理建模。
+English version
+1. User Posting Algorithm
+When a user posts, the fine-tuned model performs psychological
+analysis on the text and outputs a 43-dimensional raw mental factor
+vector V_raw, representing the psychological components of the post.
+At the same time, the system outputs an intensity factor θ ∈ [0,
+1], which indicates how significant the psychological impact of the
+post is (i.e., its “psychological shock value”).
+The system then updates the user’s current seed vector S as follows:
+𝑆𝑛𝑒𝑤 = 𝛼 ⋅ 𝑉𝑟𝑎𝑤 + (1 − 𝛼) ⋅ 𝑆𝑝𝑟𝑒𝑣
+where
+𝛼 = 𝑏𝑎𝑠𝑒_𝑎𝑙𝑝ℎ𝑎 + 𝜃(influenced by posting intensity).
+ θ: a weighting factor representing how much influence a single
+piece of content (e.g., a post or document) has on the user
+vector/semantic space.
+o Range: [0, 1]
+o The larger the value, the more “important” or
+“impactful” the content, and the greater its
+contribution to updating the user’s representation.
+2. User Interaction Algorithm
+When a user interacts with another person’s post (e.g., resonance,
+dwell), the platform directly uses the raw mental factor vector
+R_raw from that post, representing the “other person’s
+psychological expression.”
+The system then modulates R_raw by combining it with the user’s
+current mental state S_prev and the system-provided positive balance
+vector B (e.g., suppressing “anger” and “delusion,” enhancing
+“joy” and “equanimity”):
+𝑅' = 𝑅𝑟𝑎𝑤 × (1 + 𝛽 ⋅ 𝑆𝑝𝑟𝑒𝑣 + 𝜇 ⋅ 𝐵)
+where:
+ β: amplification factor of how the user’s current state
+influences external resonance.
+ μ: amplification factor for positive mental elements set by
+the system.
+ B: a fixed 43-dimensional vector that enhances positive factors
+and reduces negative ones.
+To prevent certain dimensions from exploding in value, a clip
+constraint is applied:
+𝑅'' = 𝑐𝑙𝑖𝑝(𝑅',𝑙𝑜𝑤𝑒𝑟_𝑏𝑜𝑢𝑛𝑑, 𝑢𝑝𝑝𝑒𝑟_𝑏𝑜𝑢𝑛𝑑)
+Then, it is integrated into the user’s state:
+𝑆𝑛𝑒𝑤 = 𝑊𝑠
+⋅ 𝑅'' + (1 − 𝑊𝑠) ⋅ 𝑆𝑝𝑟𝑒𝑣
+where:
+ W_s: interaction weight (e.g., resonance = 0.2, dwell = 0.01).
+ S_prev: user’s current mental state.
+3. Update Mechanism
+Whenever a user posts or interacts, the corresponding algorithm is
+executed in real time, updating the S vector immediately.
+ Posting:
+𝑆𝑛𝑒𝑤 = 𝛼 ⋅ 𝑉𝑟𝑎𝑤 + (1 − 𝛼) ⋅ 𝑆𝑝𝑟𝑒𝑣, 𝛼 = 𝑏𝑎𝑠𝑒_𝑎𝑙𝑝ℎ𝑎 + 𝜃
+ Interaction:
+𝑅' = 𝑅𝑟𝑎𝑤 × (1 + 𝛽 ⋅ 𝑆𝑝𝑟𝑒𝑣 + 𝜇 ⋅ 𝐵)
+𝑅'' = 𝑐𝑙𝑖𝑝(𝑅')
+𝑆𝑛𝑒𝑤 = 𝑊𝑠
+⋅ 𝑅'' + (1 − 𝑊𝑠) ⋅ 𝑆𝑝𝑟𝑒𝑣
+During the update process, the user’s S vector is also used as input
+for the recommendation algorithm.
+4. Personality Computation Algorithm
+ Weekly or monthly, collect all V_raw vectors from user posts
+(historical expressions) and compute a weighted average using
+θ as the weight:
+𝜇𝑝𝑜𝑠𝑡 = 𝑤𝑒𝑖𝑔ℎ𝑡𝑒𝑑_𝑚𝑒𝑎𝑛(𝑉𝑟𝑎𝑤_𝑝𝑜𝑠𝑡_𝑖
+, 𝑤𝑒𝑖𝑔ℎ𝑡 = 𝜃𝑖)
+This μ_post represents the user’s active psychological
+preferences, i.e., their explicit personality.
+ Similarly, from all interactive posts (R_raw), count the
+frequency of large values for each dimension, extract the Top-K
+high-frequency resonance dimensions Ψ, and construct a
+“subconscious resonance vector” V_shadow that retains only
+these dimensions.
+ Finally, integrate explicit and implicit personalities:
+𝜇 = 𝜆1 ⋅ 𝜇𝑝𝑜𝑠𝑡 + 𝜆2 ⋅ 𝑉𝑠ℎ𝑎𝑑𝑜𝑤
+(e.g., 𝜆1 = 0.7, 𝜆2 = 0.3)
+The resulting μ is the user’s central personality vector, which can
+be mapped to the Big Five personality traits or to the platform’s
+custom-defined dimensions.
+Conclude：
+1. User Posting Module
+Input: User’s post text → fine-tuned model → outputs a 43-
+dimensional mental factor vector V_raw + intensity factor θ.
+Update Mechanism:
+𝑆𝑛𝑒𝑤 = 𝛼 ⋅ 𝑉𝑟𝑎𝑤 + (1 − 𝛼) ⋅ 𝑆𝑝𝑟𝑒𝑣
+where 𝛼 = 𝑏𝑎𝑠𝑒_𝑎𝑙𝑝ℎ𝑎 + 𝜃.
+Here, θ reflects the “psychological impact” of the post.
+Role: Posting directly drives the update of the user’s mental state
+vector S, representing the trace of active expression.
+2. User Interaction Module
+Input: Interacted post → system provides the original mental factor
+vector R_raw.
+Modulation Mechanism:
+Combines the user’s current mental state 𝑆𝑝𝑟𝑒𝑣and the positive
+balance vector B:
+𝑅' = 𝑅𝑟𝑎𝑤 × (1 + 𝛽 ⋅ 𝑆𝑝𝑟𝑒𝑣 + 𝜇 ⋅ 𝐵)
+Then apply a clip constraint to obtain 𝑅''.
+Update Mechanism:
+𝑆𝑛𝑒𝑤 = 𝑊𝑠
+⋅ 𝑅'' + (1 − 𝑊𝑠) ⋅ 𝑆𝑝𝑟𝑒𝑣
+Here, 𝑊𝑠varies depending on the interaction type (e.g., resonance =
+0.2, dwell = 0.01), deciding the strength of influence.
+Role: Reflects the user’s passive resonance trajectory.
+3. Real-Time Update Mechanism
+ Trigger: Executed immediately when posting or interacting.
+ Commonality: Both posting and interaction results update the
+user’s mental state vector S in real time.
+ Extended Role: The updated S serves directly as input to the
+recommendation algorithm, driving personalized content
+delivery.
+4. Personality Computation Module
+Periodic Computation (weekly/monthly):
+1. Explicit Personality (μ_post): Weighted average of historical
+𝑉𝑟𝑎𝑤from posts (weights = θ).
+2. Implicit Personality (V_shadow): Extracts top-K high-frequency
+resonant dimensions from interactive 𝑅𝑟𝑎𝑤, forming a
+subconscious resonance vector.
+Fusion Formula:
+𝜇 = 𝜆1 ⋅ 𝜇𝑝𝑜𝑠𝑡 + 𝜆2 ⋅ 𝑉𝑠ℎ𝑎𝑑𝑜𝑤
+Role: Produces the user’s central personality vector μ, which can
+be mapped to the Big Five or customized platform dimensions.
+Linking Relationships & Logical Loop
+1. Posting & interaction → drive real-time updates of the user’s
+mental state vector S.
+2. Dynamic S → acts as input for the recommendation system,
+influencing content delivery.
+3. Periodic review → aggregates historical posts and interactions
+to compute the personality vector μ.
+4. Personality vector μ → summarizes long-term psychological
+preferences, portraying stable traits while guiding
+recommendations or interventions.
+✅ One-Sentence Summary:
+The posting module captures the user’s active psychological
+expression, while the interaction module reflects passive resonance;
+both jointly update the real-time mental state vector S. The periodic
+personality computation consolidates explicit and subconscious traits
+into a stable personality center μ, which—together with real-time
+S—supports recommendation and psychological modeling.

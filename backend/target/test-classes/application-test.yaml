@@ -1,0 +1,64 @@
+server:
+  port: 0  # Random port for tests
+
+spring:
+  application:
+    name: youthmind-backend-test
+  
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  h2:
+    console:
+      enabled: true
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  
+  flyway:
+    enabled: false
+  
+  # Test CORS configuration
+  web:
+    cors:
+      allowed-origins: "*"
+      allowed-methods: "*"
+      allowed-headers: "*"
+      allow-credentials: true
+      max-age: 3600
+
+# Test CORS Configuration
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:https://test.com,https://api.test.com}
+    allowed-methods: ${ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS,PATCH}
+    allowed-headers: ${ALLOWED_HEADERS:*}
+    exposed-headers: ${EXPOSED_HEADERS:Authorization,Content-Type,X-Total-Count}
+    allow-credentials: ${ALLOW_CREDENTIALS:true}
+    max-age: ${MAX_AGE:3600}
+
+# JWT Configuration for tests
+jwt:
+  secret: test-secret-key-for-testing-purposes-only
+  expiration: 86400000
+  refresh-expiration: 604800000
+
+# Admin Configuration for tests
+admin:
+  secret-key: TEST_ADMIN_SECRET_KEY
+
+# Logging for tests
+logging:
+  level:
+    ai.youthmind: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web.cors: DEBUG
+    org.hibernate.SQL: WARN
