@@ -1,4 +1,5 @@
 import Foundation
+import os.log
 
 // MARK: - App-wide Error Model
 enum AppError: Error, LocalizedError {
@@ -353,6 +354,92 @@ extension AppError {
             await AnalyticsService.shared.trackError(self)
         }
     }
+    
+    /// Handle critical error with comprehensive error handling
+    func handleCriticalError(context: ErrorContext? = nil) async {
+        let logger = Logger(subsystem: "com.youthmind.critical", category: "AppError")
+        logger.info("Handling critical error: \(errorCode)")
+        
+        let startTime = Date()
+        
+        // 1. Detect and classify error
+        let detector = CriticalErrorDetector()
+        let classification = detector.classifyError(self, context: context)
+        
+        // 2. Secure error data
+        let securityManager = ErrorHandlingSecurityManager()
+        let securedData = await securityManager.secureErrorData(self, context: context)
+        
+        // 3. Validate security
+        let validationResult = await securityManager.validateSecurity(securedData)
+        
+        // 4. Apply data protection
+        let protectionResult = await securityManager.applyDataProtection(securedData)
+        
+        // 5. Show user alert
+        let alertManager = UserAlertManager()
+        alertManager.showCriticalErrorAlert(classification)
+        
+        // 6. Report crash if needed
+        if classification.isCritical {
+            let crashService = CrashReportingService()
+            crashService.reportCrash(self, context: context)
+        }
+        
+        // 7. Execute recovery strategies
+        let recoveryStrategies = ErrorRecoveryStrategies()
+        let strategy = recoveryStrategies.getRecoveryStrategy(for: self, context: context)
+        let recoveryResult = await recoveryStrategies.executeRecoveryStrategy(strategy, for: self)
+        
+        // 8. Escalate if needed
+        if classification.severity == .critical || !recoveryResult.success {
+            let escalationService = ErrorEscalationService()
+            await escalationService.escalateError(self, context: context, priority: .critical)
+        }
+        
+        // 9. Start debugging session
+        let debuggingCollector = ErrorDebuggingCollector()
+        let sessionId = debuggingCollector.startDebugSession(for: self, context: context)
+        
+        // 10. Monitor performance
+        let performanceMonitor = ErrorHandlingPerformanceMonitor()
+        performanceMonitor.recordErrorHandlingPerformance(self, startTime: startTime, endTime: Date(), context: context)
+        
+        // 11. Apply prevention strategies
+        let preventionStrategies = ErrorPreventionStrategies()
+        let preventionSuggestions = await preventionStrategies.analyzeAndSuggestPreventions(for: [])
+        
+        // 12. End debugging session
+        await debuggingCollector.endDebugSession(sessionId)
+        
+        let duration = Date().timeIntervalSince(startTime)
+        logger.info("Critical error handling completed in \(duration)s")
+    }
+    
+    /// Handle error with app recovery
+    func handleWithRecovery(context: ErrorContext? = nil) async -> RecoveryResult {
+        let logger = Logger(subsystem: "com.youthmind.recovery", category: "AppError")
+        logger.info("Handling error with recovery: \(errorCode)")
+        
+        let recoveryManager = AppRecoveryManager()
+        
+        // Get recommended actions
+        let detector = CriticalErrorDetector()
+        let classification = detector.classifyError(self, context: context)
+        
+        if classification.recommendedActions.isEmpty {
+            return RecoveryResult(success: false, message: "No recovery actions available", duration: 0)
+        }
+        
+        // Execute recovery actions
+        let results = await recoveryManager.executeRecoverySequence(classification.recommendedActions, for: self)
+        
+        return RecoveryResult(
+            success: results.success,
+            message: results.message,
+            duration: results.duration
+        )
+    }
 }
 
 // MARK: - Error Handling Protocol
@@ -360,6 +447,20 @@ extension AppError {
 protocol AppErrorHandling {
     func handle(_ error: AppError)
     func handle(_ error: AppError, retryAction: (() -> Void)?)
+}
+
+// MARK: - Supporting Types for Critical Error Handling
+
+struct ErrorContext {
+    let screenName: String?
+    let userAction: String?
+    let additionalData: [String: Any]?
+}
+
+struct RecoveryResult {
+    let success: Bool
+    let message: String
+    let duration: TimeInterval
 }
 
 // MARK: - Default Error Handler

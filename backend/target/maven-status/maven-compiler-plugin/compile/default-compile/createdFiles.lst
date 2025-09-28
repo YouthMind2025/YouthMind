@@ -115,6 +115,7 @@ ai\youthmind\service\AIPostAnalysisService.class
 ai\youthmind\service\StateUpdateBatchProcessor$BatchProcessingHealthStatus.class
 ai\youthmind\service\ConcurrencyManager.class
 ai\youthmind\YouthmindBackendApplication.class
+ai\youthmind\service\ModernPsychologyBridge$CategoryExample.class
 ai\youthmind\dto\TrendingResponse.class
 ai\youthmind\entity\ContentSafetyCache$ContentType.class
 ai\youthmind\service\FeatureFlagManager$FeatureFlag$FeatureFlagBuilder.class
@@ -246,6 +247,7 @@ ai\youthmind\entity\VectorEmbedding$VectorEmbeddingBuilder.class
 ai\youthmind\dto\StateUpdateResponse.class
 ai\youthmind\service\CircuitBreakerService$CircuitBreaker.class
 ai\youthmind\service\ConversationService.class
+ai\youthmind\service\ModernPsychologyBridge$ComprehensiveMapping.class
 ai\youthmind\service\BatchProcessingService.class
 ai\youthmind\service\WordMaskingService$MaskingStrategy.class
 ai\youthmind\service\ConcurrencyManager$RateLimiter.class
@@ -615,6 +617,7 @@ ai\youthmind\service\DeploymentManager$DeploymentHistory$DeploymentHistoryBuilde
 ai\youthmind\service\VectorDatabaseService$DatabaseHealthStatus.class
 ai\youthmind\util\CircuitBreaker$CircuitBreakerCallable.class
 ai\youthmind\service\StateUpdateBatchProcessor$BatchProcessingStats$BatchProcessingStatsBuilder.class
+ai\youthmind\service\ModernPsychologyBridge$ValidationResult.class
 ai\youthmind\service\AIServiceTimeoutHandler$TimeoutStatistics$TimeoutStatisticsBuilder.class
 ai\youthmind\service\AIServiceTimeoutHandler.class
 ai\youthmind\config\AIServiceConnectionPoolConfig$DeepSeekConfig.class
@@ -794,6 +797,7 @@ ai\youthmind\service\ModelVersioningService.class
 ai\youthmind\service\AIServiceConnectionMetrics$ServiceMetricsSummary$ServiceMetricsSummaryBuilder.class
 ai\youthmind\controller\AIChatApiController.class
 ai\youthmind\service\StateUpdateBatchProcessor$StateUpdateResult.class
+ai\youthmind\service\ModernPsychologyBridge$TherapeuticRecommendation.class
 ai\youthmind\dto\PsychologicalAnalysisResponse$CopingAnalysis.class
 ai\youthmind\config\PerformanceOptimizationConfig.class
 ai\youthmind\service\DeploymentManager$HealthCheck$HealthCheckBuilder.class
@@ -944,6 +948,7 @@ ai\youthmind\dto\TrendingTopicsResponse.class
 ai\youthmind\service\IntensityFactorCalculator$1.class
 ai\youthmind\service\IntelligentCacheManager$AccessPattern.class
 ai\youthmind\service\PersonalityScheduler.class
+ai\youthmind\service\ModernPsychologyBridge$CrossFrameworkInsight.class
 ai\youthmind\dto\AdminRegisterRequest.class
 ai\youthmind\service\DeepSeekOffPeakRoutingService$RoutingMetrics.class
 ai\youthmind\memory\service\MemoryService.class
