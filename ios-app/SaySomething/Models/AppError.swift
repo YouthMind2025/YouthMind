@@ -30,7 +30,7 @@ enum AppError: Error, LocalizedError {
     case configuration(message: String)
     
     // MARK: - Error Severity
-    enum ErrorSeverity {
+    enum ErrorSeverity: String, Codable, CaseIterable {
         case low
         case medium
         case high
@@ -451,10 +451,57 @@ protocol AppErrorHandling {
 
 // MARK: - Supporting Types for Critical Error Handling
 
-struct ErrorContext {
+struct ErrorContext: Codable {
+    let sessionId: String?
+    let userId: String?
     let screenName: String?
     let userAction: String?
     let additionalData: [String: Any]?
+    let error: AppError?
+    
+    enum CodingKeys: String, CodingKey {
+        case sessionId, userId, screenName, userAction, additionalData, error
+    }
+    
+    init(sessionId: String? = nil, userId: String? = nil, screenName: String? = nil, userAction: String? = nil, additionalData: [String: Any]? = nil, error: AppError? = nil) {
+        self.sessionId = sessionId
+        self.userId = userId
+        self.screenName = screenName
+        self.userAction = userAction
+        self.additionalData = additionalData
+        self.error = error
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try container.decodeIfPresent(String.self, forKey: .sessionId)
+        userId = try container.decodeIfPresent(String.self, forKey: .userId)
+        screenName = try container.decodeIfPresent(String.self, forKey: .screenName)
+        userAction = try container.decodeIfPresent(String.self, forKey: .userAction)
+        error = try container.decodeIfPresent(AppError.self, forKey: .error)
+        
+        // Decode additionalData as [String: String] and convert to [String: Any]
+        if let stringData = try container.decodeIfPresent([String: String].self, forKey: .additionalData) {
+            additionalData = stringData
+        } else {
+            additionalData = nil
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(sessionId, forKey: .sessionId)
+        try container.encodeIfPresent(userId, forKey: .userId)
+        try container.encodeIfPresent(screenName, forKey: .screenName)
+        try container.encodeIfPresent(userAction, forKey: .userAction)
+        try container.encodeIfPresent(error, forKey: .error)
+        
+        // Convert [String: Any] to [String: String] for encoding
+        if let data = additionalData {
+            let stringData = data.mapValues { "\($0)" }
+            try container.encode(stringData, forKey: .additionalData)
+        }
+    }
 }
 
 struct RecoveryResult {
@@ -583,3 +630,192 @@ class AppErrorHandler: AppErrorHandling {
 //            .store(in: &cancellables)
 //    }
 //}
+
+// MARK: - Notification System Integration
+extension AppError {
+    
+    /// Show notification for this error with comprehensive notification system
+    func showNotification(context: ErrorContext? = nil) {
+        logger.info("Showing notification for error: \(errorCode)")
+        
+        // Get notification services
+        let toastManager = ToastNotificationManager()
+        let alertManager = AlertDialogManager()
+        let customizationManager = NotificationCustomizationManager()
+        let accessibilityService = NotificationAccessibilityService()
+        let performanceOptimizer = NotificationPerformanceOptimizer()
+        let localizationService = NotificationLocalizationService()
+        let securityValidator = NotificationSecurityValidator()
+        
+        // Create notification based on severity
+        switch severity {
+        case .low, .medium:
+            showToastNotification(
+                toastManager: toastManager,
+                customizationManager: customizationManager,
+                accessibilityService: accessibilityService,
+                performanceOptimizer: performanceOptimizer,
+                localizationService: localizationService,
+                securityValidator: securityValidator,
+                context: context
+            )
+            
+        case .high, .critical:
+            showAlertDialog(
+                alertManager: alertManager,
+                customizationManager: customizationManager,
+                accessibilityService: accessibilityService,
+                performanceOptimizer: performanceOptimizer,
+                localizationService: localizationService,
+                securityValidator: securityValidator,
+                context: context
+            )
+        }
+    }
+    
+    /// Show toast notification for low/medium severity errors
+    private func showToastNotification(
+        toastManager: ToastNotificationManager,
+        customizationManager: NotificationCustomizationManager,
+        accessibilityService: NotificationAccessibilityService,
+        performanceOptimizer: NotificationPerformanceOptimizer,
+        localizationService: NotificationLocalizationService,
+        securityValidator: NotificationSecurityValidator,
+        context: ErrorContext?
+    ) {
+        // Create base notification
+        var notification = ToastNotification(
+            id: UUID().uuidString,
+            type: .error,
+            title: getLocalizedTitle(localizationService: localizationService),
+            message: getLocalizedMessage(localizationService: localizationService),
+            duration: getOptimalDuration(performanceOptimizer: performanceOptimizer),
+            severity: severity,
+            context: context,
+            timestamp: Date(),
+            retryable: isRetryable,
+            actions: getLocalizedActions(localizationService: localizationService)
+        )
+        
+        // Apply customizations
+        let preferences = customizationManager.getNotificationPreferences()
+        if preferences.showToasts {
+            // Apply performance optimizations
+            notification = performanceOptimizer.optimizeNotification(&notification)
+            
+            // Apply accessibility enhancements
+            notification = accessibilityService.makeNotificationAccessible(&notification)
+            
+            // Validate security
+            let securityResult = securityValidator.validateNotification(notification)
+            if securityResult.isValid {
+                // Sanitize if needed
+                securityValidator.sanitizeNotification(&notification)
+                
+                // Show notification
+                toastManager.showErrorToast(self, context: context)
+                
+                // Announce to screen readers
+                accessibilityService.announceNotification(notification)
+            } else {
+                logger.warning("Notification failed security validation: \(securityResult.violations.count) violations")
+            }
+        }
+    }
+    
+    /// Show alert dialog for high/critical severity errors
+    private func showAlertDialog(
+        alertManager: AlertDialogManager,
+        customizationManager: NotificationCustomizationManager,
+        accessibilityService: NotificationAccessibilityService,
+        performanceOptimizer: NotificationPerformanceOptimizer,
+        localizationService: NotificationLocalizationService,
+        securityValidator: NotificationSecurityValidator,
+        context: ErrorContext?
+    ) {
+        let preferences = customizationManager.getNotificationPreferences()
+        if preferences.showAlerts {
+            // Show critical error dialog
+            alertManager.showCriticalErrorDialog(self, context: context)
+        }
+    }
+    
+    /// Get localized title
+    private func getLocalizedTitle(localizationService: NotificationLocalizationService) -> String {
+        return localizationService.getLocalizedErrorMessage(for: self)
+    }
+    
+    /// Get localized message
+    private func getLocalizedMessage(localizationService: NotificationLocalizationService) -> String {
+        return localizationService.getLocalizedErrorMessage(for: self)
+    }
+    
+    /// Get localized actions
+    private func getLocalizedActions(localizationService: NotificationLocalizationService) -> [ToastAction] {
+        var actions: [ToastAction] = []
+        
+        if isRetryable {
+            actions.append(ToastAction(
+                title: localizationService.getLocalizedActionText(.retry),
+                type: .retry,
+                style: .primary
+            ))
+        }
+        
+        if severity == .critical {
+            actions.append(ToastAction(
+                title: localizationService.getLocalizedActionText(.report),
+                type: .report,
+                style: .secondary
+            ))
+        }
+        
+        actions.append(ToastAction(
+            title: localizationService.getLocalizedActionText(.dismiss),
+            type: .dismiss,
+            style: .tertiary
+        ))
+        
+        return actions
+    }
+    
+    /// Get optimal duration for notification
+    private func getOptimalDuration(performanceOptimizer: NotificationPerformanceOptimizer) -> TimeInterval {
+        let baseNotification = ToastNotification(
+            id: UUID().uuidString,
+            type: .error,
+            title: "",
+            message: "",
+            duration: 3.0,
+            severity: severity,
+            context: nil,
+            timestamp: Date(),
+            retryable: isRetryable,
+            actions: []
+        )
+        
+        return performanceOptimizer.getOptimalDuration(for: baseNotification)
+    }
+}
+
+// MARK: - Error Context Extension
+extension ErrorContext {
+    func toDictionary() -> [String: Any] {
+        var dict: [String: Any] = [:]
+        
+        if let sessionId = sessionId {
+            dict["sessionId"] = sessionId
+        }
+        if let userId = userId {
+            dict["userId"] = userId
+        }
+        if let screenName = screenName {
+            dict["screenName"] = screenName
+        }
+        if let error = error {
+            dict["error"] = error.errorCode
+        }
+        
+        return dict
+    }
+}
