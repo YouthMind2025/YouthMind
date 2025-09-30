@@ -533,3 +533,4 @@ public class MentalFactorClassifier {
         public void setTimestamp(Date timestamp) { this.timestamp = timestamp; }
     }
 }
+

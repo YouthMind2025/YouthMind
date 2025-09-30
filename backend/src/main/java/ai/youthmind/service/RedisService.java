@@ -21,6 +21,12 @@ public class RedisService {
 
     @Autowired
     private String aiProcessedChannel;
+    
+    @Autowired
+    private IntelligentCacheManager intelligentCacheManager;
+    
+    @Autowired
+    private CachePartitionManager partitionManager;
 
     // Cache TTL settings (coordinated with Harley)
     private static final long FEED_CACHE_TTL_MINUTES = 5;
@@ -259,5 +265,87 @@ public class RedisService {
         
         public long getTimestamp() { return timestamp; }
         public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+    }
+    
+    // Multi-level cache integration methods
+    
+    /**
+     * Get value using multi-level cache
+     */
+    public <T> java.util.Optional<T> getValueMultiLevel(String key, Class<T> type) {
+        try {
+            return intelligentCacheManager.get(key, type, IntelligentCacheManager.CacheLevel.ANY).join();
+        } catch (Exception e) {
+            System.err.println("⚠️ Multi-level cache GET operation failed: " + e.getMessage());
+            return java.util.Optional.empty();
+        }
+    }
+    
+    /**
+     * Set value using multi-level cache
+     */
+    public void setValueMultiLevel(String key, Object value, long timeout, TimeUnit unit) {
+        try {
+            CachePartitionManager.CachePartition partition = partitionManager.getPartition(key);
+            IntelligentCacheManager.CacheLevel level = partitionManager.determineOptimalLevel(partition, key);
+            java.time.Duration ttl = java.time.Duration.ofMillis(unit.toMillis(timeout));
+            
+            intelligentCacheManager.put(key, value, level, ttl).join();
+        } catch (Exception e) {
+            System.err.println("⚠️ Multi-level cache SET operation failed: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Cache feed using multi-level cache
+     */
+    public void cacheFeedMultiLevel(String cacheKey, FeedResponse feedResponse) {
+        String key = FEED_KEY_PREFIX + cacheKey;
+        setValueMultiLevel(key, feedResponse, FEED_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+    }
+    
+    /**
+     * Get cached feed using multi-level cache
+     */
+    public FeedResponse getCachedFeedMultiLevel(String cacheKey) {
+        String key = FEED_KEY_PREFIX + cacheKey;
+        return getValueMultiLevel(key, FeedResponse.class).orElse(null);
+    }
+    
+    /**
+     * Cache post using multi-level cache
+     */
+    public void cachePostMultiLevel(String postId, Object post) {
+        String key = POST_KEY_PREFIX + postId;
+        setValueMultiLevel(key, post, POST_CACHE_TTL_HOURS, TimeUnit.HOURS);
+    }
+    
+    /**
+     * Get cached post using multi-level cache
+     */
+    public Object getCachedPostMultiLevel(String postId) {
+        String key = POST_KEY_PREFIX + postId;
+        return getValueMultiLevel(key, Object.class).orElse(null);
+    }
+    
+    /**
+     * Get cache metrics
+     */
+    public IntelligentCacheManager.CacheMetrics getCacheMetrics() {
+        return intelligentCacheManager.getMetrics();
+    }
+    
+    /**
+     * Get cache health status
+     */
+    public IntelligentCacheManager.CacheHealthStatus getCacheHealthStatus() {
+        return intelligentCacheManager.getHealthStatus();
+    }
+    
+    /**
+     * Get partition performance summary
+     */
+    public CachePartitionManager.PartitionPerformanceSummary getPartitionPerformanceSummary() {
+        return partitionManager.getPerformanceSummary();
     }
 } 
