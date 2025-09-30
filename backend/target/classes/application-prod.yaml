@@ -1,0 +1,212 @@
+server:
+  port: 8080
+  # Production server configuration
+  servlet:
+    context-path: /api
+  # Security headers
+  error:
+    include-stacktrace: never
+    include-message: never
+
+spring:
+  application:
+    name: youthmind-backend
+  
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:youthmind_db}
+    username: ${DB_USERNAME:youthmind_user}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+    
+    # Production HikariCP Connection Pool Configuration
+    hikari:
+      minimum-idle: 20
+      maximum-pool-size: 50
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      
+      # PostgreSQL Production Performance Properties
+      data-source-properties:
+        work_mem: '8MB'
+        shared_buffers: '512MB'
+        effective_cache_size: '2GB'
+        random_page_cost: 1.1
+        effective_io_concurrency: 200
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          batch_size: 25
+          batch_versioned_data: true
+        order_inserts: true
+        order_updates: true
+        jdbc.lob.non_contextual_creation: true
+  
+  # Flyway Configuration
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+  
+  # Production Redis configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5000ms
+      connect-timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+        shutdown-timeout: 200ms
+
+# Production CORS Configuration
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:https://youthmind.ai,https://www.youthmind.ai,https://api.youthmind.ai}
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+    allowed-headers: Authorization,Content-Type,X-Requested-With,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers,X-API-Key,X-Client-Version
+    exposed-headers: Authorization,Content-Type,X-Total-Count,X-Rate-Limit-Remaining,X-Rate-Limit-Reset,X-Request-ID
+    allow-credentials: true
+    max-age: 600
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:}
+  expiration: ${JWT_EXPIRATION:86400000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+# Admin Configuration
+admin:
+  secret-key: ${ADMIN_SECRET_KEY:}
+
+# File Upload Configuration
+app:
+  upload:
+    dir: ${UPLOAD_DIR:/var/uploads}
+  avatar:
+    max-size: ${AVATAR_MAX_SIZE:2097152}
+    allowed-types: ${AVATAR_ALLOWED_TYPES:image/jpeg,image/png,image/gif,image/webp}
+
+# DeepSeek API Configuration
+deepseek:
+  api:
+    base-url: ${YOUTHMIND_DEEPSEEK_API_URL:https://api.deepseek.com/v1}
+    api-key: ${YOUTHMIND_DEEPSEEK_API_KEY:}
+    timeout: ${YOUTHMIND_DEEPSEEK_TIMEOUT:30000}
+    max-retries: ${YOUTHMIND_DEEPSEEK_MAX_RETRIES:3}
+    model: ${YOUTHMIND_DEEPSEEK_MODEL:deepseek-chat}
+    moderation:
+      enabled: ${YOUTHMIND_DEEPSEEK_MODERATION_ENABLED:true}
+      threshold: ${YOUTHMIND_DEEPSEEK_MODERATION_THRESHOLD:0.7}
+
+# AI Service Configuration
+ai:
+  deepseek:
+    base-url: ${YOUTHMIND_DEEPSEEK_API_URL:https://api.deepseek.com/v1}
+    api-key: ${YOUTHMIND_DEEPSEEK_API_KEY:}
+    enabled: ${YOUTHMIND_AI_ENABLED:true}
+
+# Production Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: always
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: ping
+        readiness:
+          include: redis,database,diskSpace
+        custom:
+          include: redis,database
+          show-details: when-authorized
+    info:
+      enabled: true
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+        descriptions: true
+        step: 60s
+    tags:
+      application: youthmind-backend
+      environment: production
+      version: ${project.version:0.0.1-SNAPSHOT}
+    web:
+      server:
+        request:
+          autotime:
+            enabled: true
+            percentiles: 0.5, 0.75, 0.95, 0.99
+    system:
+      cpu:
+        enabled: true
+      memory:
+        enabled: true
+      disk:
+        enabled: true
+  health:
+    redis:
+      enabled: true
+    db:
+      enabled: true
+    diskspace:
+      enabled: true
+      threshold: 1GB
+    ping:
+      enabled: true
+    defaults:
+      enabled: true
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
+    build:
+      enabled: true
+    git:
+      enabled: true
+      mode: full
+
+# Production Logging
+logging:
+  level:
+    org.springframework.security: WARN
+    ai.youthmind: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.springframework.data.redis: WARN
+    org.springframework.web.cors: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /var/log/youthmind/application.log
+    max-size: 100MB
+    max-history: 30

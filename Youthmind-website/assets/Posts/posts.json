@@ -1,0 +1,44 @@
+[
+  {
+    "id": "1",
+    "title": "Future of Machine Learning",
+    "date": "Dec 18, 2024",
+    "image": "AI Research Post",
+    "file": "post1.json"
+  },
+  {
+    "id": "2",
+    "title": "Blockchain Revolution",
+    "date": "Dec 16, 2024",
+    "image": "Tech Innovation Post",
+    "file": "post2.json"
+  },
+  {
+    "id": "3",
+    "title": "Design Thinking in Tech",
+    "date": "Dec 14, 2024",
+    "image": "Design Thinking Post",
+    "file": "post3.json"
+  },
+  {
+    "id": "4",
+    "title": "Green Technology Trends",
+    "date": "Dec 11, 2024",
+    "image": "Sustainability Post",
+    "file": "post4.json"
+  },
+  {
+    "id": "5",
+    "title": "Digital Leadership Skills",
+    "date": "Dec 9, 2024",
+    "image": "Leadership Post",
+    "file": "post5.json"
+  },
+  {
+    "id": "6",
+    "title": "Innovation Methodologies",
+    "date": "Dec 7, 2024",
+    "image": "Innovation Post",
+    "file": "post6.json"
+  }
+]
