@@ -7,6 +7,7 @@ import ai.youthmind.entity.UserModerationStatus;
 import ai.youthmind.entity.WarningHistory;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.UserModerationStatusRepository;
+import ai.youthmind.repository.UserRepository;
 import ai.youthmind.repository.WarningHistoryRepository;
 import ai.youthmind.util.ModerationUtils;
 import ai.youthmind.util.PerformanceMonitor;
@@ -35,6 +36,7 @@ public class AsyncModerationService {
 
     private final AIServiceClient aiServiceClient;
     private final PostRepository postRepository;
+    private final UserRepository userRepository;
     private final UserModerationStatusRepository moderationStatusRepository;
     private final WarningHistoryRepository warningHistoryRepository;
     private final RedisTemplate<String, Object> redisTemplate;
@@ -152,10 +154,17 @@ public class AsyncModerationService {
     private void updateUserModerationStatus(UUID userId, ModerationResult result) {
         try {
             if (!result.isSafe() && result.getConfidence() > 0.8) {
+                // Find or create user moderation status
                 UserModerationStatus status = moderationStatusRepository.findByUserId(userId)
                     .orElse(new UserModerationStatus());
                 
-                status.setUserId(userId);
+                // Set the User entity by fetching from database
+                if (status.getUser() == null) {
+                    User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+                    status.setUser(user);
+                }
+                
                 status.setStatus(ai.youthmind.entity.UserModerationStatus.ModerationStatus.WARNED);
                 status.setWarningLevel(status.getWarningLevel() + 1);
                 status.setLastWarningAt(LocalDateTime.now());
@@ -166,7 +175,10 @@ public class AsyncModerationService {
                 
                 // Create warning history
                 WarningHistory warning = new WarningHistory();
-                warning.setUserId(userId);
+                // Set the User entity by fetching from database
+                User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+                warning.setUser(user);
                 warning.setWarningType(ai.youthmind.entity.WarningHistory.WarningType.INAPPROPRIATE_CONTENT);
                 warning.setReason(result.getReason());
                 warning.setSeverity(ai.youthmind.entity.WarningHistory.Severity.MEDIUM);

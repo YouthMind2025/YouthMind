@@ -178,9 +178,28 @@ public class BatchProcessingService {
     @SuppressWarnings("unchecked")
     private <T> BatchResponse.BatchOperationResult<T> processCreatePost(BatchRequest.BatchOperation<T> operation) {
         try {
-            PostDto postDto = (PostDto) operation.getData();
+            // Handle the case where data might be a LinkedHashMap instead of PostDto
+            PostDto postDto;
+            if (operation.getData() instanceof PostDto) {
+                postDto = (PostDto) operation.getData();
+            } else if (operation.getData() instanceof java.util.Map) {
+                // Convert LinkedHashMap to PostDto
+                @SuppressWarnings("unchecked")
+                java.util.Map<String, Object> dataMap = (java.util.Map<String, Object>) operation.getData();
+                postDto = convertMapToPostDto(dataMap);
+            } else {
+                throw new IllegalArgumentException("Invalid data type for CREATE_POST operation: " + operation.getData().getClass());
+            }
+            
+            log.debug("Creating post with data: userId={}, title={}, content={}", 
+                postDto.getUserId(), postDto.getTitle(), postDto.getContent());
+            
             Post post = convertToPost(postDto);
+            log.debug("Converted post: id={}, userId={}, title={}, content={}", 
+                post.getId(), post.getUserId(), post.getTitle(), post.getContent());
+            
             Post savedPost = postRepository.save(post);
+            log.debug("Saved post with ID: {}", savedPost.getId());
             
             // Trigger async moderation
             asyncModerationService.processModerationAsync(savedPost.getId(), savedPost.getContent(), savedPost.getUserId());
@@ -191,6 +210,7 @@ public class BatchProcessingService {
                 .data((T) convertToPostDto(savedPost))
                 .build();
         } catch (Exception e) {
+            log.error("Failed to create post: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to create post: " + e.getMessage(), e);
         }
     }
@@ -302,14 +322,59 @@ public class BatchProcessingService {
     }
 
     // Helper methods for conversion
+    private PostDto convertMapToPostDto(java.util.Map<String, Object> dataMap) {
+        return PostDto.builder()
+            .id(dataMap.get("id") != null ? UUID.fromString(dataMap.get("id").toString()) : null)
+            .userId(dataMap.get("userId") != null ? UUID.fromString(dataMap.get("userId").toString()) : null)
+            .title((String) dataMap.get("title"))
+            .content((String) dataMap.get("content"))
+            .emotion((String) dataMap.get("emotion"))
+            .preImg((String) dataMap.get("preImg"))
+            .topics((String) dataMap.get("topics"))
+            .resonance(dataMap.get("resonance") != null ? (Integer) dataMap.get("resonance") : 0)
+            .view(dataMap.get("view") != null ? (Integer) dataMap.get("view") : 0)
+            .collect(dataMap.get("collect") != null ? (Integer) dataMap.get("collect") : 0)
+            .isresonanced(dataMap.get("isresonanced") != null ? (Boolean) dataMap.get("isresonanced") : false)
+            .isCollected(dataMap.get("isCollected") != null ? (Boolean) dataMap.get("isCollected") : false)
+            .flagged(dataMap.get("flagged") != null ? (Boolean) dataMap.get("flagged") : false)
+            .flagReason((String) dataMap.get("flagReason"))
+            .flaggedAt(dataMap.get("flaggedAt") != null ? 
+                java.time.LocalDateTime.parse(dataMap.get("flaggedAt").toString()) : null)
+            .build();
+    }
+
     private Post convertToPost(PostDto dto) {
+        // Validate required fields
+        if (dto.getUserId() == null) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+        if (dto.getTitle() == null || dto.getTitle().trim().isEmpty()) {
+            throw new IllegalArgumentException("Title is required");
+        }
+        if (dto.getContent() == null || dto.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("Content is required");
+        }
+        
         Post post = new Post();
         post.setUserId(dto.getUserId());
-        post.setTitle(dto.getTitle());
-        post.setContent(dto.getContent());
+        post.setTitle(dto.getTitle().trim());
+        post.setContent(dto.getContent().trim());
         post.setEmotion(dto.getEmotion());
         post.setPreImg(dto.getPreImg());
         post.setTopics(dto.getTopics());
+        
+        // Set required fields with default values
+        post.setResonance(dto.getResonance());
+        post.setView(dto.getView());
+        post.setCollect(dto.getCollect());
+        post.setFlagged(dto.isFlagged());
+        post.setFlagReason(dto.getFlagReason());
+        post.setFlaggedAt(dto.getFlaggedAt());
+        
+        // Set timestamps - @PrePersist will handle this, but set explicitly for safety
+        post.setCreatedAt(LocalDateTime.now());
+        post.setUpdatedAt(LocalDateTime.now());
+        
         return post;
     }
 

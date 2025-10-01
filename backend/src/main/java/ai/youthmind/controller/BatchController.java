@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -70,7 +71,7 @@ public class BatchController {
     @PostMapping("/posts/create")
     @Operation(summary = "Batch create posts", description = "Create multiple posts in a single batch operation")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-    public ResponseEntity<CompletableFuture<BatchResponse<?>>> batchCreatePosts(
+    public ResponseEntity<BatchResponse<?>> batchCreatePosts(
             @Valid @RequestBody BatchRequest<Object> request) {
         
         // Set operation type for all operations
@@ -78,9 +79,14 @@ public class BatchController {
         
         log.info("Batch creating {} posts", request.getOperations().size());
         
-        CompletableFuture<BatchResponse<?>> future = batchProcessingService.processBatchAsync(request).thenApply(response -> (BatchResponse<?>) response);
-        
-        return ResponseEntity.accepted().body(future);
+        try {
+            // Process synchronously to maintain security context
+            BatchResponse<?> response = batchProcessingService.processBatchAsync(request).get();
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error processing batch request: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PostMapping("/posts/update")
