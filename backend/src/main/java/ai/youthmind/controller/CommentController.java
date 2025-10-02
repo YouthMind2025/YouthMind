@@ -15,6 +15,7 @@ import ai.youthmind.entity.CommentReport;
 import ai.youthmind.entity.Post;
 import ai.youthmind.entity.User;
 import ai.youthmind.service.CommentService;
+import ai.youthmind.service.CommentModerationService;
 import ai.youthmind.service.PostService;
 import ai.youthmind.service.UserService;
 import ai.youthmind.util.AuthenticationUtils;
@@ -46,6 +47,9 @@ public class CommentController {
 
     @Autowired
     private CommentService commentService;
+
+    @Autowired
+    private CommentModerationService commentModerationService;
 
     @Autowired
     private PostService postService;
@@ -93,12 +97,13 @@ public class CommentController {
     @PostMapping("/{postId}/comments")
     @Operation(
         summary = "Add comment to a post",
-        description = "Create a new comment on a specific post"
+        description = "Create a new comment on a specific post with AI moderation"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Comment created successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Comment rejected by moderation")
     })
     public ResponseEntity<ApiResponse<CommentDto>> addComment(
             @PathVariable UUID postId,
@@ -124,9 +129,23 @@ public class CommentController {
             comment.setLikes(0);
             comment.setCreatedAt(LocalDateTime.now());
 
+            // Moderate comment using the advanced moderation pipeline
+            ai.youthmind.dto.ModerationResult moderationResult = commentModerationService.moderateComment(comment, currentUserId);
+            
+            // Check if comment was flagged as unsafe
+            if (!moderationResult.isSafe()) {
+                // Save the comment with moderation data already set
+                Comment savedComment = commentService.saveCommentWithoutModeration(comment);
+                CommentDto commentDto = convertToCommentDto(savedComment, currentUserId);
+                
+                return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success(commentDto, 201));
+            }
+
+            // Comment is safe, save normally
             Comment savedComment = commentService.saveComment(comment);
             
-            // Convert to DTO
+            // Convert to DTO (moderation data is already set in the comment entity)
             CommentDto commentDto = convertToCommentDto(savedComment, currentUserId);
             
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -141,7 +160,7 @@ public class CommentController {
     @PostMapping("/comments/{commentId}/replies")
     @Operation(
         summary = "Add reply to a comment",
-        description = "Create a new reply to a specific comment"
+        description = "Create a new reply to a specific comment with AI moderation"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Reply created successfully"),
@@ -181,9 +200,23 @@ public class CommentController {
             reply.setLikes(0);
             reply.setCreatedAt(LocalDateTime.now());
 
+            // Moderate reply using the advanced moderation pipeline
+            ai.youthmind.dto.ModerationResult moderationResult = commentModerationService.moderateComment(reply, currentUserId);
+            
+            // Check if reply was flagged as unsafe
+            if (!moderationResult.isSafe()) {
+                // Save the reply with moderation data already set
+                Comment savedReply = commentService.saveCommentWithoutModeration(reply);
+                CommentDto replyDto = convertToCommentDto(savedReply, currentUserId);
+                
+                return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success(replyDto, 201));
+            }
+
+            // Reply is safe, save normally
             Comment savedReply = commentService.saveComment(reply);
             
-            // Convert to DTO
+            // Convert to DTO (moderation data is already set in the comment entity)
             CommentDto replyDto = convertToCommentDto(savedReply, currentUserId);
             
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -333,17 +366,23 @@ public class CommentController {
             replies = commentService.getRepliesByCommentId(comment.getId(), currentUserId);
         }
 
-        return new CommentDto(
-            comment.getPostId(),
-            comment.getAuthorId(),
-            comment.getParentId(),
-            comment.getId(),
-            author,
-            comment.getContent(),
-            comment.getCreatedAt(),
-            comment.getLikes(),
-            replies,
-            isLiked
-        );
+        CommentDto dto = new CommentDto();
+        dto.setPostId(comment.getPostId());
+        dto.setAuthorId(comment.getAuthorId());
+        dto.setParentId(comment.getParentId());
+        dto.setId(comment.getId());
+        dto.setAuthor(author);
+        dto.setContent(comment.getContent());
+        dto.setCreatedAt(comment.getCreatedAt());
+        dto.setLikes(comment.getLikes());
+        dto.setReplies(replies);
+        dto.setLiked(isLiked);
+        
+        // Set moderation values from the comment entity
+        dto.setModerationStatus(comment.getModerationStatus() != null ? comment.getModerationStatus() : "APPROVED");
+        dto.setModerationReason(comment.getModerationReason() != null ? comment.getModerationReason() : "Content approved");
+        dto.setModerationConfidence(comment.getModerationConfidence() != null ? comment.getModerationConfidence() : 1.0);
+        
+        return dto;
     }
 }

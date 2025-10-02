@@ -10,11 +10,14 @@ import ai.youthmind.repository.CommentReportRepository;
 import ai.youthmind.repository.CommentRepository;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,7 +26,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 public class CommentService {
+
+    private static final Logger logger = LoggerFactory.getLogger(CommentService.class);
 
     @Autowired
     private CommentRepository commentRepository;
@@ -39,6 +45,9 @@ public class CommentService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CommentModerationService commentModerationService;
 
     /**
      * Get comments for a post with pagination
@@ -70,9 +79,51 @@ public class CommentService {
     }
 
     /**
-     * Save a comment
+     * Save a comment with moderation
      */
     public Comment saveComment(Comment comment) {
+        try {
+            logger.info("Saving comment by user: {}", comment.getAuthorId());
+            
+            // Check if user should be allowed to post comments
+            if (!commentModerationService.shouldAllowComment(comment.getAuthorId())) {
+                logger.warn("User {} blocked from posting comments due to moderation history", comment.getAuthorId());
+                throw new RuntimeException("User is temporarily blocked from posting comments due to moderation history");
+            }
+            
+            // Perform moderation before saving
+            ai.youthmind.dto.ModerationResult moderationResult = commentModerationService.moderateComment(comment, comment.getAuthorId());
+            
+            // If moderation result is not safe, handle accordingly
+            if (!moderationResult.isSafe()) {
+                logger.warn("Comment flagged as unsafe: {}", moderationResult.getReason());
+                
+                // For now, we'll still save the comment but log the flag
+                // In a real implementation, you might:
+                // - Save with a flag
+                // - Queue for human review
+                // - Block the comment entirely
+                // - Send warning to user
+            }
+            
+            // Save the comment
+            Comment savedComment = commentRepository.save(comment);
+            
+            logger.info("Comment saved successfully with moderation result - Safe: {}, Confidence: {}", 
+                moderationResult.isSafe(), moderationResult.getConfidence());
+            
+            return savedComment;
+            
+        } catch (Exception e) {
+            logger.error("Error saving comment with moderation: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * Save a comment without moderation (for internal use)
+     */
+    public Comment saveCommentWithoutModeration(Comment comment) {
         return commentRepository.save(comment);
     }
 

@@ -25,4 +25,9 @@ public class CommentDto {
     private int likes;
     private List<CommentDto> replies;
     private boolean isLiked;
+    
+    // Moderation fields
+    private String moderationStatus;  // APPROVED, FLAGGED, PENDING_REVIEW
+    private String moderationReason;  // Reason for moderation decision
+    private Double moderationConfidence;  // Confidence score (0.0-1.0)
 }

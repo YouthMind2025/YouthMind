@@ -529,6 +529,7 @@ ai\youthmind\service\RequestQueueService$QueueHealthStatus$QueueHealthStatusBuil
 ai\youthmind\service\PsychologicalAnalysisBatchProcessor$PsychologicalAnalysisTask.class
 ai\youthmind\service\RequestQueueService$RequestQueueItem.class
 ai\youthmind\service\DeepSeekUsageMonitoringService$PerformanceMetrics.class
+ai\youthmind\service\CommentModerationService.class
 ai\youthmind\entity\User.class
 ai\youthmind\service\DeepSeekUsageMonitoringService$UsageMetrics.class
 ai\youthmind\service\AIServiceBulkhead$BulkheadStatistics$BulkheadStatisticsBuilder.class

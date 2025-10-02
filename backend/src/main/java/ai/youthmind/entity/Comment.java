@@ -37,6 +37,28 @@ public class Comment {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     
+    // Moderation fields
+    @Column(name = "is_flagged", nullable = false)
+    private Boolean isFlagged = false;
+    
+    @Column(name = "flag_reason", columnDefinition = "TEXT")
+    private String flagReason;
+    
+    @Column(name = "flagged_at")
+    private LocalDateTime flaggedAt;
+    
+    @Column(name = "moderated_at")
+    private LocalDateTime moderatedAt;
+    
+    @Column(name = "moderation_confidence")
+    private Double moderationConfidence;
+    
+    @Column(name = "moderation_reason", columnDefinition = "TEXT")
+    private String moderationReason;
+    
+    @Column(name = "moderation_status", length = 50)
+    private String moderationStatus = "APPROVED";
+    
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -97,5 +119,62 @@ public class Comment {
     
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+    
+    // Moderation field getters and setters
+    public Boolean getIsFlagged() {
+        return isFlagged;
+    }
+    
+    public void setIsFlagged(Boolean isFlagged) {
+        this.isFlagged = isFlagged;
+    }
+    
+    public String getFlagReason() {
+        return flagReason;
+    }
+    
+    public void setFlagReason(String flagReason) {
+        this.flagReason = flagReason;
+    }
+    
+    public LocalDateTime getFlaggedAt() {
+        return flaggedAt;
+    }
+    
+    public void setFlaggedAt(LocalDateTime flaggedAt) {
+        this.flaggedAt = flaggedAt;
+    }
+    
+    public LocalDateTime getModeratedAt() {
+        return moderatedAt;
+    }
+    
+    public void setModeratedAt(LocalDateTime moderatedAt) {
+        this.moderatedAt = moderatedAt;
+    }
+    
+    public Double getModerationConfidence() {
+        return moderationConfidence;
+    }
+    
+    public void setModerationConfidence(Double moderationConfidence) {
+        this.moderationConfidence = moderationConfidence;
+    }
+    
+    public String getModerationReason() {
+        return moderationReason;
+    }
+    
+    public void setModerationReason(String moderationReason) {
+        this.moderationReason = moderationReason;
+    }
+    
+    public String getModerationStatus() {
+        return moderationStatus;
+    }
+    
+    public void setModerationStatus(String moderationStatus) {
+        this.moderationStatus = moderationStatus;
     }
 }

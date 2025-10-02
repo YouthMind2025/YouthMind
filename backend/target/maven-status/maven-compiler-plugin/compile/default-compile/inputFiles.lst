@@ -239,6 +239,7 @@ C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\InsightsRequest.
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\config\CacheConfig.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\entity\UserInteractionModulation.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\analytics\dto\BehaviorSummaryResponse.java
+C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\CommentModerationService.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\UserPersonalityService.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\IntelligentCacheManager.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\QueryPerformanceProfiler.java
