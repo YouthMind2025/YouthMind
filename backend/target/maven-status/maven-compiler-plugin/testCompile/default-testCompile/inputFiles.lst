@@ -25,6 +25,7 @@ C:\Users\alexa\YouthMind\backend\src\test\java\ai\youthmind\service\ModelTrainin
 C:\Users\alexa\YouthMind\backend\src\test\java\ai\youthmind\config\CorsIntegrationTest.java
 C:\Users\alexa\YouthMind\backend\src\test\java\ai\youthmind\service\UserCreationTest.java
 C:\Users\alexa\YouthMind\backend\src\test\java\ai\youthmind\dto\PostDtoBuilderTest.java
+C:\Users\alexa\YouthMind\backend\src\test\java\ai\youthmind\service\AsyncModerationServiceBatchTest.java
 C:\Users\alexa\YouthMind\backend\src\test\java\ai\youthmind\repository\PostViewRepositoryTest.java
 C:\Users\alexa\YouthMind\backend\src\test\java\ai\youthmind\service\AIChatServiceIntegrationTest.java
 C:\Users\alexa\YouthMind\backend\src\test\java\ai\youthmind\service\AIErrorHandlingTest.java

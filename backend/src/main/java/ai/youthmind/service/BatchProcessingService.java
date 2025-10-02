@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * Service for handling batch API requests with high performance
@@ -72,31 +72,44 @@ public class BatchProcessingService {
                 int successfulCount = 0;
                 int failedCount = 0;
 
-                for (BatchRequest.BatchOperation<T> operation : request.getOperations()) {
-                    try {
-                        BatchResponse.BatchOperationResult<T> result = processOperation(operation);
-                        results.add(result);
-                        
-                        if (result.isSuccess()) {
-                            successfulCount++;
-                        } else {
-                            failedCount++;
-                            if (request.isFailFast()) {
-                                break; // Stop on first failure if failFast is true
+                // Check if this is a batch of posts that can use batch moderation
+                boolean isPostBatch = request.getOperations().stream()
+                    .allMatch(op -> "CREATE_POST".equals(op.getOperationType()));
+                
+                if (isPostBatch && request.getOperations().size() > 1) {
+                    // Use batch moderation for multiple posts
+                    log.info("Using batch moderation for {} posts", request.getOperations().size());
+                    results = processPostBatchWithModeration(request);
+                    successfulCount = (int) results.stream().filter(BatchResponse.BatchOperationResult::isSuccess).count();
+                    failedCount = results.size() - successfulCount;
+                } else {
+                    // Process operations individually
+                    for (BatchRequest.BatchOperation<T> operation : request.getOperations()) {
+                        try {
+                            BatchResponse.BatchOperationResult<T> result = processOperation(operation);
+                            results.add(result);
+                            
+                            if (result.isSuccess()) {
+                                successfulCount++;
+                            } else {
+                                failedCount++;
+                                if (request.isFailFast()) {
+                                    break; // Stop on first failure if failFast is true
+                                }
                             }
-                        }
-                    } catch (Exception e) {
-                        log.error("Error processing operation {}: {}", operation.getOperationId(), e.getMessage());
-                        results.add(BatchResponse.BatchOperationResult.<T>builder()
-                            .operationId(operation.getOperationId())
-                            .success(false)
-                            .errorMessage(e.getMessage())
-                            .errorCode("PROCESSING_ERROR")
-                            .build());
-                        failedCount++;
-                        
-                        if (request.isFailFast()) {
-                            break;
+                        } catch (Exception e) {
+                            log.error("Error processing operation {}: {}", operation.getOperationId(), e.getMessage());
+                            results.add(BatchResponse.BatchOperationResult.<T>builder()
+                                .operationId(operation.getOperationId())
+                                .success(false)
+                                .errorMessage(e.getMessage())
+                                .errorCode("PROCESSING_ERROR")
+                                .build());
+                            failedCount++;
+                            
+                            if (request.isFailFast()) {
+                                break;
+                            }
                         }
                     }
                 }
@@ -172,6 +185,82 @@ public class BatchProcessingService {
                 .errorCode("OPERATION_ERROR")
                 .processingTimeMs(System.currentTimeMillis() - operationStartTime)
                 .build();
+        }
+    }
+
+    /**
+     * Process a batch of posts with batch moderation
+     */
+    @SuppressWarnings("unchecked")
+    private <T> List<BatchResponse.BatchOperationResult<T>> processPostBatchWithModeration(BatchRequest<T> request) {
+        List<BatchResponse.BatchOperationResult<T>> results = new ArrayList<>();
+        List<Post> createdPosts = new ArrayList<>();
+        
+        try {
+            // First, create all posts without moderation
+            for (BatchRequest.BatchOperation<T> operation : request.getOperations()) {
+                try {
+                    PostDto postDto = convertOperationToPostDto(operation);
+                    Post post = convertToPost(postDto);
+                    Post savedPost = postRepository.save(post);
+                    createdPosts.add(savedPost);
+                    
+                    results.add(BatchResponse.BatchOperationResult.<T>builder()
+                        .operationId(operation.getOperationId())
+                        .success(true)
+                        .data((T) convertToPostDto(savedPost))
+                        .build());
+                } catch (Exception e) {
+                    log.error("Failed to create post in batch: {}", e.getMessage(), e);
+                    results.add(BatchResponse.BatchOperationResult.<T>builder()
+                        .operationId(operation.getOperationId())
+                        .success(false)
+                        .errorMessage(e.getMessage())
+                        .errorCode("POST_CREATION_ERROR")
+                        .build());
+                }
+            }
+            
+            // Now run batch moderation on all created posts
+            if (!createdPosts.isEmpty()) {
+                List<UUID> postIds = createdPosts.stream()
+                    .map(Post::getId)
+                    .collect(Collectors.toList());
+                
+                log.info("Running batch moderation for {} posts", postIds.size());
+                asyncModerationService.processBatchModerationAsync(postIds);
+            }
+            
+        } catch (Exception e) {
+            log.error("Error in batch post processing: {}", e.getMessage(), e);
+            // Mark all operations as failed
+            for (int i = 0; i < request.getOperations().size(); i++) {
+                if (i >= results.size()) {
+                    results.add(BatchResponse.BatchOperationResult.<T>builder()
+                        .operationId(request.getOperations().get(i).getOperationId())
+                        .success(false)
+                        .errorMessage("Batch processing failed: " + e.getMessage())
+                        .errorCode("BATCH_PROCESSING_ERROR")
+                        .build());
+                }
+            }
+        }
+        
+        return results;
+    }
+
+    /**
+     * Convert operation to PostDto
+     */
+    @SuppressWarnings("unchecked")
+    private PostDto convertOperationToPostDto(BatchRequest.BatchOperation<?> operation) {
+        if (operation.getData() instanceof PostDto) {
+            return (PostDto) operation.getData();
+        } else if (operation.getData() instanceof java.util.Map) {
+            java.util.Map<String, Object> dataMap = (java.util.Map<String, Object>) operation.getData();
+            return convertMapToPostDto(dataMap);
+        } else {
+            throw new IllegalArgumentException("Invalid data type for CREATE_POST operation: " + operation.getData().getClass());
         }
     }
 

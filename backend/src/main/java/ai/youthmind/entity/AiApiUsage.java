@@ -108,6 +108,7 @@ public class AiApiUsage {
         LANGUAGE_DETECTION("Language Detection"),
         TEXT_SUMMARIZATION("Text Summarization"),
         TRANSLATION("Translation"),
+        POST("Post Processing"),
         OTHER("Other");
 
         private final String description;

@@ -24,6 +24,7 @@ ai\youthmind\dto\PostDtoBuilderTest.class
 ai\youthmind\controller\AdminRegistrationTest.class
 ai\youthmind\service\EnhancedAIAnalysisIntegrationTest.class
 ai\youthmind\repository\PostCollectionRepositoryTest.class
+ai\youthmind\service\AsyncModerationServiceBatchTest.class
 ai\youthmind\comprehensive\ComprehensiveSystemTest.class
 ai\youthmind\dto\PostUpdateRequestTest.class
 ai\youthmind\config\AdminSecretConfigurationTest.class

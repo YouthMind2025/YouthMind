@@ -54,7 +54,7 @@ public class DeepSeekAdapterService {
     
     // Batch processing configuration
     private static final int MAX_BATCH_SIZE = 10;
-    private static final Duration BATCH_TIMEOUT = Duration.ofMillis(500);
+    private static final Duration BATCH_TIMEOUT = Duration.ofMillis(10000); // Increased to 10 seconds
     
     // Response validation
     private static final Duration RESPONSE_TIMEOUT = Duration.ofMillis(800);
@@ -445,14 +445,21 @@ public class DeepSeekAdapterService {
         // Enhanced parsing logic
         String upperResponse = responseText.trim().toUpperCase();
         
+        // Debug logging to see what AI is responding
+        logger.debug("AI Response for content '{}': {}", 
+            originalContent.length() > 50 ? originalContent.substring(0, 50) + "..." : originalContent, 
+            responseText);
+        
         if (upperResponse.startsWith("APPROVE")) {
             result.setSafe(true);
             result.setConfidence(0.9);
             result.setReason(extractReason(responseText));
+            logger.debug("Content APPROVED: {}", extractReason(responseText));
         } else if (upperResponse.startsWith("REJECT")) {
             result.setSafe(false);
             result.setConfidence(0.8);
             result.setReason(extractReason(responseText));
+            logger.debug("Content REJECTED: {}", extractReason(responseText));
         } else {
             // Fallback parsing for unexpected formats
             logger.warn("Unexpected response format: {}", responseText);
@@ -503,7 +510,7 @@ public class DeepSeekAdapterService {
         
         DeepSeekModerationRequest.Message systemMessage = new DeepSeekModerationRequest.Message();
         systemMessage.setRole("system");
-        systemMessage.setContent("You are a content moderation AI. Analyze the following content and respond with APPROVE or REJECT followed by a brief reason.");
+        systemMessage.setContent("You are a content moderation AI for a mental health platform. Analyze the following content and respond with APPROVE or REJECT followed by a brief reason. REJECT content that contains: profanity, hate speech, threats, self-harm, or inappropriate language. APPROVE content that is appropriate for a mental health support community, even if it discusses difficult emotions or struggles.");
         
         DeepSeekModerationRequest.Message userMessage = new DeepSeekModerationRequest.Message();
         userMessage.setRole("user");
