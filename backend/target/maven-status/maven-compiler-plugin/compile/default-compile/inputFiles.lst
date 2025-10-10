@@ -1,6 +1,7 @@
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\ModerationStatusResponse.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\VectorCollectionManager.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\DeepSeekCostOptimizationService.java
+C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\cli\PsychologicalVectorCLI.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\PostEngagementResponse.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\AIServiceConnectionMetrics.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\PostCreateResponse.java
@@ -91,6 +92,7 @@ C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\memory\dto\ContextRe
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\controller\QueueController.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\DeploymentMonitoringService.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\config\ConcurrencyConfig.java
+C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\cli\PsychologicalVectorCLITest.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\dto\SimilarityValidationResultDto.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\AIServiceConnectionPoolManager.java
 C:\Users\alexa\YouthMind\backend\src\main\java\ai\youthmind\service\JWTService.java

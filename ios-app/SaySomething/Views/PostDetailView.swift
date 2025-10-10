@@ -282,6 +282,7 @@ struct PostDetailView: View {
     @EnvironmentObject private var feedVM: FeedViewModel
     @State private var viewOpenedAt: Date = Date()
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     
     private var currentViews: Int {
         feedVM.engagement[post.id]?.views ?? post.view
@@ -434,7 +435,22 @@ struct PostDetailView: View {
             .background(.ultraThinMaterial)
         }
         }
-        .onAppear { feedVM.incrementView(for: post.id) }
+        .onAppear { 
+            // Start view tracking
+            PostViewTracker.shared.startTracking(postId: post.id)
+            // Keep existing local view increment for UI responsiveness
+            feedVM.incrementView(for: post.id)
+        }
+        .onDisappear {
+            // End view tracking when user navigates away
+            PostViewTracker.shared.endTracking(postId: post.id, reason: .navigation)
+        }
+        .onChange(of: scenePhase) { newPhase in
+            // Handle app backgrounding
+            if newPhase == .background {
+                PostViewTracker.shared.endTracking(postId: post.id, reason: .background)
+            }
+        }
         .background(post.emotion.color.opacity(0.12).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .tint(DesignConstants.ColorPalette.brandPurple)

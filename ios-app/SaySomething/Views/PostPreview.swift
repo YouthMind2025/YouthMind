@@ -10,6 +10,7 @@ struct PostPreview: View {
     let post: Post
     @ObservedObject var viewModel: FeedViewModel
     @State private var likeBounce: Bool = false
+    @State private var viewStartTime: Date?
     
     // Engagement is now separate from the post content
     private var currentEngagement: PostEngagement? {
@@ -127,6 +128,22 @@ struct PostPreview: View {
         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
         .shadow(color: emotionColor.opacity(0.10), radius: 10, x: 0, y: 6)
+        .onAppear {
+            // Start tracking when post appears in viewport
+            viewStartTime = Date()
+            PostViewTracker.shared.startTracking(postId: post.id)
+        }
+        .onDisappear {
+            // End tracking when post scrolls out of viewport
+            if let startTime = viewStartTime {
+                let duration = Date().timeIntervalSince(startTime)
+                // Only track if viewed for more than 1 second
+                if duration >= 1.0 {
+                    PostViewTracker.shared.endTracking(postId: post.id, reason: .scroll)
+                }
+                viewStartTime = nil
+            }
+        }
     }
 }
 

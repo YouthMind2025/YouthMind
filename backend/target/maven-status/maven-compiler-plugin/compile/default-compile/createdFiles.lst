@@ -65,6 +65,7 @@ ai\youthmind\dto\SearchResponse.class
 ai\youthmind\service\AIServiceConnectionMetrics$GlobalMetricsSummary.class
 ai\youthmind\service\EnhancedRedisQueryCache$CacheMetadata.class
 ai\youthmind\analytics\dto\InteractionEventRequest.class
+ai\youthmind\cli\PsychologicalVectorCLI.class
 ai\youthmind\util\CircuitBreaker$State.class
 ai\youthmind\controller\VectorSearchController.class
 ai\youthmind\entity\PersonalityComputation.class
@@ -95,6 +96,7 @@ ai\youthmind\controller\EnhancedAIAnalysisController.class
 ai\youthmind\service\AutoScalingService$ScalingStatus.class
 ai\youthmind\service\AIServiceConnectionMetrics$PerformanceTrend$PerformanceTrendBuilder.class
 ai\youthmind\service\StateUpdateBatchProcessor.class
+ai\youthmind\cli\PsychologicalVectorCLITest$FactorResult.class
 ai\youthmind\controller\EnhancedModerationTestController$GenZLanguageTestResult.class
 ai\youthmind\service\FeatureFlagManager$ABTest.class
 ai\youthmind\dto\InsightsRequest.class
@@ -169,6 +171,7 @@ ai\youthmind\service\ModerationService.class
 ai\youthmind\dto\ApiUsageAnalytics$ErrorStatistic$ErrorStatisticBuilder.class
 ai\youthmind\service\ResonanceProcessor.class
 ai\youthmind\service\VectorNormalizationService$1.class
+ai\youthmind\cli\PsychologicalVectorCLITest$2.class
 ai\youthmind\entity\ModerationLog.class
 ai\youthmind\service\IntelligentCacheManager$CacheLevel.class
 ai\youthmind\entity\UserInteractionModulation$InteractionType.class
@@ -233,6 +236,7 @@ ai\youthmind\entity\WarningHistory$WarningType.class
 ai\youthmind\service\DatabaseQueryOptimizer$DatabasePerformanceMetrics.class
 ai\youthmind\util\PerformanceMonitor$MethodStats.class
 ai\youthmind\analytics\dto\BehaviorSummaryResponse.class
+ai\youthmind\cli\PsychologicalVectorCLITest.class
 ai\youthmind\service\DeepSeekCostOptimizationService$CostRecord.class
 ai\youthmind\service\AIServiceLoadBalancer$ServiceEndpoint$ServiceEndpointBuilder.class
 ai\youthmind\dto\ArticleCreateRequest.class
@@ -721,6 +725,7 @@ ai\youthmind\config\EmbeddingConfig.class
 ai\youthmind\service\IntelligentCacheManager$ConsistencyMetrics$ConsistencyMetricsBuilder.class
 ai\youthmind\config\AIServiceConnectionPoolConfig.class
 ai\youthmind\service\FeatureFlagManager$FeatureFlagAnalytics$FeatureFlagAnalyticsBuilder.class
+ai\youthmind\cli\PsychologicalVectorCLITest$1.class
 ai\youthmind\controller\PostModerationController$ModerationStatistics.class
 ai\youthmind\service\AIServiceConnectionHealthMonitor$ServiceHealthStatus$ServiceHealthStatusBuilder.class
 ai\youthmind\service\DeploymentManager$DeploymentInfo.class
@@ -911,6 +916,7 @@ ai\youthmind\dto\AIChatRequest.class
 ai\youthmind\interests\entity\UserInterest.class
 ai\youthmind\dto\ApiUsageAnalytics$UserUsage$UserUsageBuilder.class
 ai\youthmind\entity\VectorEmbedding.class
+ai\youthmind\cli\PsychologicalVectorCLI$FactorResult.class
 ai\youthmind\service\PsychologicalStateVectorOptimizedRepository.class
 ai\youthmind\exception\ResourceNotFoundException.class
 ai\youthmind\dto\CommentReportResponse.class
