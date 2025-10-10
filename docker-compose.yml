@@ -1,0 +1,172 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14
+    container_name: youthmind-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-youthmind_db}
+      POSTGRES_USER: ${DB_USERNAME:-youthmind_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/main/resources/db/migration:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-youthmind_user} -d ${DB_NAME:-youthmind_db}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - youthmind
+
+  # Redis Cache and Streams for Recommendation Engine
+  redis:
+    image: redis:7-alpine
+    container_name: youthmind-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      # Redis configuration for recommendation engine
+      REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-512mb}
+      REDIS_MAXMEMORY_POLICY: ${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+    volumes:
+      - redis_data:/data
+      - ./monitoring/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: |
+      redis-server /usr/local/etc/redis/redis.conf 
+      --maxmemory ${REDIS_MAXMEMORY:-512mb} 
+      --maxmemory-policy ${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+      --appendonly yes
+      --appendfsync everysec
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - youthmind
+
+  # YouthMind Backend Application
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: youthmind-backend
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    environment:
+      # Database Configuration
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-youthmind_db}
+      DB_USERNAME: ${DB_USERNAME:-youthmind_user}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      
+      # Redis Configuration
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      
+      # JWT Configuration
+      JWT_SECRET: ${JWT_SECRET:-bb7d84d73df9334e3d00632cb9db09330d73e20261db3b1e665ac41c166aae0e2b0102d01ef9f6c31748a7bc7f8f1e5fe5cf60437324ffd837cf6eaf97ba3fe9db2095e8faec51ce87ba782b5f37b75cf05c6efbfc8404413621b9b257201ce79fb9a3f13f797a7a4d9d9b5c901d2eb0c0e1cae862d1e8c7e8c40d4dc5c5393ebd20a1590cfda77d2017050f078fd9595e442f7d980719953917448a139b515f9b8d27e8f8587dfedd5c1bcf5b4a4f0d3fa83b15a5822ce969659c255742b75089edcd2c200de663684b736ef4c2796a8b9b68461d8ee0f13899f54e81f93d99df5665c2a878f08747bbffa8ed58b32997a44140e87585838b7fde51c703b8a6}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      
+      # Admin Configuration
+      ADMIN_SECRET_KEY: ${ADMIN_SECRET_KEY:-YOUTHMIND_ADMIN_2024}
+      
+      # Recommendation Engine Configuration
+      YOUTHMIND_RECOMMENDATION_ENABLED: ${YOUTHMIND_RECOMMENDATION_ENABLED:-true}
+      YOUTHMIND_DEFAULT_BLOCK_SIZE: ${YOUTHMIND_DEFAULT_BLOCK_SIZE:-20}
+      YOUTHMIND_BLOCK_EXPIRY_HOURS: ${YOUTHMIND_BLOCK_EXPIRY_HOURS:-1}
+      YOUTHMIND_RVECTOR_CACHE_TTL_MINUTES: ${YOUTHMIND_RVECTOR_CACHE_TTL_MINUTES:-30}
+      YOUTHMIND_EVENT_QUEUE_MAX_DEPTH: ${YOUTHMIND_EVENT_QUEUE_MAX_DEPTH:-10000}
+      YOUTHMIND_BLOCK_PRECALC_ENABLED: ${YOUTHMIND_BLOCK_PRECALC_ENABLED:-true}
+      YOUTHMIND_FALLBACK_TO_CHRONOLOGICAL: ${YOUTHMIND_FALLBACK_TO_CHRONOLOGICAL:-true}
+      YOUTHMIND_MIN_POSTS_PER_EMOTION: ${YOUTHMIND_MIN_POSTS_PER_EMOTION:-3}
+      
+      # Redis Streams Configuration
+      YOUTHMIND_RVECTOR_UPDATES_STREAM: ${YOUTHMIND_RVECTOR_UPDATES_STREAM:-recommendation:rvector-updates}
+      YOUTHMIND_BLOCK_PRECALC_STREAM: ${YOUTHMIND_BLOCK_PRECALC_STREAM:-recommendation:block-precalc}
+      YOUTHMIND_CONSUMER_GROUP: ${YOUTHMIND_CONSUMER_GROUP:-recommendation-engine-workers}
+      YOUTHMIND_STREAM_MAX_RETRIES: ${YOUTHMIND_STREAM_MAX_RETRIES:-3}
+      YOUTHMIND_STREAM_RETRY_DELAY_MS: ${YOUTHMIND_STREAM_RETRY_DELAY_MS:-1000}
+      
+      # Rate Limiting Configuration
+      YOUTHMIND_RATE_LIMIT_MAX_PER_MINUTE: ${YOUTHMIND_RATE_LIMIT_MAX_PER_MINUTE:-100}
+      YOUTHMIND_RATE_LIMIT_BURST_CAPACITY: ${YOUTHMIND_RATE_LIMIT_BURST_CAPACITY:-10}
+      
+      # Circuit Breaker Configuration
+      YOUTHMIND_CB_FAILURE_RATE_THRESHOLD: ${YOUTHMIND_CB_FAILURE_RATE_THRESHOLD:-50}
+      YOUTHMIND_CB_WAIT_DURATION_SECONDS: ${YOUTHMIND_CB_WAIT_DURATION_SECONDS:-30}
+      YOUTHMIND_CB_SLIDING_WINDOW_SIZE: ${YOUTHMIND_CB_SLIDING_WINDOW_SIZE:-10}
+      YOUTHMIND_CB_MINIMUM_CALLS: ${YOUTHMIND_CB_MINIMUM_CALLS:-5}
+      
+      # Performance Targets
+      YOUTHMIND_PERF_RVECTOR_UPDATE_MS: ${YOUTHMIND_PERF_RVECTOR_UPDATE_MS:-5}
+      YOUTHMIND_PERF_TOP_EMOTION_SELECT_MS: ${YOUTHMIND_PERF_TOP_EMOTION_SELECT_MS:-1}
+      YOUTHMIND_PERF_SINGLE_EMOTION_SELECT_MS: ${YOUTHMIND_PERF_SINGLE_EMOTION_SELECT_MS:-50}
+      YOUTHMIND_PERF_FULL_BLOCK_GENERATE_MS: ${YOUTHMIND_PERF_FULL_BLOCK_GENERATE_MS:-200}
+      YOUTHMIND_PERF_EVENT_PUBLISH_MS: ${YOUTHMIND_PERF_EVENT_PUBLISH_MS:-10}
+      
+      # Cache Configuration
+      YOUTHMIND_CACHE_MAPPING_RULES_TTL_HOURS: ${YOUTHMIND_CACHE_MAPPING_RULES_TTL_HOURS:-1}
+      YOUTHMIND_CACHE_RVECTOR_TTL_MINUTES: ${YOUTHMIND_CACHE_RVECTOR_TTL_MINUTES:-30}
+      YOUTHMIND_CACHE_FEED_BLOCKS_TTL_HOURS: ${YOUTHMIND_CACHE_FEED_BLOCKS_TTL_HOURS:-1}
+      YOUTHMIND_CACHE_SHOWN_POSTS_TTL_DAYS: ${YOUTHMIND_CACHE_SHOWN_POSTS_TTL_DAYS:-7}
+      YOUTHMIND_CACHE_SHOWN_POSTS_MAX_SIZE: ${YOUTHMIND_CACHE_SHOWN_POSTS_MAX_SIZE:-500}
+      
+      # AI Service Configuration
+      YOUTHMIND_DEEPSEEK_API_URL: ${YOUTHMIND_DEEPSEEK_API_URL:-https://api.deepseek.com/v1}
+      YOUTHMIND_DEEPSEEK_API_KEY: ${YOUTHMIND_DEEPSEEK_API_KEY:-}
+      YOUTHMIND_AI_ENABLED: ${YOUTHMIND_AI_ENABLED:-true}
+      
+      # Spring Profile
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - youthmind
+    restart: unless-stopped
+
+  # Frontend Application (if needed)
+  frontend:
+    build:
+      context: ./admin-panel
+      dockerfile: Dockerfile
+    container_name: youthmind-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8080}
+      REACT_APP_RECOMMENDATION_ENABLED: ${REACT_APP_RECOMMENDATION_ENABLED:-true}
+    depends_on:
+      - backend
+    networks:
+      - youthmind
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  youthmind:
+    driver: bridge

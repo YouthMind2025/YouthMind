@@ -1,0 +1,260 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: youthmind-backend
+  namespace: youthmind
+  labels:
+    app: youthmind-backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: youthmind-backend
+  template:
+    metadata:
+      labels:
+        app: youthmind-backend
+    spec:
+      containers:
+      - name: youthmind-backend
+        image: youthmind-backend:latest
+        ports:
+        - containerPort: 8080
+        env:
+        # Database Configuration
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://postgres:5432/youthmind"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "youthmind"
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
+        
+        # Redis Configuration
+        - name: SPRING_REDIS_HOST
+          value: "redis"
+        - name: SPRING_REDIS_PORT
+          value: "6379"
+        
+        # Recommendation Engine Configuration
+        - name: YOUTHMIND_RECOMMENDATION_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_RECOMMENDATION_ENABLED
+        - name: YOUTHMIND_DEFAULT_BLOCK_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_DEFAULT_BLOCK_SIZE
+        - name: YOUTHMIND_BLOCK_EXPIRY_HOURS
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_BLOCK_EXPIRY_HOURS
+        - name: YOUTHMIND_RVECTOR_CACHE_TTL_MINUTES
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_RVECTOR_CACHE_TTL_MINUTES
+        - name: YOUTHMIND_EVENT_QUEUE_MAX_DEPTH
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_EVENT_QUEUE_MAX_DEPTH
+        - name: YOUTHMIND_BLOCK_PRECALC_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_BLOCK_PRECALC_ENABLED
+        - name: YOUTHMIND_FALLBACK_TO_CHRONOLOGICAL
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_FALLBACK_TO_CHRONOLOGICAL
+        - name: YOUTHMIND_MIN_POSTS_PER_EMOTION
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_MIN_POSTS_PER_EMOTION
+        
+        # Redis Streams Configuration
+        - name: YOUTHMIND_RVECTOR_UPDATES_STREAM
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_RVECTOR_UPDATES_STREAM
+        - name: YOUTHMIND_BLOCK_PRECALC_STREAM
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_BLOCK_PRECALC_STREAM
+        - name: YOUTHMIND_CONSUMER_GROUP
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_CONSUMER_GROUP
+        - name: YOUTHMIND_STREAM_MAX_RETRIES
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_STREAM_MAX_RETRIES
+        - name: YOUTHMIND_STREAM_RETRY_DELAY_MS
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_STREAM_RETRY_DELAY_MS
+        
+        # Rate Limiting Configuration
+        - name: YOUTHMIND_RATE_LIMIT_MAX_PER_MINUTE
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_RATE_LIMIT_MAX_PER_MINUTE
+        - name: YOUTHMIND_RATE_LIMIT_BURST_CAPACITY
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_RATE_LIMIT_BURST_CAPACITY
+        
+        # Circuit Breaker Configuration
+        - name: YOUTHMIND_CB_FAILURE_RATE_THRESHOLD
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_CB_FAILURE_RATE_THRESHOLD
+        - name: YOUTHMIND_CB_WAIT_DURATION_SECONDS
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_CB_WAIT_DURATION_SECONDS
+        - name: YOUTHMIND_CB_SLIDING_WINDOW_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_CB_SLIDING_WINDOW_SIZE
+        - name: YOUTHMIND_CB_MINIMUM_CALLS
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_CB_MINIMUM_CALLS
+        
+        # Performance Targets
+        - name: YOUTHMIND_PERF_RVECTOR_UPDATE_MS
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_PERF_RVECTOR_UPDATE_MS
+        - name: YOUTHMIND_PERF_TOP_EMOTION_SELECT_MS
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_PERF_TOP_EMOTION_SELECT_MS
+        - name: YOUTHMIND_PERF_SINGLE_EMOTION_SELECT_MS
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_PERF_SINGLE_EMOTION_SELECT_MS
+        - name: YOUTHMIND_PERF_FULL_BLOCK_GENERATE_MS
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_PERF_FULL_BLOCK_GENERATE_MS
+        - name: YOUTHMIND_PERF_EVENT_PUBLISH_MS
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_PERF_EVENT_PUBLISH_MS
+        
+        # Cache Configuration
+        - name: YOUTHMIND_CACHE_MAPPING_RULES_TTL_HOURS
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_CACHE_MAPPING_RULES_TTL_HOURS
+        - name: YOUTHMIND_CACHE_RVECTOR_TTL_MINUTES
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_CACHE_RVECTOR_TTL_MINUTES
+        - name: YOUTHMIND_CACHE_FEED_BLOCKS_TTL_HOURS
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_CACHE_FEED_BLOCKS_TTL_HOURS
+        - name: YOUTHMIND_CACHE_SHOWN_POSTS_TTL_DAYS
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_CACHE_SHOWN_POSTS_TTL_DAYS
+        - name: YOUTHMIND_CACHE_SHOWN_POSTS_MAX_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: youthmind-config
+              key: YOUTHMIND_CACHE_SHOWN_POSTS_MAX_SIZE
+        
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: youthmind-backend
+  namespace: youthmind
+  labels:
+    app: youthmind-backend
+spec:
+  selector:
+    app: youthmind-backend
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: youthmind-backend-hpa
+  namespace: youthmind
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: youthmind-backend
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

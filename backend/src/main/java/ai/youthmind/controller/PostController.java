@@ -16,6 +16,9 @@ import ai.youthmind.service.PostService;
 import ai.youthmind.service.RedisService;
 import ai.youthmind.service.PsychologicalStateCacheService;
 import ai.youthmind.service.AIServiceClient;
+import ai.youthmind.service.ViewDurationTrackingService;
+import ai.youthmind.events.publisher.RecommendationEventPublisher;
+import ai.youthmind.events.model.Emotion;
 import ai.youthmind.util.AuthenticationUtils;
 import ai.youthmind.util.ResponseBuilder;
 import org.springframework.http.ResponseEntity;
@@ -84,6 +87,12 @@ public class PostController {
     
     @Autowired
     private AIServiceClient aiServiceClient;
+    
+    @Autowired
+    private ViewDurationTrackingService viewDurationTrackingService;
+    
+    @Autowired
+    private RecommendationEventPublisher eventPublisher;
 
     @PostMapping("/create")
     @Operation(
@@ -152,12 +161,15 @@ public class PostController {
             System.err.println("Failed to trigger psychological analysis for post: " + e.getMessage());
         }
 
-        // Publish enhanced event with structured data
-        // redisService.publishPostCreatedEvent(
-        //     savedPost.getId().toString(), 
-        //     userId.toString(), 
-        //     savedPost.getEmotion()
-        // );
+        // Publish PostCreatedEvent for recommendation engine
+        try {
+            Emotion emotion = Emotion.fromValue(savedPost.getEmotion());
+            eventPublisher.publishPostCreated(userId, savedPost.getId(), emotion);
+            log.debug("Published PostCreatedEvent for user {} post {} with emotion {}", 
+                     userId, savedPost.getId(), emotion);
+        } catch (Exception e) {
+            log.warn("Failed to publish PostCreatedEvent: {}", e.getMessage());
+        }
         
         return ResponseBuilder.created(response, "Post created successfully");
     }
@@ -324,6 +336,18 @@ public class PostController {
         // Toggle resonance
         PostDto updatedPost = postService.toggleResonance(id, userId);
         
+        // Publish PostLikedEvent for recommendation engine
+        try {
+            Emotion emotion = Emotion.fromValue(updatedPost.getEmotion());
+            // Note: We assume this is a like action - in a real implementation,
+            // you'd need to track the previous state to determine if it's like/unlike
+            eventPublisher.publishPostLiked(userId, id, emotion);
+            log.debug("Published PostLikedEvent for user {} post {} with emotion {}", 
+                     userId, id, emotion);
+        } catch (Exception e) {
+            log.warn("Failed to publish PostLikedEvent: {}", e.getMessage());
+        }
+        
         return ResponseBuilder.success(updatedPost);
     }
     
@@ -441,15 +465,15 @@ public class PostController {
     
     @PostMapping("/{id}/view")
     @Operation(
-        summary = "Track post view",
-        description = "Track a view for a post by the current user. Only increments count for first-time views per user."
+        summary = "Start tracking post view",
+        description = "Start tracking a view session for a post by the current user."
     )
     @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "View tracked successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "View tracking started successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     })
-    public ResponseEntity<ApiResponse<PostDto>> trackPostView(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> startViewTracking(
         @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
         @PathVariable UUID id
     ) {
@@ -457,14 +481,90 @@ public class PostController {
             // Extract user from authentication
             UUID currentUserId = AuthenticationUtils.getCurrentUserId();
             
-            // Track the view using PostService
+            // Verify post exists
+            Optional<Post> postOpt = postService.getPostById(id);
+            if (postOpt.isEmpty()) {
+                return ResponseBuilder.notFound("Post not found");
+            }
+            
+            Post post = postOpt.get();
+            
+            // Start view tracking
+            viewDurationTrackingService.startView(currentUserId, id);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "View tracking started");
+            response.put("postId", id);
+            response.put("userId", currentUserId);
+            response.put("emotion", post.getEmotion());
+            
+            return ResponseBuilder.success(response, "View tracking started successfully");
+        } catch (Exception e) {
+            return ResponseBuilder.internalServerError("Failed to start view tracking");
+        }
+    }
+    
+    @PostMapping("/{id}/view/end")
+    @Operation(
+        summary = "End tracking post view",
+        description = "End view tracking and potentially publish PostViewedEvent if duration >= 15s."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "View tracking ended successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> endViewTracking(
+        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id
+    ) {
+        try {
+            // Extract user from authentication
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            
+            // Verify post exists
+            Optional<Post> postOpt = postService.getPostById(id);
+            if (postOpt.isEmpty()) {
+                return ResponseBuilder.notFound("Post not found");
+            }
+            
+            Post post = postOpt.get();
+            
+            // End view tracking and get duration
+            Integer duration = viewDurationTrackingService.endView(currentUserId, id);
+            
+            // Track the view in PostService (for view count)
             PostDto updatedPost = postService.trackPostView(id, currentUserId);
             
-            return ResponseBuilder.success(updatedPost, "View tracked successfully");
-        } catch (ResourceNotFoundException e) {
-            return ResponseBuilder.notFound(e.getMessage());
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "View tracking ended");
+            response.put("postId", id);
+            response.put("userId", currentUserId);
+            response.put("duration", duration);
+            response.put("emotion", post.getEmotion());
+            response.put("viewCount", updatedPost.getView());
+            
+            // Publish PostViewedEvent if duration >= 15s
+            if (duration >= 15) {
+                try {
+                    Emotion emotion = Emotion.fromValue(post.getEmotion());
+                    eventPublisher.publishPostViewed(currentUserId, id, emotion, duration);
+                    response.put("eventPublished", true);
+                    log.debug("Published PostViewedEvent for user {} post {} with duration {}s", 
+                             currentUserId, id, duration);
+                } catch (Exception e) {
+                    log.warn("Failed to publish PostViewedEvent: {}", e.getMessage());
+                    response.put("eventPublished", false);
+                    response.put("eventError", e.getMessage());
+                }
+            } else {
+                response.put("eventPublished", false);
+                response.put("reason", "Duration < 15 seconds");
+            }
+            
+            return ResponseBuilder.success(response, "View tracking ended successfully");
         } catch (Exception e) {
-            return ResponseBuilder.internalServerError("Failed to track view");
+            return ResponseBuilder.internalServerError("Failed to end view tracking");
         }
     }
     

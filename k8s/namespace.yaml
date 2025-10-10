@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: youthmind
+  labels:
+    name: youthmind
+    app: youthmind

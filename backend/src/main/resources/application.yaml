@@ -413,9 +413,59 @@ ai:
     api-key: ${YOUTHMIND_DEEPSEEK_API_KEY:}
     enabled: ${YOUTHMIND_AI_ENABLED:true}
 
+# Recommendation Engine Configuration
+youthmind:
+  recommendation:
+    enabled: ${YOUTHMIND_RECOMMENDATION_ENABLED:true}
+    default-block-size: ${YOUTHMIND_DEFAULT_BLOCK_SIZE:20}
+    block-expiry-hours: ${YOUTHMIND_BLOCK_EXPIRY_HOURS:1}
+    rvector-cache-ttl-minutes: ${YOUTHMIND_RVECTOR_CACHE_TTL_MINUTES:30}
+    event-queue-max-depth: ${YOUTHMIND_EVENT_QUEUE_MAX_DEPTH:10000}
+    block-precalc-enabled: ${YOUTHMIND_BLOCK_PRECALC_ENABLED:true}
+    fallback-to-chronological: ${YOUTHMIND_FALLBACK_TO_CHRONOLOGICAL:true}
+    min-posts-per-emotion: ${YOUTHMIND_MIN_POSTS_PER_EMOTION:3}
+    
+    # Redis Streams Configuration
+    streams:
+      rvector-updates-stream: ${YOUTHMIND_RVECTOR_UPDATES_STREAM:recommendation:rvector-updates}
+      block-precalc-stream: ${YOUTHMIND_BLOCK_PRECALC_STREAM:recommendation:block-precalc}
+      consumer-group: ${YOUTHMIND_CONSUMER_GROUP:recommendation-engine-workers}
+      max-retries: ${YOUTHMIND_STREAM_MAX_RETRIES:3}
+      retry-delay-ms: ${YOUTHMIND_STREAM_RETRY_DELAY_MS:1000}
+      
+    # Rate Limiting Configuration
+    rate-limiting:
+      max-requests-per-minute: ${YOUTHMIND_RATE_LIMIT_MAX_PER_MINUTE:100}
+      burst-capacity: ${YOUTHMIND_RATE_LIMIT_BURST_CAPACITY:10}
+      
+    # Circuit Breaker Configuration
+    circuit-breaker:
+      failure-rate-threshold: ${YOUTHMIND_CB_FAILURE_RATE_THRESHOLD:50}
+      wait-duration-seconds: ${YOUTHMIND_CB_WAIT_DURATION_SECONDS:30}
+      sliding-window-size: ${YOUTHMIND_CB_SLIDING_WINDOW_SIZE:10}
+      minimum-calls: ${YOUTHMIND_CB_MINIMUM_CALLS:5}
+      
+    # Performance Targets (for monitoring)
+    performance-targets:
+      r-vector-update-ms: ${YOUTHMIND_PERF_RVECTOR_UPDATE_MS:5}
+      top-emotion-select-ms: ${YOUTHMIND_PERF_TOP_EMOTION_SELECT_MS:1}
+      single-emotion-select-ms: ${YOUTHMIND_PERF_SINGLE_EMOTION_SELECT_MS:50}
+      full-block-generate-ms: ${YOUTHMIND_PERF_FULL_BLOCK_GENERATE_MS:200}
+      event-publish-ms: ${YOUTHMIND_PERF_EVENT_PUBLISH_MS:10}
+      
+    # Cache Configuration
+    cache:
+      mapping-rules-ttl-hours: ${YOUTHMIND_CACHE_MAPPING_RULES_TTL_HOURS:1}
+      rvector-ttl-minutes: ${YOUTHMIND_CACHE_RVECTOR_TTL_MINUTES:30}
+      feed-blocks-ttl-hours: ${YOUTHMIND_CACHE_FEED_BLOCKS_TTL_HOURS:1}
+      shown-posts-ttl-days: ${YOUTHMIND_CACHE_SHOWN_POSTS_TTL_DAYS:7}
+      shown-posts-max-size: ${YOUTHMIND_CACHE_SHOWN_POSTS_MAX_SIZE:500}
+
 # Logging
 logging:
   level:
     org.springframework.security: DEBUG
     ai.youthmind: DEBUG
-    ai.youthmind.service.AIServiceClient: DEBUG 
+    ai.youthmind.service.AIServiceClient: DEBUG
+    ai.youthmind.events: INFO
+    ai.youthmind.service.FeedBlockScheduledGenerator: INFO 

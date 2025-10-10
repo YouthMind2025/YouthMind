@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: youthmind
+
+resources:
+- namespace.yaml
+- configmap.yaml
+- postgres.yaml
+- redis.yaml
+- backend.yaml
+- frontend.yaml
+- ingress.yaml
+
+commonLabels:
+  app.kubernetes.io/name: youthmind
+  app.kubernetes.io/version: "1.0.0"
+  app.kubernetes.io/component: recommendation-engine
+
+images:
+- name: youthmind-backend
+  newTag: latest
+- name: youthmind-frontend
+  newTag: latest
