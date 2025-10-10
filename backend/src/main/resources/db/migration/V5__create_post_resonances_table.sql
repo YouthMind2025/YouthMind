@@ -1,6 +1,6 @@
 -- Create post_resonances table for tracking user likes/resonances
 CREATE TABLE post_resonances (
-    id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID NOT NULL,
     post_id UUID NOT NULL,
     resonanced_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -10,9 +10,9 @@ CREATE TABLE post_resonances (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_post_resonances_user_post ON post_resonances(user_id, post_id);
-CREATE INDEX idx_post_resonances_post ON post_resonances(post_id);
-CREATE INDEX idx_post_resonances_resonanced_at ON post_resonances(resonanced_at);
+CREATE INDEX IF NOT EXISTS idx_post_resonances_user_post ON post_resonances(user_id, post_id);
+CREATE INDEX IF NOT EXISTS idx_post_resonances_post ON post_resonances(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_resonances_resonanced_at ON post_resonances(resonanced_at);
 
 -- Add comments for documentation
 COMMENT ON TABLE post_resonances IS 'Tracks user resonances (likes) for posts';

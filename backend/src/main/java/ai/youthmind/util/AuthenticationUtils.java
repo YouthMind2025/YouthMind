@@ -23,10 +23,16 @@ public class AuthenticationUtils {
      */
     public static UUID getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !(authentication.getPrincipal() instanceof UUID)) {
+        if (authentication == null || authentication.getPrincipal() == null) {
             throw new IllegalStateException("No authenticated user found");
         }
-        return (UUID) authentication.getPrincipal();
+        
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof UUID)) {
+            throw new IllegalStateException("Principal is not a UUID. Found: " + principal.getClass().getName());
+        }
+        
+        return (UUID) principal;
     }
     
     /**

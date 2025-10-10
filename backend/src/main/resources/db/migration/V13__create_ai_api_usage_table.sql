@@ -22,17 +22,17 @@ CREATE TABLE ai_api_usage (
 );
 
 -- Create indexes for efficient querying
-CREATE INDEX idx_ai_api_usage_user_id ON ai_api_usage(user_id);
-CREATE INDEX idx_ai_api_usage_created_at ON ai_api_usage(created_at);
-CREATE INDEX idx_ai_api_usage_request_type ON ai_api_usage(request_type);
-CREATE INDEX idx_ai_api_usage_model_name ON ai_api_usage(model_name);
-CREATE INDEX idx_ai_api_usage_success ON ai_api_usage(success);
-CREATE INDEX idx_ai_api_usage_session_id ON ai_api_usage(session_id);
+CREATE INDEX IF NOT EXISTS idx_ai_api_usage_user_id ON ai_api_usage(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_api_usage_created_at ON ai_api_usage(created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_api_usage_request_type ON ai_api_usage(request_type);
+CREATE INDEX IF NOT EXISTS idx_ai_api_usage_model_name ON ai_api_usage(model_name);
+CREATE INDEX IF NOT EXISTS idx_ai_api_usage_success ON ai_api_usage(success);
+CREATE INDEX IF NOT EXISTS idx_ai_api_usage_session_id ON ai_api_usage(session_id);
 
 -- Create composite indexes for common queries
-CREATE INDEX idx_ai_api_usage_user_date ON ai_api_usage(user_id, created_at);
-CREATE INDEX idx_ai_api_usage_type_date ON ai_api_usage(request_type, created_at);
-CREATE INDEX idx_ai_api_usage_model_date ON ai_api_usage(model_name, created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_api_usage_user_date ON ai_api_usage(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_api_usage_type_date ON ai_api_usage(request_type, created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_api_usage_model_date ON ai_api_usage(model_name, created_at);
 
 -- Add comments for documentation
 COMMENT ON TABLE ai_api_usage IS 'Tracks AI API usage, costs, and performance metrics for billing and monitoring';

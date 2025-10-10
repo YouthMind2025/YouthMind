@@ -7,4 +7,4 @@ CREATE TABLE user_behavior_analytics (
   metadata_json TEXT,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX idx_behavior_user_created ON user_behavior_analytics(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_behavior_user_created ON user_behavior_analytics(user_id, created_at);

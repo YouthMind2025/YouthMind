@@ -18,7 +18,7 @@ CREATE TABLE user_preferences (
 );
 
 -- Create index for fast user preference lookups
-CREATE INDEX idx_user_preferences_user_id ON user_preferences(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id);
 
 -- Insert default preferences for existing users
 INSERT INTO user_preferences (user_id, theme, language, notifications_enabled, email_notifications, push_notifications, privacy_level, ai_suggestions_enabled, anonymous_posting_allowed)

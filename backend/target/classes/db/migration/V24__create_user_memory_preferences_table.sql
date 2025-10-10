@@ -13,9 +13,9 @@ CREATE TABLE user_memory_preferences (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_memory_pref_user_key ON user_memory_preferences(user_id, pref_key);
-CREATE INDEX idx_memory_pref_user_id ON user_memory_preferences(user_id);
-CREATE INDEX idx_memory_pref_updated ON user_memory_preferences(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memory_pref_user_key ON user_memory_preferences(user_id, pref_key);
+CREATE INDEX IF NOT EXISTS idx_memory_pref_user_id ON user_memory_preferences(user_id);
+CREATE INDEX IF NOT EXISTS idx_memory_pref_updated ON user_memory_preferences(updated_at DESC);
 
 -- Add comments for documentation
 COMMENT ON TABLE user_memory_preferences IS 'AI memory system key-value preferences for dynamic user context';

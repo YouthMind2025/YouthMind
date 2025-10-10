@@ -9,4 +9,4 @@ CREATE TABLE ai_analysis (
 );
 
 -- Create index for performant retrieval queries
-CREATE INDEX idx_ai_analysis_post_id ON ai_analysis(post_id); 
+CREATE INDEX IF NOT EXISTS idx_ai_analysis_post_id ON ai_analysis(post_id); 

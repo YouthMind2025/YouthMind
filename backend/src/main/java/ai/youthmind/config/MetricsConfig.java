@@ -2,9 +2,6 @@ package ai.youthmind.config;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.config.MeterFilter;
-import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
-import io.micrometer.prometheus.PrometheusConfig;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,14 +11,6 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class MetricsConfig {
-
-    /**
-     * Prometheus meter registry for metrics collection
-     */
-    @Bean
-    public PrometheusMeterRegistry prometheusMeterRegistry() {
-        return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-    }
 
     /**
      * Customize meter registry with common tags and filters

@@ -106,19 +106,30 @@ public class JWTService {
     }
 
     public boolean isTokenBlacklisted(String token) {
-        String key = BLACKLIST_PREFIX + token;
-        return redisService.hasKey(key) && (boolean) redisService.getValue(key);
+        try {
+            String key = BLACKLIST_PREFIX + token;
+            return redisService.hasKey(key) && (boolean) redisService.getValue(key);
+        } catch (Exception e) {
+            // If Redis is unavailable, assume token is not blacklisted (fail open)
+            System.err.println("⚠️ Warning: Unable to check token blacklist in Redis: " + e.getMessage());
+            return false;
+        }
     }
 
     public void updateUserTokens(String email, String token) {
-        String key = USER_TOKENS_PREFIX + email;
-        List<String> tokens = redisService.hasKey(key)?
-                (List<String>) redisService.getValue(key) : new ArrayList<>();
+        try {
+            String key = USER_TOKENS_PREFIX + email;
+            List<String> tokens = redisService.hasKey(key)?
+                    (List<String>) redisService.getValue(key) : new ArrayList<>();
 
-        tokens.add(token);
-        tokens.removeIf(this::validateToken);
+            tokens.add(token);
+            tokens.removeIf(this::validateToken);
 
-        redisService.setValue(key, tokens);
+            redisService.setValue(key, tokens);
+        } catch (Exception e) {
+            // Log warning but don't fail token generation if Redis is unavailable
+            System.err.println("⚠️ Warning: Unable to update user tokens in Redis: " + e.getMessage());
+        }
     }
 
     public void blacklistUserTokens(String email) {

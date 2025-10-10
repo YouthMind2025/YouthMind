@@ -5,26 +5,34 @@ spring:
   application:
     name: youthmind-backend
   profiles:
-    active: dev  # Use dev profile by default
+    active: default  # Use PostgreSQL configuration
   
   datasource:
     url: jdbc:postgresql://localhost:5432/youthmind_db
     username: ${DB_USERNAME:youthmind_user}
     password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
+    
+    # HikariCP Connection Pool Configuration for PostgreSQL
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
   
   jpa:
     hibernate:
-      ddl-auto: validate  # Use validate with Flyway migrations
+      ddl-auto: update  # Use update to create/update tables automatically
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
   
-  # Flyway Configuration (Task 3: Database Migration)
+  # Flyway Configuration (Database Migration)
   flyway:
-    enabled: true
+    enabled: false  # Disable Flyway due to PostgreSQL version compatibility
     locations: classpath:db/migration
     baseline-on-migrate: true
     validate-on-migrate: true
@@ -49,6 +57,22 @@ spring:
           max-idle: 8
           min-idle: 0
 
+  # Email configuration for OTP sending
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${EMAIL_USERNAME:liyin20200613@gmail.com}
+    password: ${EMAIL_PASSWORD:eesy sqna oyvh aoeu}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
+
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET:bb7d84d73df9334e3d00632cb9db09330d73e20261db3b1e665ac41c166aae0e2b0102d01ef9f6c31748a7bc7f8f1e5fe5cf60437324ffd837cf6eaf97ba3fe9db2095e8faec51ce87ba782b5f37b75cf05c6efbfc8404413621b9b257201ce79fb9a3f13f797a7a4d9d9b5c901d2eb0c0e1cae862d1e8c7e8c40d4dc5c5393ebd20a1590cfda77d2017050f078fd9595e442f7d980719953917448a139b515f9b8d27e8f8587dfedd5c1bcf5b4a4f0d3fa83b15a5822ce969659c255742b75089edcd2c200de663684b736ef4c2796a8b9b68461d8ee0f13899f54e81f93d99df5665c2a878f08747bbffa8ed58b32997a44140e87585838b7fde51c703b8a6}
@@ -67,6 +91,19 @@ rate:
 # Admin Configuration
 admin:
   secret-key: ${ADMIN_SECRET_KEY:YOUTHMIND_ADMIN_2024}
+
+# OTP Configuration
+otp:
+  expiration-minutes: ${OTP_EXPIRATION_MINUTES:10}
+  length: ${OTP_LENGTH:6}
+  max-attempts: ${OTP_MAX_ATTEMPTS:3}
+  
+# Email Configuration
+email:
+  from: ${EMAIL_FROM:noreply@youthmind.ai}
+  from-name: ${EMAIL_FROM_NAME:YouthMind}
+  templates:
+    otp-subject: "Your YouthMind Verification Code"
 
 # File Upload Configuration
 app:

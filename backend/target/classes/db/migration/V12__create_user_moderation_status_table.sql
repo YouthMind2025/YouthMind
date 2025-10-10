@@ -1,6 +1,6 @@
 -- Create user_moderation_status table for tracking user moderation state
 CREATE TABLE user_moderation_status (
-    id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID NOT NULL UNIQUE,
     status VARCHAR(20) NOT NULL DEFAULT 'CLEAN',
     warning_level INTEGER NOT NULL DEFAULT 0,
@@ -26,8 +26,8 @@ CREATE TABLE user_moderation_status (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_user_moderation_status_user_id ON user_moderation_status(user_id);
-CREATE INDEX idx_user_moderation_status_status ON user_moderation_status(status);
-CREATE INDEX idx_user_moderation_status_warning_level ON user_moderation_status(warning_level);
-CREATE INDEX idx_user_moderation_status_manual_review ON user_moderation_status(manual_review_required);
-CREATE INDEX idx_user_moderation_status_updated_at ON user_moderation_status(updated_at);
+CREATE INDEX IF NOT EXISTS idx_user_moderation_status_user_id ON user_moderation_status(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_moderation_status_status ON user_moderation_status(status);
+CREATE INDEX IF NOT EXISTS idx_user_moderation_status_warning_level ON user_moderation_status(warning_level);
+CREATE INDEX IF NOT EXISTS idx_user_moderation_status_manual_review ON user_moderation_status(manual_review_required);
+CREATE INDEX IF NOT EXISTS idx_user_moderation_status_updated_at ON user_moderation_status(updated_at);

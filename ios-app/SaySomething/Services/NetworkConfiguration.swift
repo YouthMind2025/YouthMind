@@ -92,33 +92,6 @@ enum SessionExpiredError: Error {
     case sessionExpired
 }
 
-// MARK: - Post View Tracking Endpoints
-extension Endpoint {
-    static func trackPostViewStart(postId: String) -> Endpoint {
-        Endpoint(
-            path: "/v1/posts/\(postId)/view",
-            method: NetworkConfiguration.HTTPMethod.POST,
-            headers: [NetworkConfiguration.Headers.contentType: NetworkConfiguration.Headers.applicationJSON]
-        )
-    }
-    
-    static func trackPostViewEnd(postId: String, request: PostViewEndRequest) -> Endpoint {
-        Endpoint(
-            path: "/v1/posts/\(postId)/view/end",
-            method: NetworkConfiguration.HTTPMethod.POST,
-            headers: [NetworkConfiguration.Headers.contentType: NetworkConfiguration.Headers.applicationJSON],
-            body: try? JSONEncoder().encode(request)
-        )
-    }
-}
-
-// MARK: - Post View Tracking Request Models
-struct PostViewEndRequest: Codable {
-    let postId: String
-    let durationMs: Int64
-    let viewEndReason: String
-}
-
 // MARK: - Helper Extensions
 extension APIError {
     static func mapStatusCode(_ statusCode: Int) -> Error {

@@ -71,6 +71,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/test/**").permitAll()
                 .requestMatchers("/v1/auth/register").permitAll()
                 .requestMatchers("/v1/auth/login").permitAll()
+                .requestMatchers("/v1/auth/send-otp").permitAll()
+                .requestMatchers("/v1/auth/forgot-password").permitAll()
                 .requestMatchers("/v1/auth/refresh").permitAll()
                 .requestMatchers("/v1/auth/admin/register").permitAll()
                 .requestMatchers("/v1/auth/admin/login").permitAll()
@@ -109,6 +111,10 @@ public class SecurityConfig {
                 // Protected endpoints
                 .requestMatchers("/v1/auth/test").authenticated()
                 .requestMatchers("/v1/posts/create").authenticated()
+                .requestMatchers("/v1/posts").permitAll()  // Allow public access to post list
+                .requestMatchers("/v1/posts/*/comments").permitAll()  // Allow public access to comments
+                .requestMatchers("/v1/user/**").authenticated()  // User profile and related endpoints
+                .requestMatchers("/v1/notifications/**").authenticated()  // Notification endpoints
                 .requestMatchers("/v1/conversations/**").authenticated()
                 .requestMatchers("/v1/ai-chat/**").authenticated()
                 .anyRequest().authenticated())

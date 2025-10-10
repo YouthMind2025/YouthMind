@@ -9,6 +9,8 @@ import ai.youthmind.dto.FlaggedPostDto;
 import ai.youthmind.dto.PostViewStats;
 import ai.youthmind.dto.PostUpdateRequest;
 import ai.youthmind.dto.PsychologicalAnalysisRequest;
+import ai.youthmind.dto.UserInteractionItem;
+import ai.youthmind.dto.UserInteractionResponse;
 import ai.youthmind.dto.PsychologicalAnalysisResponse;
 import ai.youthmind.util.ModerationUtils;
 import ai.youthmind.entity.AIAnalysis;
@@ -37,7 +39,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.HashMap;
 import java.util.stream.Collectors;
@@ -74,6 +78,9 @@ public class PostService {
     
     @Autowired
     private AIServiceClient aiServiceClient;
+    
+    @Autowired
+    private UserService userService;
     
     /**
      * Update or insert AI analysis result for a post
@@ -128,6 +135,7 @@ public class PostService {
         post.setContent(request.getContent());
         post.setEmotion(request.getEmotion());
         post.setPreImg(request.getPreImg());
+        post.setTopics(request.getTopics());
         post.setResonance(0); // New post starts with 0 resonance
         post.setView(0); // New post starts with 0 views
         post.setCollect(0); // New post starts with 0 collections
@@ -299,8 +307,10 @@ public class PostService {
             feedResponse.setCurrentPage(page);
             feedResponse.setTotalPages(postsPage.getTotalPages());
             feedResponse.setTotalElements(postsPage.getTotalElements());
+            feedResponse.setPageSize(size);
             feedResponse.setHasNext(postsPage.hasNext());
-            // Note: hasPrevious is not available in FeedResponse, removing this call
+            feedResponse.setFirst(postsPage.isFirst());
+            feedResponse.setLast(postsPage.isLast());
             
             // Cache for 2 minutes - temporarily disabled to fix Redis connection issue
             // // redisService.cacheFeed(cacheKey, feedResponse);
@@ -363,7 +373,16 @@ public class PostService {
     public List<PostDto> getLikedPostsByUser(UUID userId) {
         List<PostResonance> resonances = postResonanceRepository.findByUserId(userId);
         return resonances.stream()
-                .map(resonance -> getPostById(resonance.getPostId(), userId))
+                .map(resonance -> {
+                    try {
+                        return getPostById(resonance.getPostId(), userId);
+                    } catch (ResourceNotFoundException e) {
+                        // Log the error and skip this post if it doesn't exist
+                        System.err.println("Liked post not found: " + resonance.getPostId() + " for user: " + userId);
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull) // Remove null entries
                 .collect(Collectors.toList());
     }
 
@@ -373,7 +392,16 @@ public class PostService {
     public List<PostDto> getBookmarkedPostsByUser(UUID userId) {
         List<PostCollection> collections = postCollectionRepository.findByUserId(userId);
         return collections.stream()
-                .map(collection -> getPostById(collection.getPostId(), userId))
+                .map(collection -> {
+                    try {
+                        return getPostById(collection.getPostId(), userId);
+                    } catch (ResourceNotFoundException e) {
+                        // Log the error and skip this post if it doesn't exist
+                        System.err.println("Bookmarked post not found: " + collection.getPostId() + " for user: " + userId);
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull) // Remove null entries
                 .collect(Collectors.toList());
     }
 
@@ -944,5 +972,69 @@ public class PostService {
         
         // Invalidate cache if needed
         // redisService.invalidateFeedCache();
+    }
+
+    /**
+     * Get user interactions (resonances received on user's posts)
+     */
+    public List<UserInteractionItem> getUserInteractions(UUID userId, int page, int limit) {
+        // Get posts by the user
+        List<Post> userPosts = postRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        List<UUID> userPostIds = userPosts.stream().map(Post::getId).collect(Collectors.toList());
+        
+        if (userPostIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        // Get resonances on user's posts
+        List<PostResonance> resonances = postResonanceRepository.findByPostIdInOrderByResonancedAtDesc(userPostIds);
+        
+        // Convert to UserInteractionItem
+        List<UserInteractionItem> interactions = new ArrayList<>();
+        
+        for (PostResonance resonance : resonances) {
+            try {
+                // Get the post details
+                Post post = userPosts.stream()
+                    .filter(p -> p.getId().equals(resonance.getPostId()))
+                    .findFirst()
+                    .orElse(null);
+                
+                if (post != null) {
+                    // Get user who made the resonance
+                    Optional<ai.youthmind.entity.User> fromUserOpt = userService.getUserById(resonance.getUserId());
+                    if (fromUserOpt.isPresent()) {
+                        ai.youthmind.entity.User fromUser = fromUserOpt.get();
+                        
+                        UserInteractionItem item = new UserInteractionItem();
+                        item.setId(resonance.getId());
+                        item.setInteractionType("RESONANCE");
+                        item.setFromUserId(fromUser.getId());
+                        item.setFromUserName(fromUser.getUsername());
+                        item.setFromUserAvatar(fromUser.getAvatar());
+                        item.setPostId(post.getId());
+                        item.setPostTitle(post.getTitle());
+                        item.setPostPreview(post.getContent().length() > 100 ? 
+                            post.getContent().substring(0, 100) + "..." : post.getContent());
+                        item.setCreatedAt(resonance.getResonancedAt());
+                        
+                        interactions.add(item);
+                    }
+                }
+            } catch (Exception e) {
+                // Log error but continue processing other interactions
+                System.err.println("Error processing interaction: " + e.getMessage());
+            }
+        }
+        
+        // Apply pagination
+        int startIndex = (page - 1) * limit;
+        int endIndex = Math.min(startIndex + limit, interactions.size());
+        
+        if (startIndex >= interactions.size()) {
+            return new ArrayList<>();
+        }
+        
+        return interactions.subList(startIndex, endIndex);
     }
 } 

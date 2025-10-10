@@ -350,11 +350,12 @@ public class ComprehensiveApiTest {
         assertEquals("password123", loginRequest.getPassword());
 
         // Test PostCreateRequest DTO
-        PostCreateRequest postRequest = new PostCreateRequest("Test Title", "Test Content", "happy", "preview.jpg");
+        PostCreateRequest postRequest = new PostCreateRequest("Test Title", "Test Content", "happy", "preview.jpg", "test,topics");
         assertEquals("Test Title", postRequest.getTitle());
         assertEquals("Test Content", postRequest.getContent());
         assertEquals("happy", postRequest.getEmotion());
         assertEquals("preview.jpg", postRequest.getPreImg());
+        assertEquals("test,topics", postRequest.getTopics());
 
         // Test CommentCreateRequest DTO
         CommentCreateRequest commentRequest = new CommentCreateRequest();

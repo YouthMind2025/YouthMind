@@ -21,9 +21,16 @@ public class UserStatisticsDto {
     // Post statistics
     private int totalPosts;
     private int totalViews; // Total views across all user's posts
-    private int totalResonances; // Total resonances (likes) received
+    private int totalResonance; // Total resonances (likes) received - renamed to match frontend
+    private int totalSaves; // Alias for totalCollections to match frontend
     private int totalCollections; // Total collections (saves) received
     private int totalComments; // Total comments received on user's posts
+    
+    // Level and progress (required by frontend)
+    private int resonanceLevel; // User's current level based on resonance
+    private double currentLevelProgress; // Progress to next level (0.0-1.0)
+    private int nextLevelThreshold; // Resonance needed for next level
+    private LocalDateTime joinDate; // Alias for memberSince
     
     // Engagement statistics (user's actions)
     private int postsResonated; // Posts user has resonated with

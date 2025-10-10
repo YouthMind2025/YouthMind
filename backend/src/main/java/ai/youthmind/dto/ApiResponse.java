@@ -23,9 +23,13 @@ public class ApiResponse<T> {
     @Schema(description = "Response headers as a key-value map")
     private Map<String, String> headers;
     
+    @Schema(description = "Success flag indicating if the request was successful", example = "true")
+    private boolean success;
+    
     // Default constructor
     public ApiResponse() {
         this.headers = new HashMap<>();
+        this.success = true; // Default to success
     }
     
     // Constructor with required fields
@@ -33,6 +37,7 @@ public class ApiResponse<T> {
         this.data = data;
         this.statusCode = statusCode;
         this.headers = new HashMap<>();
+        this.success = statusCode >= 200 && statusCode < 300; // Auto-determine success
     }
     
     // Constructor with all fields
@@ -40,6 +45,15 @@ public class ApiResponse<T> {
         this.data = data;
         this.statusCode = statusCode;
         this.headers = headers != null ? headers : new HashMap<>();
+        this.success = statusCode >= 200 && statusCode < 300; // Auto-determine success
+    }
+    
+    // Constructor with all fields including success
+    public ApiResponse(T data, int statusCode, Map<String, String> headers, boolean success) {
+        this.data = data;
+        this.statusCode = statusCode;
+        this.headers = headers != null ? headers : new HashMap<>();
+        this.success = success;
     }
     
     // Static factory methods for common responses
@@ -80,6 +94,14 @@ public class ApiResponse<T> {
         this.headers = headers != null ? headers : new HashMap<>();
     }
     
+    public boolean isSuccess() {
+        return success;
+    }
+    
+    public void setSuccess(boolean success) {
+        this.success = success;
+    }
+    
     // Helper method to add a header
     public void addHeader(String key, String value) {
         if (this.headers == null) {
@@ -89,8 +111,8 @@ public class ApiResponse<T> {
     }
     
     // Helper method to check if response indicates success
-    public boolean isSuccess() {
-        return statusCode >= 200 && statusCode < 300;
+    public boolean getSuccess() {
+        return success;
     }
     
     // Builder pattern for better API consistency and longevity

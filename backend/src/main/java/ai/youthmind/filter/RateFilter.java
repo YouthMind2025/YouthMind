@@ -32,13 +32,13 @@ public class RateFilter extends OncePerRequestFilter {
     @Value("${rate.limit.anonymous.default:100}")
     private int anonymousDefaultThreshold;
 
-    @Value("${rate.limit.authenticated.default:10}")
+    @Value("${rate.limit.authenticated.default:1000}")
     private int authenticatedDefaultThreshold;
 
     @Value("${rate.limit.anonymous.sensitive:10}")
     private int anonymousSensitiveThreshold;
 
-    @Value("${rate.limit.authenticated.sensitive:5}")
+    @Value("${rate.limit.authenticated.sensitive:500}")
     private int authenticatedSensitiveThreshold;
 
     // Endpoint patterns

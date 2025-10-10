@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import io.swagger.v3.oas.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -62,6 +63,7 @@ public class PostDto {
     private boolean isresonanced;
     
     @Schema(description = "Whether current user has collected/saved this post", example = "false")
+    @JsonProperty("isCollected")
     private boolean isCollected;
     
     @Schema(description = "Emotion tag for the post", example = "happy", allowableValues = {"angry", "sad", "happy", "conflicted", "surprised", "fear"})
@@ -204,9 +206,5 @@ public class PostDto {
     public String getNormalizedEmotion() {
         if (emotion == null) return "";
         return emotion.toLowerCase().trim();
-    }
-
-    public void setIsCollected(boolean isCollected) {
-        this.isCollected = isCollected;
     }
 } 

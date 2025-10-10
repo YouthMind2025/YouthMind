@@ -91,6 +91,10 @@ public class UserService {
         return userRepository.existsByEmail(email);
     }
     
+    public boolean existsByUsername(String username) {
+        return userRepository.existsByUsername(username);
+    }
+    
     /**
      * Comprehensive account deletion that removes all user-related data
      * This method handles deletion in the correct order to avoid foreign key constraint violations
@@ -150,8 +154,19 @@ public class UserService {
         int totalResonances = userPosts.stream().mapToInt(Post::getResonance).sum();
         int totalCollections = userPosts.stream().mapToInt(Post::getCollect).sum();
         stats.setTotalViews(totalViews);
-        stats.setTotalResonances(totalResonances);
+        stats.setTotalResonance(totalResonances);
+        stats.setTotalSaves(totalCollections); // Set alias for frontend compatibility
         stats.setTotalCollections(totalCollections);
+        
+        // Calculate level and progress based on total resonance
+        int level = calculateResonanceLevel(totalResonances);
+        double progress = calculateLevelProgress(totalResonances, level);
+        int nextThreshold = calculateNextLevelThreshold(level);
+        
+        stats.setResonanceLevel(level);
+        stats.setCurrentLevelProgress(progress);
+        stats.setNextLevelThreshold(nextThreshold);
+        stats.setJoinDate(user.getCreatedAt()); // Set alias for memberSince
         
         // Get comments on user's posts
         int totalComments = 0;
@@ -287,6 +302,63 @@ public class UserService {
         stats.setStreakDays(calculateStreakDays(userId));
         
         return stats;
+    }
+    
+    /**
+     * Calculate user's resonance level based on total resonance count
+     */
+    private int calculateResonanceLevel(int totalResonance) {
+        if (totalResonance < 10) return 1;
+        if (totalResonance < 50) return 2;
+        if (totalResonance < 150) return 3;
+        if (totalResonance < 300) return 4;
+        if (totalResonance < 500) return 5;
+        if (totalResonance < 800) return 6;
+        if (totalResonance < 1200) return 7;
+        if (totalResonance < 1800) return 8;
+        if (totalResonance < 2500) return 9;
+        return 10; // Max level
+    }
+    
+    /**
+     * Calculate progress to next level (0.0-1.0)
+     */
+    private double calculateLevelProgress(int totalResonance, int currentLevel) {
+        int currentThreshold = getLevelThreshold(currentLevel);
+        int nextThreshold = getLevelThreshold(currentLevel + 1);
+        
+        if (currentLevel >= 10) return 1.0; // Max level reached
+        
+        int progressInLevel = totalResonance - currentThreshold;
+        int levelRange = nextThreshold - currentThreshold;
+        
+        return Math.min(1.0, Math.max(0.0, (double) progressInLevel / levelRange));
+    }
+    
+    /**
+     * Calculate threshold for next level
+     */
+    private int calculateNextLevelThreshold(int currentLevel) {
+        return getLevelThreshold(currentLevel + 1);
+    }
+    
+    /**
+     * Get resonance threshold for a specific level
+     */
+    private int getLevelThreshold(int level) {
+        switch (level) {
+            case 1: return 0;
+            case 2: return 10;
+            case 3: return 50;
+            case 4: return 150;
+            case 5: return 300;
+            case 6: return 500;
+            case 7: return 800;
+            case 8: return 1200;
+            case 9: return 1800;
+            case 10: return 2500;
+            default: return 2500; // Max threshold
+        }
     }
     
     /**

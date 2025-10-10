@@ -12,13 +12,13 @@ ADD COLUMN moderation_reason TEXT,
 ADD COLUMN moderation_status VARCHAR(50) DEFAULT 'APPROVED';
 
 -- Create index for flagged comments for efficient querying
-CREATE INDEX idx_comments_is_flagged ON comments(is_flagged);
+CREATE INDEX IF NOT EXISTS idx_comments_is_flagged ON comments(is_flagged);
 
 -- Create index for moderation status for efficient querying
-CREATE INDEX idx_comments_moderation_status ON comments(moderation_status);
+CREATE INDEX IF NOT EXISTS idx_comments_moderation_status ON comments(moderation_status);
 
 -- Create index for flagged_at for time-based queries
-CREATE INDEX idx_comments_flagged_at ON comments(flagged_at);
+CREATE INDEX IF NOT EXISTS idx_comments_flagged_at ON comments(flagged_at);
 
 -- Add comments to the migration tracking
 COMMENT ON COLUMN comments.is_flagged IS 'Whether the comment has been flagged by moderation';

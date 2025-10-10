@@ -71,18 +71,18 @@ CREATE TABLE state_update_history (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_psychological_vectors_user_id ON psychological_state_vectors(user_id);
-CREATE INDEX idx_psychological_vectors_type ON psychological_state_vectors(vector_type);
-CREATE INDEX idx_psychological_vectors_source ON psychological_state_vectors(source_type, source_id);
-CREATE INDEX idx_psychological_vectors_created_at ON psychological_state_vectors(created_at);
+CREATE INDEX IF NOT EXISTS idx_psychological_vectors_user_id ON psychological_state_vectors(user_id);
+CREATE INDEX IF NOT EXISTS idx_psychological_vectors_type ON psychological_state_vectors(vector_type);
+CREATE INDEX IF NOT EXISTS idx_psychological_vectors_source ON psychological_state_vectors(source_type, source_id);
+CREATE INDEX IF NOT EXISTS idx_psychological_vectors_created_at ON psychological_state_vectors(created_at);
 
-CREATE INDEX idx_user_psychological_states_user_id ON user_psychological_states(user_id);
-CREATE INDEX idx_user_psychological_states_updated_at ON user_psychological_states(last_updated_at);
+CREATE INDEX IF NOT EXISTS idx_user_psychological_states_user_id ON user_psychological_states(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_psychological_states_updated_at ON user_psychological_states(last_updated_at);
 
-CREATE INDEX idx_state_history_user_id ON state_update_history(user_id);
-CREATE INDEX idx_state_history_type ON state_update_history(update_type);
-CREATE INDEX idx_state_history_created_at ON state_update_history(created_at);
-CREATE INDEX idx_state_history_source ON state_update_history(source_id);
+CREATE INDEX IF NOT EXISTS idx_state_history_user_id ON state_update_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_state_history_type ON state_update_history(update_type);
+CREATE INDEX IF NOT EXISTS idx_state_history_created_at ON state_update_history(created_at);
+CREATE INDEX IF NOT EXISTS idx_state_history_source ON state_update_history(source_id);
 
 -- Comments for documentation
 COMMENT ON TABLE psychological_state_vectors IS 'Stores 43-dimensional psychological state vectors for users, posts, and interactions';

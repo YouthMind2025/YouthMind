@@ -25,6 +25,9 @@ public class PostCreateRequest {
     @Schema(description = "Preview image URL", example = "https://example.com/image.jpg", required = false)
     private String preImg;
     
+    @Schema(description = "Post topics/tags for search and categorization", example = "mental health,anxiety,coping", required = false)
+    private String topics;
+    
     // Explicit getters and setters
     public String getTitle() {
         return title;
@@ -56,5 +59,13 @@ public class PostCreateRequest {
     
     public void setPreImg(String preImg) {
         this.preImg = preImg;
+    }
+    
+    public String getTopics() {
+        return topics;
+    }
+    
+    public void setTopics(String topics) {
+        this.topics = topics;
     }
 } 

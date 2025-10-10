@@ -125,7 +125,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
      * Atomically increment the view count for a post
      * This method uses a native SQL query for better performance
      */
-    @Query(value = "UPDATE posts SET view = view + 1 WHERE id = :postId", nativeQuery = true)
+    @Query(value = "UPDATE posts SET view_count = view_count + 1 WHERE id = :postId", nativeQuery = true)
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     void incrementViewCount(@Param("postId") UUID postId);

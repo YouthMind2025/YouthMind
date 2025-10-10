@@ -24,9 +24,6 @@ struct SaySomethingApp: App {
                     UITabBar.appearance().tintColor = UIColor(DesignConstants.ColorPalette.brandPurple)
                     UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(DesignConstants.ColorPalette.brandPurple)
                     UIButton.appearance(whenContainedInInstancesOf: [UINavigationBar.self]).tintColor = UIColor(DesignConstants.ColorPalette.brandPurple)
-                    
-                    // Handle app crash recovery for post view tracking
-                    PostViewTracker.shared.handleAppCrashRecovery()
                 }
         }
     }

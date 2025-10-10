@@ -52,14 +52,14 @@ CREATE TABLE content_safety_cache (
 );
 
 -- Add indexes for performance
-CREATE INDEX idx_posts_moderation_layer ON posts(moderation_layer);
-CREATE INDEX idx_posts_content_hash ON posts(content_hash);
-CREATE INDEX idx_moderation_logs_entity ON moderation_logs(entity_type, entity_id);
-CREATE INDEX idx_moderation_logs_user_id ON moderation_logs(user_id);
-CREATE INDEX idx_moderation_logs_layer ON moderation_logs(moderation_layer);
-CREATE INDEX idx_moderation_logs_created_at ON moderation_logs(created_at);
-CREATE INDEX idx_content_safety_cache_hash ON content_safety_cache(content_hash);
-CREATE INDEX idx_content_safety_cache_expires ON content_safety_cache(expires_at);
+CREATE INDEX IF NOT EXISTS idx_posts_moderation_layer ON posts(moderation_layer);
+CREATE INDEX IF NOT EXISTS idx_posts_content_hash ON posts(content_hash);
+CREATE INDEX IF NOT EXISTS idx_moderation_logs_entity ON moderation_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_logs_user_id ON moderation_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_logs_layer ON moderation_logs(moderation_layer);
+CREATE INDEX IF NOT EXISTS idx_moderation_logs_created_at ON moderation_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_content_safety_cache_hash ON content_safety_cache(content_hash);
+CREATE INDEX IF NOT EXISTS idx_content_safety_cache_expires ON content_safety_cache(expires_at);
 
 -- Create function to generate content hash
 CREATE OR REPLACE FUNCTION generate_content_hash(content TEXT)

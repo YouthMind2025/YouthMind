@@ -137,4 +137,12 @@ public interface PostResonanceRepository extends JpaRepository<PostResonance, UU
      * @return The count of resonances after the specified time
      */
     long countByResonancedAtAfter(LocalDateTime resonancedAt);
+    
+    /**
+     * Find all resonances for multiple posts ordered by resonanced date.
+     *
+     * @param postIds List of post IDs
+     * @return List of resonances for the specified posts
+     */
+    List<PostResonance> findByPostIdInOrderByResonancedAtDesc(List<UUID> postIds);
 } 

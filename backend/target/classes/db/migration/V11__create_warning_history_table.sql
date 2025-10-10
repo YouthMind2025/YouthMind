@@ -1,6 +1,6 @@
 -- Create warning_history table for tracking user warnings
 CREATE TABLE warning_history (
-    id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID NOT NULL,
     warning_type VARCHAR(50) NOT NULL,
     reason TEXT NOT NULL,
@@ -31,8 +31,8 @@ CREATE TABLE warning_history (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_warning_history_user_id ON warning_history(user_id);
-CREATE INDEX idx_warning_history_created_at ON warning_history(created_at);
-CREATE INDEX idx_warning_history_type ON warning_history(warning_type);
-CREATE INDEX idx_warning_history_severity ON warning_history(severity);
-CREATE INDEX idx_warning_history_expires_at ON warning_history(expires_at);
+CREATE INDEX IF NOT EXISTS idx_warning_history_user_id ON warning_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_warning_history_created_at ON warning_history(created_at);
+CREATE INDEX IF NOT EXISTS idx_warning_history_type ON warning_history(warning_type);
+CREATE INDEX IF NOT EXISTS idx_warning_history_severity ON warning_history(severity);
+CREATE INDEX IF NOT EXISTS idx_warning_history_expires_at ON warning_history(expires_at);

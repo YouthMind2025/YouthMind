@@ -1,6 +1,6 @@
 -- Create post_collections table for tracking user collections/saves
 CREATE TABLE post_collections (
-    id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID NOT NULL,
     post_id UUID NOT NULL,
     collected_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -10,9 +10,9 @@ CREATE TABLE post_collections (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_post_collections_user_post ON post_collections(user_id, post_id);
-CREATE INDEX idx_post_collections_post ON post_collections(post_id);
-CREATE INDEX idx_post_collections_collected_at ON post_collections(collected_at);
+CREATE INDEX IF NOT EXISTS idx_post_collections_user_post ON post_collections(user_id, post_id);
+CREATE INDEX IF NOT EXISTS idx_post_collections_post ON post_collections(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_collections_collected_at ON post_collections(collected_at);
 
 -- Add comments for documentation
 COMMENT ON TABLE post_collections IS 'Tracks user collections (saves) for posts';

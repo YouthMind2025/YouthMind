@@ -79,11 +79,11 @@ SET is_secondary_affliction = true
 WHERE category = 'SECONDARY_AFFLICTIONS';
 
 -- Create indexes for performance
-CREATE INDEX idx_buddhist_factors_category ON buddhist_psychology_factors(category);
-CREATE INDEX idx_buddhist_factors_polarity ON buddhist_psychology_factors(polarity);
-CREATE INDEX idx_buddhist_factors_dimension ON buddhist_psychology_factors(dimension_index);
-CREATE INDEX idx_buddhist_factors_core ON buddhist_psychology_factors(is_core_factor);
-CREATE INDEX idx_buddhist_factors_secondary ON buddhist_psychology_factors(is_secondary_affliction);
+CREATE INDEX IF NOT EXISTS idx_buddhist_factors_category ON buddhist_psychology_factors(category);
+CREATE INDEX IF NOT EXISTS idx_buddhist_factors_polarity ON buddhist_psychology_factors(polarity);
+CREATE INDEX IF NOT EXISTS idx_buddhist_factors_dimension ON buddhist_psychology_factors(dimension_index);
+CREATE INDEX IF NOT EXISTS idx_buddhist_factors_core ON buddhist_psychology_factors(is_core_factor);
+CREATE INDEX IF NOT EXISTS idx_buddhist_factors_secondary ON buddhist_psychology_factors(is_secondary_affliction);
 
 -- Comments for documentation
 COMMENT ON TABLE buddhist_psychology_factors IS 'Reference table for 43 Buddhist mental factors used in psychological analysis';

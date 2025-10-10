@@ -75,18 +75,18 @@ INSERT INTO interaction_type_configs (interaction_type, default_beta, default_mu
 ('SHARE', 0.20, 0.12, 0.30, -10.0, 10.0, 'Highest impact: user shares content with others');
 
 -- Create indexes for performance
-CREATE INDEX idx_interaction_modulations_user_id ON user_interaction_modulations(user_id);
-CREATE INDEX idx_interaction_modulations_type ON user_interaction_modulations(interaction_type);
-CREATE INDEX idx_interaction_modulations_active ON user_interaction_modulations(is_active);
-CREATE INDEX idx_interaction_modulations_updated_at ON user_interaction_modulations(updated_at);
+CREATE INDEX IF NOT EXISTS idx_interaction_modulations_user_id ON user_interaction_modulations(user_id);
+CREATE INDEX IF NOT EXISTS idx_interaction_modulations_type ON user_interaction_modulations(interaction_type);
+CREATE INDEX IF NOT EXISTS idx_interaction_modulations_active ON user_interaction_modulations(is_active);
+CREATE INDEX IF NOT EXISTS idx_interaction_modulations_updated_at ON user_interaction_modulations(updated_at);
 
-CREATE INDEX idx_interaction_configs_type ON interaction_type_configs(interaction_type);
-CREATE INDEX idx_interaction_configs_active ON interaction_type_configs(is_active);
+CREATE INDEX IF NOT EXISTS idx_interaction_configs_type ON interaction_type_configs(interaction_type);
+CREATE INDEX IF NOT EXISTS idx_interaction_configs_active ON interaction_type_configs(is_active);
 
-CREATE INDEX idx_modulation_history_user_id ON interaction_modulation_history(user_id);
-CREATE INDEX idx_modulation_history_type ON interaction_modulation_history(interaction_type);
-CREATE INDEX idx_modulation_history_created_at ON interaction_modulation_history(created_at);
-CREATE INDEX idx_modulation_history_changed_by ON interaction_modulation_history(changed_by);
+CREATE INDEX IF NOT EXISTS idx_modulation_history_user_id ON interaction_modulation_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_modulation_history_type ON interaction_modulation_history(interaction_type);
+CREATE INDEX IF NOT EXISTS idx_modulation_history_created_at ON interaction_modulation_history(created_at);
+CREATE INDEX IF NOT EXISTS idx_modulation_history_changed_by ON interaction_modulation_history(changed_by);
 
 -- Function to initialize user interaction modulations with defaults
 CREATE OR REPLACE FUNCTION initialize_user_interaction_modulations(p_user_id UUID)

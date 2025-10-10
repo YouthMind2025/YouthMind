@@ -130,27 +130,27 @@ CREATE TABLE personality_mappings (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_personality_computations_user_id ON personality_computations(user_id);
-CREATE INDEX idx_personality_computations_period ON personality_computations(computation_period);
-CREATE INDEX idx_personality_computations_date ON personality_computations(computation_date);
-CREATE INDEX idx_personality_computations_valid ON personality_computations(is_valid);
-CREATE INDEX idx_personality_computations_recomputation ON personality_computations(needs_recomputation);
-CREATE INDEX idx_personality_computations_created_at ON personality_computations(created_at);
+CREATE INDEX IF NOT EXISTS idx_personality_computations_user_id ON personality_computations(user_id);
+CREATE INDEX IF NOT EXISTS idx_personality_computations_period ON personality_computations(computation_period);
+CREATE INDEX IF NOT EXISTS idx_personality_computations_date ON personality_computations(computation_date);
+CREATE INDEX IF NOT EXISTS idx_personality_computations_valid ON personality_computations(is_valid);
+CREATE INDEX IF NOT EXISTS idx_personality_computations_recomputation ON personality_computations(needs_recomputation);
+CREATE INDEX IF NOT EXISTS idx_personality_computations_created_at ON personality_computations(created_at);
 
-CREATE INDEX idx_personality_schedules_user_id ON personality_computation_schedules(user_id);
-CREATE INDEX idx_personality_schedules_frequency ON personality_computation_schedules(computation_frequency);
-CREATE INDEX idx_personality_schedules_next_date ON personality_computation_schedules(next_computation_date);
-CREATE INDEX idx_personality_schedules_active ON personality_computation_schedules(is_active);
+CREATE INDEX IF NOT EXISTS idx_personality_schedules_user_id ON personality_computation_schedules(user_id);
+CREATE INDEX IF NOT EXISTS idx_personality_schedules_frequency ON personality_computation_schedules(computation_frequency);
+CREATE INDEX IF NOT EXISTS idx_personality_schedules_next_date ON personality_computation_schedules(next_computation_date);
+CREATE INDEX IF NOT EXISTS idx_personality_schedules_active ON personality_computation_schedules(is_active);
 
-CREATE INDEX idx_personality_trends_user_id ON personality_computation_trends(user_id);
-CREATE INDEX idx_personality_trends_type ON personality_computation_trends(trend_type);
-CREATE INDEX idx_personality_trends_dimension ON personality_computation_trends(dimension_index);
-CREATE INDEX idx_personality_trends_computation ON personality_computation_trends(computation_id);
-CREATE INDEX idx_personality_trends_created_at ON personality_computation_trends(created_at);
+CREATE INDEX IF NOT EXISTS idx_personality_trends_user_id ON personality_computation_trends(user_id);
+CREATE INDEX IF NOT EXISTS idx_personality_trends_type ON personality_computation_trends(trend_type);
+CREATE INDEX IF NOT EXISTS idx_personality_trends_dimension ON personality_computation_trends(dimension_index);
+CREATE INDEX IF NOT EXISTS idx_personality_trends_computation ON personality_computation_trends(computation_id);
+CREATE INDEX IF NOT EXISTS idx_personality_trends_created_at ON personality_computation_trends(created_at);
 
-CREATE INDEX idx_personality_mappings_user_id ON personality_mappings(user_id);
-CREATE INDEX idx_personality_mappings_type ON personality_mappings(mapping_type);
-CREATE INDEX idx_personality_mappings_computation ON personality_mappings(computation_id);
+CREATE INDEX IF NOT EXISTS idx_personality_mappings_user_id ON personality_mappings(user_id);
+CREATE INDEX IF NOT EXISTS idx_personality_mappings_type ON personality_mappings(mapping_type);
+CREATE INDEX IF NOT EXISTS idx_personality_mappings_computation ON personality_mappings(computation_id);
 
 -- Function to create a new personality computation
 CREATE OR REPLACE FUNCTION create_personality_computation(

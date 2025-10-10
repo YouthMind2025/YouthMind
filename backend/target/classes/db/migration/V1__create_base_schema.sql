@@ -1,6 +1,6 @@
 -- Create users table
 CREATE TABLE users (
-    id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     first_name VARCHAR(255),
@@ -11,7 +11,7 @@ CREATE TABLE users (
 
 -- Create posts table
 CREATE TABLE posts (
-    id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID NOT NULL,
     content TEXT NOT NULL,
     emotion_tag VARCHAR(100),
@@ -21,8 +21,8 @@ CREATE TABLE posts (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_posts_user_id ON posts(user_id);
-CREATE INDEX idx_posts_created_at ON posts(created_at);
-CREATE INDEX idx_posts_emotion_tag ON posts(emotion_tag);
-CREATE INDEX idx_users_created_at ON users(created_at);
-CREATE INDEX idx_users_email ON users(email); 
+CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at);
+CREATE INDEX IF NOT EXISTS idx_posts_emotion_tag ON posts(emotion_tag);
+CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email); 

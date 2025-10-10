@@ -56,9 +56,13 @@ public class FeedResponse {
     public boolean isHasNext() { return hasNext; }
     public void setHasNext(boolean hasNext) { this.hasNext = hasNext; }
     
-    public boolean isFirst() { return isFirst; }
-    public void setFirst(boolean isFirst) { this.isFirst = isFirst; }
+    public boolean getIsFirst() { return isFirst; }
+    public void setIsFirst(boolean isFirst) { this.isFirst = isFirst; }
     
-    public boolean isLast() { return isLast; }
+    public boolean getIsLast() { return isLast; }
+    public void setIsLast(boolean isLast) { this.isLast = isLast; }
+    
+    // Keep original setter names for backward compatibility
+    public void setFirst(boolean isFirst) { this.isFirst = isFirst; }
     public void setLast(boolean isLast) { this.isLast = isLast; }
 } 

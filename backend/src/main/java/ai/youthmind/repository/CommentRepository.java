@@ -31,4 +31,9 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
     void deleteByPostId(UUID postId);
     
     void deleteByAuthorId(UUID authorId);
+    
+    /**
+     * Find comments by multiple post IDs ordered by creation date
+     */
+    List<Comment> findByPostIdInOrderByCreatedAtDesc(List<UUID> postIds);
 }

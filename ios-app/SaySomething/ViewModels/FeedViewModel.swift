@@ -222,9 +222,6 @@ extension FeedViewModel {
 
     // MARK: - Mutations
     func incrementView(for postId: UUID) {
-        // Start view tracking for analytics
-        PostViewTracker.shared.startTracking(postId: postId)
-        // Keep existing local update for UI responsiveness
         if var e = engagement[postId] { e.views += 1; engagement[postId] = e }
     }
 

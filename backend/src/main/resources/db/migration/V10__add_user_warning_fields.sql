@@ -5,8 +5,8 @@ ADD COLUMN user_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
 ADD COLUMN ban_expires_at TIMESTAMP NULL;
 
 -- Create index for user status queries
-CREATE INDEX idx_users_status ON users(user_status);
-CREATE INDEX idx_users_ban_expires ON users(ban_expires_at);
+CREATE INDEX IF NOT EXISTS idx_users_status ON users(user_status);
+CREATE INDEX IF NOT EXISTS idx_users_ban_expires ON users(ban_expires_at);
 
 -- Add check constraint for user_status
 ALTER TABLE users ADD CONSTRAINT chk_user_status 

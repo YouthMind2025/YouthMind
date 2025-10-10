@@ -21,15 +21,15 @@ CREATE TABLE moderation_audit (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_moderation_audit_content_id_type ON moderation_audit(content_id, content_type);
-CREATE INDEX idx_moderation_audit_user_id_timestamp ON moderation_audit(user_id, timestamp);
-CREATE INDEX idx_moderation_audit_audit_type_timestamp ON moderation_audit(audit_type, timestamp);
-CREATE INDEX idx_moderation_audit_decision_timestamp ON moderation_audit(decision, timestamp);
-CREATE INDEX idx_moderation_audit_escalation_level ON moderation_audit(escalation_level);
-CREATE INDEX idx_moderation_audit_action_taken ON moderation_audit(action_taken);
-CREATE INDEX idx_moderation_audit_ai_model_used ON moderation_audit(ai_model_used);
-CREATE INDEX idx_moderation_audit_cache_hit ON moderation_audit(cache_hit);
-CREATE INDEX idx_moderation_audit_timestamp ON moderation_audit(timestamp);
+CREATE INDEX IF NOT EXISTS idx_moderation_audit_content_id_type ON moderation_audit(content_id, content_type);
+CREATE INDEX IF NOT EXISTS idx_moderation_audit_user_id_timestamp ON moderation_audit(user_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_moderation_audit_audit_type_timestamp ON moderation_audit(audit_type, timestamp);
+CREATE INDEX IF NOT EXISTS idx_moderation_audit_decision_timestamp ON moderation_audit(decision, timestamp);
+CREATE INDEX IF NOT EXISTS idx_moderation_audit_escalation_level ON moderation_audit(escalation_level);
+CREATE INDEX IF NOT EXISTS idx_moderation_audit_action_taken ON moderation_audit(action_taken);
+CREATE INDEX IF NOT EXISTS idx_moderation_audit_ai_model_used ON moderation_audit(ai_model_used);
+CREATE INDEX IF NOT EXISTS idx_moderation_audit_cache_hit ON moderation_audit(cache_hit);
+CREATE INDEX IF NOT EXISTS idx_moderation_audit_timestamp ON moderation_audit(timestamp);
 
 -- Create trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_moderation_audit_updated_at()

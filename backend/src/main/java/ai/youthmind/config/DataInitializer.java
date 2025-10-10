@@ -145,31 +145,9 @@ public class DataInitializer implements CommandLineRunner {
             
             // Diana's posts
             createPost(users.get(3), "Rainy Day Vibes", 
-                      "There's something so peaceful about rainy days. Perfect time for tea, books, and self-reflection. " +
-                      "What's your favorite rainy day activity?", "calm"),
+                      "There's something peaceful about rainy days. Perfect time for reflection and cozy indoor activities.", "peaceful"),
             
-            createPost(users.get(3), "Overwhelmed by Social Media", 
-                      "Taking a break from social media for a week. The constant comparison and noise was getting to me. " +
-                      "Already feeling lighter!", "relieved"),
-            
-            // Eve's posts
-            createPost(users.get(4), "Started Therapy Today", 
-                      "Finally took the step to start therapy. Nervous but hopeful. It's okay to ask for help.", "hopeful"),
-            
-            createPost(users.get(4), "Creative Block", 
-                      "Been staring at a blank canvas for days. Sometimes creativity needs time to flow naturally. " +
-                      "How do you deal with creative blocks?", "frustrated"),
-            
-            // More diverse posts
-            createPost(users.get(0), "Morning Workout Victory", 
-                      "Actually got up early and went for a run! The endorphins are real. " +
-                      "Exercise might be the best medicine for my mood.", "energetic"),
-            
-            createPost(users.get(1), "Cooking Therapy", 
-                      "Spent the evening making homemade pasta from scratch. There's something meditative about the process. " +
-                      "Plus, delicious results!", "content"),
-            
-            createPost(users.get(2), "Job Interview Nerves", 
+            createPost(users.get(3), "Job Interview Nerves", 
                       "Big job interview next week. Excited but terrified. Any advice for managing interview anxiety?", "nervous"),
             
             createPost(users.get(3), "Nature Walk Healing", 
@@ -201,6 +179,10 @@ public class DataInitializer implements CommandLineRunner {
         
         // Sample topics (comma-separated)
         post.setTopics(generateTopicsForEmotion(emotion));
+        
+        // Set JSONB fields to null to avoid type mismatch
+        post.setModerationDetails(null);
+        post.setAiMetadata(null);
         
         return post;
     }

@@ -104,6 +104,15 @@ public interface PostCollectionRepository extends JpaRepository<PostCollection, 
     List<PostCollection> findByUserIdAndPostIdIn(UUID userId, List<UUID> postIds);
     
     /**
+     * Find all collections for multiple posts ordered by collection date.
+     * This method is used for generating notifications about who saved user's posts.
+     *
+     * @param postIds List of post IDs
+     * @return List of collections ordered by collection date (most recent first)
+     */
+    List<PostCollection> findByPostIdInOrderByCollectedAtDesc(List<UUID> postIds);
+    
+    /**
      * Delete all collections by a specific user.
      * This method is used when deleting a user account.
      *

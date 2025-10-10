@@ -109,6 +109,7 @@ public class PostController {
             .content(savedPost.getContent())
             .preImg(savedPost.getPreImg())
             .emotion(savedPost.getEmotion())
+            .topics(savedPost.getTopics())
             .date(savedPost.getCreatedAt())
             .resonance(savedPost.getResonance())
             .view(savedPost.getView())
@@ -184,8 +185,8 @@ public class PostController {
         @Parameter(description = "Search term", example = "anxiety")
         @RequestParam(required = false) String term
     ) {
-        // Extract user ID from JWT token
-        UUID userId = AuthenticationUtils.getCurrentUserId();
+        // Extract user ID from JWT token (null if not authenticated)
+        UUID userId = AuthenticationUtils.getCurrentUserIdOrNull();
         
         // Validate pagination parameters
         if (page < 0) page = 0;

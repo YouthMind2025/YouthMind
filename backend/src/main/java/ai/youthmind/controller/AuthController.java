@@ -5,7 +5,10 @@ import ai.youthmind.dto.*;
 import ai.youthmind.entity.User;
 import ai.youthmind.service.JWTService;
 import ai.youthmind.service.UserService;
+import ai.youthmind.service.OtpService;
+import ai.youthmind.service.EmailService;
 import ai.youthmind.util.AuthenticationUtils;
+import ai.youthmind.util.UsernameGenerator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -32,8 +35,6 @@ import java.util.UUID;
 @Tag(name = "Authentication", description = "User authentication operations")
 public class AuthController {
 
-    private static final String MOCK_OTP = "123456";
-
     @Autowired
     private UserService userService;
 
@@ -45,6 +46,12 @@ public class AuthController {
 
     @Autowired
     private AdminConfig adminConfig;
+    
+    @Autowired
+    private OtpService otpService;
+    
+    @Autowired
+    private EmailService emailService;
 
     @PostMapping("/send-otp")
     @Operation(
@@ -53,16 +60,24 @@ public class AuthController {
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "OTP sent successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid email format")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid email format"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "Too many requests")
     })
     public ResponseEntity<ApiResponse<SendOtpResponse>> sendOtp(@Valid @RequestBody SendOtpRequest request) {
         try {
-            // In a real implementation, this would send an actual OTP
-            // For now, we'll just return a mock response
+            // Send real OTP via email
+            otpService.sendOtp(request.getEmail());
+            
+            // Get expiration time for response
+            LocalDateTime expiresAt = otpService.getOtpExpiration(request.getEmail());
+            if (expiresAt == null) {
+                expiresAt = LocalDateTime.now().plusMinutes(10); // fallback
+            }
+            
             SendOtpResponse response = new SendOtpResponse(
                 true,
                 "Verification code sent to your email",
-                LocalDateTime.now().plusMinutes(10)
+                expiresAt
             );
             
             return ResponseEntity.ok(ApiResponse.success(response));
@@ -80,7 +95,7 @@ public class AuthController {
     @PostMapping("/register")
     @Operation(
         summary = "Register a new user",
-        description = "Register a new user with email and OTP verification. Use '123456' as the OTP."
+        description = "Register a new user with email and OTP verification"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "User registered successfully"),
@@ -88,35 +103,57 @@ public class AuthController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "User with this email already exists")
     })
     public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        System.out.println("🔍 DEBUG: Register method called with email: " + request.getEmail());
         
-        // Validate OTP
-        if (!MOCK_OTP.equals(request.getOtp())) {
+        // Validate OTP using real OTP service
+        System.out.println("🔍 DEBUG: Validating OTP: " + request.getOtp());
+        if (!otpService.validateOtp(request.getEmail(), request.getOtp())) {
+            System.out.println("🔍 DEBUG: OTP validation failed");
             RegisterResponse errorResponse = new RegisterResponse();
-            errorResponse.setMessage("Invalid OTP. Please use '123456'");
+            errorResponse.setMessage("Invalid or expired OTP. Please request a new verification code.");
             return ResponseEntity.badRequest()
                 .body(ApiResponse.error(errorResponse, 400));
         }
+        System.out.println("🔍 DEBUG: OTP validation passed");
         
         // Check if user already exists
+        System.out.println("🔍 DEBUG: Checking if user exists");
         if (userService.existsByEmail(request.getEmail())) {
+            System.out.println("🔍 DEBUG: User already exists");
             RegisterResponse errorResponse = new RegisterResponse();
             errorResponse.setMessage("User with this email already exists");
             return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(errorResponse, 409));
         }
+        System.out.println("🔍 DEBUG: User does not exist, proceeding with registration");
         
         try {
+            System.out.println("🔍 DEBUG: Starting user creation");
             // Create new user
-        User user = new User();
+            User user = new User();
             user.setEmail(request.getEmail());
-            user.setPassword(passwordEncoder.encode(request.getOtp())); // Use OTP as password for now
+            
+            // Handle optional username - generate if not provided
+            String username = request.getUsername();
+            if (username == null || username.trim().isEmpty()) {
+                // Generate a random but readable username
+                username = generateUniqueUsername();
+            }
+            user.setUsername(username);
+            System.out.println("🔍 DEBUG: Username set: " + username);
+            
+            user.setPassword(passwordEncoder.encode(request.getPassword())); // Use actual password
             user.setFirstName(""); // Default empty values
             user.setLastName("");
+            System.out.println("🔍 DEBUG: User object created, saving to database");
             
-        User savedUser = userService.saveUser(user);
+            User savedUser = userService.saveUser(user);
+            System.out.println("🔍 DEBUG: User saved with ID: " + savedUser.getId());
 
             // Generate JWT token with role
+            System.out.println("🔍 DEBUG: Generating JWT token");
             Pair<String, Timestamp> tokenPair = jwtService.generateToken(savedUser.getEmail(), savedUser.getRole().toString());
+            System.out.println("🔍 DEBUG: JWT token generated successfully");
             
             // Convert Timestamp to LocalDateTime for response
             LocalDateTime expiresAt = tokenPair.getSecond().toLocalDateTime();
@@ -128,17 +165,51 @@ public class AuthController {
                 expiresAt,
                 "Registration successful"
             );
+            System.out.println("🔍 DEBUG: RegisterResponse created, returning success");
             
+            // Send welcome email (non-blocking)
+            try {
+                emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getUsername());
+            } catch (Exception e) {
+                // Log but don't fail registration if welcome email fails
+                System.err.println("Failed to send welcome email: " + e.getMessage());
+            }
+            
+            System.out.println("🔍 DEBUG: About to return success response");
             return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response, 201));
             
         } catch (Exception e) {
+            System.err.println("🔍 DEBUG: Exception in register method: " + e.getMessage());
+            e.printStackTrace();
             RegisterResponse errorResponse = new RegisterResponse(
                 null, null, null, "Registration failed: " + e.getMessage()
             );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(errorResponse, 500));
         }
+    }
+    
+    /**
+     * Generate a unique username by checking against existing usernames
+     */
+    private String generateUniqueUsername() {
+        String username;
+        int attempts = 0;
+        int maxAttempts = 10;
+        
+        do {
+            username = UsernameGenerator.generateUsername();
+            attempts++;
+        } while (attempts < maxAttempts && userService.existsByUsername(username));
+        
+        // If we couldn't find a unique username after max attempts, 
+        // add timestamp to ensure uniqueness
+        if (userService.existsByUsername(username)) {
+            username = UsernameGenerator.generateUsername() + System.currentTimeMillis() % 1000;
+        }
+        
+        return username;
     }
 
     @PostMapping("/login")
