@@ -10,6 +10,7 @@ import ai.youthmind.repository.UserRepository;
 import ai.youthmind.service.AIEmotionClassificationService;
 import ai.youthmind.service.RVectorService;
 import ai.youthmind.service.FeedBlockPreCalculationService;
+import ai.youthmind.service.DataMigrationService;
 import ai.youthmind.util.ResponseBuilder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -37,6 +39,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/admin/v1")
 @Tag(name = "Admin Management", description = "Administrative operations for system management")
 @SecurityRequirement(name = "bearer-jwt")
+@Slf4j
 public class AdminController {
 
     @Autowired
@@ -53,6 +56,9 @@ public class AdminController {
     
     @Autowired
     private AIEmotionClassificationService aiEmotionClassificationService;
+    
+    @Autowired
+    private DataMigrationService dataMigrationService;
 
     /**
      * Update user's recommendation engine toggle
@@ -349,6 +355,90 @@ public class AdminController {
 
         public void setDryRun(Boolean dryRun) {
             this.dryRun = dryRun;
+        }
+    }
+    
+    /**
+     * Migrate existing users to recommendation engine
+     * POST /admin/v1/users/migrate
+     */
+    @PostMapping("/users/migrate")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Migrate existing users to recommendation engine",
+        description = "Initialize R vectors and feed states for all existing users who don't have them"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Migration completed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - admin access required"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error during migration")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> migrateUsers(
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Migration configuration")
+        @RequestBody(required = false) MigrationRequest request
+    ) {
+        try {
+            // Use default values if request is null
+            boolean dryRun = request != null && Boolean.TRUE.equals(request.getDryRun());
+            int batchSize = request != null && request.getBatchSize() != null ? request.getBatchSize() : 100;
+            
+            // Validate batch size
+            if (batchSize < 1 || batchSize > 1000) {
+                return ResponseBuilder.badRequest("Batch size must be between 1 and 1000");
+            }
+            
+            log.info("Starting user migration - dryRun: {}, batchSize: {}", dryRun, batchSize);
+            
+            // Run migration
+            DataMigrationService.MigrationResult result = dataMigrationService.runAllMigrations();
+            
+            // Build response
+            Map<String, Object> response = new HashMap<>();
+            response.put("dryRun", dryRun);
+            response.put("batchSize", batchSize);
+            response.put("totalProcessed", result.total());
+            response.put("rVectorsCreated", result.created());
+            response.put("feedStatesCreated", result.created()); // Same count for both
+            response.put("skipped", result.skipped());
+            response.put("errors", result.errors());
+            response.put("successful", result.isSuccessful());
+            response.put("hasErrors", result.hasErrors());
+            response.put("completedAt", LocalDateTime.now());
+            
+            String message = dryRun ? 
+                "Migration dry run completed successfully" : 
+                "Migration completed successfully";
+            
+            return ResponseBuilder.success(response, message);
+            
+        } catch (Exception e) {
+            log.error("Migration failed: {}", e.getMessage(), e);
+            return ResponseBuilder.internalServerError("Migration failed: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Request DTO for migration endpoint
+     */
+    public static class MigrationRequest {
+        private Boolean dryRun = false;
+        private Integer batchSize = 100;
+        
+        public Boolean getDryRun() {
+            return dryRun;
+        }
+        
+        public void setDryRun(Boolean dryRun) {
+            this.dryRun = dryRun;
+        }
+        
+        public Integer getBatchSize() {
+            return batchSize;
+        }
+        
+        public void setBatchSize(Integer batchSize) {
+            this.batchSize = batchSize;
         }
     }
 }
