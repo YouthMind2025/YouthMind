@@ -6,6 +6,8 @@ import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.dto.PostDto;
 import ai.youthmind.dto.PostDtoBuilder;
 import ai.youthmind.dto.FeedResponse;
+import ai.youthmind.dto.FeedBlockResponse;
+import ai.youthmind.dto.BlockMetadata;
 import ai.youthmind.dto.FlaggedPostDto;
 import ai.youthmind.dto.PostViewStats;
 import ai.youthmind.dto.PostUpdateRequest;
@@ -1237,5 +1239,173 @@ public class PostService {
         
         // Invalidate cache if needed
         // redisService.invalidateFeedCache();
+    }
+    
+    /**
+     * Get feed block with personalized recommendations
+     * 
+     * @param userId The user ID requesting the block
+     * @param blockNumber The block number to retrieve (1-based)
+     * @param pageSize The number of posts per block
+     * @param prefetch Whether to trigger prefetch of next block
+     * @return FeedBlockResponse with posts and block metadata
+     */
+    @Transactional
+    public FeedBlockResponse getFeedBlock(UUID userId, Integer blockNumber, Integer pageSize, Boolean prefetch) {
+        PerformanceMonitor.start("PostService.getFeedBlock");
+        logger.info("Getting feed block for user: {} block: {} pageSize: {} prefetch: {}", 
+                   userId, blockNumber, pageSize, prefetch);
+        
+        try {
+            // Validate parameters
+            if (userId == null) {
+                throw new IllegalArgumentException("User ID cannot be null");
+            }
+            if (blockNumber == null || blockNumber < 1) {
+                throw new IllegalArgumentException("Block number must be at least 1");
+            }
+            if (pageSize == null || pageSize < 1 || pageSize > 50) {
+                throw new IllegalArgumentException("Page size must be between 1 and 50");
+            }
+            
+            // Step 1: Get or generate feed block
+            logger.debug("Step 1: Getting or generating block {} for user {}", blockNumber, userId);
+            FeedBlockCache block = feedBlockPreCalculationService.getOrGenerateBlock(userId, blockNumber);
+            
+            if (block == null) {
+                logger.error("Failed to get or generate block {} for user {}", blockNumber, userId);
+                throw new RuntimeException("Failed to generate feed block");
+            }
+            
+            logger.info("Retrieved block {} for user {} with {} posts", 
+                       blockNumber, userId, block.getPostCount());
+            
+            // Step 2: Convert block postIds to PostDto list
+            logger.debug("Step 2: Converting {} post IDs to DTOs", block.getPostIds().size());
+            List<PostDto> postDtos = convertBlockPostsToDtos(block.getPostIds(), userId);
+            
+            logger.info("Converted {} posts to DTOs for user {}", postDtos.size(), userId);
+            
+            // Step 3: Create FeedBlockResponse
+            logger.debug("Step 3: Creating FeedBlockResponse");
+            FeedBlockResponse feedBlockResponse = new FeedBlockResponse();
+            
+            // Set posts
+            feedBlockResponse.setPosts(postDtos);
+            
+            // Set block number
+            feedBlockResponse.setBlockNumber(blockNumber);
+            
+            // Create and set block metadata
+            BlockMetadata blockMetadata = convertToBlockMetadata(block);
+            feedBlockResponse.setBlockMetadata(blockMetadata);
+            
+            // Set pagination fields
+            feedBlockResponse.setCurrentPage(0); // Block-based, not page-based
+            feedBlockResponse.setTotalPages(1); // Self-contained block
+            feedBlockResponse.setTotalElements(postDtos.size());
+            feedBlockResponse.setPageSize(pageSize);
+            feedBlockResponse.setFirst(blockNumber == 1);
+            
+            // Check if next block is available
+            boolean nextBlockAvailable = checkNextBlockAvailable(userId, blockNumber + 1);
+            feedBlockResponse.setNextBlockAvailable(nextBlockAvailable);
+            feedBlockResponse.setNextBlockNumber(blockNumber + 1);
+            feedBlockResponse.setHasNext(nextBlockAvailable);
+            feedBlockResponse.setLast(!nextBlockAvailable);
+            
+            logger.info("Feed block response created for user {} block {} with {} posts, nextBlockAvailable: {}", 
+                       userId, blockNumber, postDtos.size(), nextBlockAvailable);
+            
+            // Step 4: Trigger prefetch if requested
+            if (Boolean.TRUE.equals(prefetch) && nextBlockAvailable) {
+                logger.info("Triggering prefetch for user {} next block {}", userId, blockNumber + 1);
+                try {
+                    // Trigger prefetch asynchronously
+                    feedBlockPreCalculationService.handleUserScroll(userId);
+                    logger.debug("Prefetch triggered successfully for user {}", userId);
+                } catch (Exception e) {
+                    logger.warn("Failed to trigger prefetch for user {}: {}", userId, e.getMessage(), e);
+                    // Don't fail the main request if prefetch fails
+                }
+            }
+            
+            logger.info("Successfully generated feed block response for user {} block {}", userId, blockNumber);
+            return feedBlockResponse;
+            
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid parameters for getFeedBlock - userId: {} blockNumber: {} pageSize: {}", 
+                        userId, blockNumber, pageSize, e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Failed to get feed block for user: {} block: {}", userId, blockNumber, e);
+            throw new RuntimeException("Failed to get feed block for user: " + userId + " block: " + blockNumber, e);
+        } finally {
+            PerformanceMonitor.end("PostService.getFeedBlock");
+        }
+    }
+    
+    /**
+     * Convert FeedBlockCache to BlockMetadata
+     * 
+     * @param block The FeedBlockCache to convert
+     * @return BlockMetadata with all relevant information
+     */
+    private BlockMetadata convertToBlockMetadata(FeedBlockCache block) {
+        logger.debug("Converting FeedBlockCache to BlockMetadata for block {}", block.getBlockNumber());
+        
+        BlockMetadata metadata = new BlockMetadata();
+        
+        // Map emotion distribution
+        metadata.setEmotionDistribution(block.getEmotionDistribution());
+        
+        // Map R vector version
+        metadata.setRVectorVersion(block.getRVectorVersion());
+        
+        // Map timestamps
+        metadata.setGeneratedAt(block.getGeneratedAt());
+        metadata.setExpiresAt(block.getExpiresAt());
+        
+        // Set personalized flag (always true for recommendation engine)
+        metadata.setIsPersonalized(true);
+        
+        logger.debug("Converted block {} metadata: {} emotions, R vector v{}, generated: {}, expires: {}", 
+                    block.getBlockNumber(), 
+                    metadata.getEmotionDistribution() != null ? metadata.getEmotionDistribution().size() : 0,
+                    metadata.getRVectorVersion(),
+                    metadata.getGeneratedAt(),
+                    metadata.getExpiresAt());
+        
+        return metadata;
+    }
+    
+    /**
+     * Check if the next block is available for a user
+     * 
+     * @param userId The user ID
+     * @param nextBlockNumber The next block number to check
+     * @return true if next block is available or can be generated
+     */
+    private boolean checkNextBlockAvailable(UUID userId, Integer nextBlockNumber) {
+        try {
+            logger.debug("Checking if next block {} is available for user {}", nextBlockNumber, userId);
+            
+            // Check if block exists in cache by trying to get it
+            try {
+                FeedBlockCache cachedBlock = feedBlockPreCalculationService.getOrGenerateBlock(userId, nextBlockNumber);
+                boolean available = cachedBlock != null && !cachedBlock.isExpired();
+                logger.debug("Next block {} for user {} exists, available: {}", 
+                           nextBlockNumber, userId, available);
+                return available;
+            } catch (Exception e) {
+                logger.debug("Next block {} for user {} not available: {}", nextBlockNumber, userId, e.getMessage());
+                return false;
+            }
+            
+        } catch (Exception e) {
+            logger.warn("Failed to check next block availability for user {} block {}: {}", 
+                       userId, nextBlockNumber, e.getMessage(), e);
+            return false;
+        }
     }
 } 

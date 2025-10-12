@@ -336,3 +336,4 @@ public class RVectorService {
                     emotion, currentWeight, newWeight, updateAmount);
     }
 }
+
