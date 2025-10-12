@@ -74,6 +74,7 @@ ai\youthmind\controller\VectorSearchController.class
 ai\youthmind\entity\PersonalityComputation.class
 ai\youthmind\dto\ModerationUpdateRequest.class
 ai\youthmind\service\AIServiceConnectionMetrics$PerformanceSnapshot$PerformanceSnapshotBuilder.class
+ai\youthmind\dto\EmotionDistributionDTO.class
 ai\youthmind\service\AIServiceCircuitBreakerMetrics$CircuitBreakerHealthSummary$CircuitBreakerHealthSummaryBuilder.class
 ai\youthmind\service\ContextAwareModerationService.class
 ai\youthmind\service\VectorSearchService$SearchResult.class
@@ -203,6 +204,7 @@ ai\youthmind\service\FeatureFlagManager$UserAnalytics.class
 ai\youthmind\service\StateUpdateRollbackManager$StateUpdateHistory.class
 ai\youthmind\config\QdrantConfig$CollectionConfig.class
 ai\youthmind\analytics\controller\BehaviorAnalyticsController.class
+ai\youthmind\service\DataMigrationService.class
 ai\youthmind\config\ModerationConfig.class
 ai\youthmind\service\DeploymentConfigurationService$ServiceDeploymentConfig$ServiceDeploymentConfigBuilder.class
 ai\youthmind\repository\PostViewRepository.class
@@ -414,6 +416,7 @@ ai\youthmind\service\StateSimilarityCalculator.class
 ai\youthmind\entity\CommentEngagement.class
 ai\youthmind\service\AdvancedModerationPipelineService$PolicyRubricResult.class
 ai\youthmind\service\EmbeddingService.class
+ai\youthmind\enums\Emotion.class
 ai\youthmind\service\DeepSeekModelSelectionService$ModelPerformanceMetrics.class
 ai\youthmind\dto\PsychologicalAnalysisResponse$RiskAssessment.class
 ai\youthmind\service\FeatureFlagAnalyticsService$ABTestAnalytics.class
@@ -608,6 +611,7 @@ ai\youthmind\service\StateSimilarityCalculator$StateSimilarityMetrics.class
 ai\youthmind\controller\UserProfileController.class
 ai\youthmind\service\DeepSeekUsageMonitoringService$CostAnalysis.class
 ai\youthmind\util\EmbeddingUtil.class
+ai\youthmind\dto\RVectorUpdateRequest.class
 ai\youthmind\repository\UserModerationStatusRepository.class
 ai\youthmind\service\DeploymentMonitoringService$MonitoringStatus.class
 ai\youthmind\service\PsychologyFactorService$PostFactorAnalysis.class
@@ -618,12 +622,14 @@ ai\youthmind\dto\PsychologicalAnalysisResponse$AnalysisMetadata.class
 ai\youthmind\dto\UserSharedItem.class
 ai\youthmind\service\ContextAwareModerationService$ContextPattern.class
 ai\youthmind\config\PsychologicalStateConfig$4.class
+ai\youthmind\dto\FeedBlockRequest.class
 ai\youthmind\service\InteractionWeightService.class
 ai\youthmind\service\MentalFactorClassifier$CategoryPattern.class
 ai\youthmind\service\AutoScalingService$SystemMetrics.class
 ai\youthmind\util\RetryUtil$RetryableOperation.class
 ai\youthmind\service\DeploymentConfigurationService$DeploymentTemplate.class
 ai\youthmind\service\AIServiceTimeoutHandler$TimeoutMetrics.class
+ai\youthmind\dto\RVectorResponse.class
 ai\youthmind\service\VectorCollectionManager$CollectionMetadata$CollectionMetadataBuilder.class
 ai\youthmind\dto\PsychologicalAnalysisResponse$BuddhistFactorsResult.class
 ai\youthmind\dto\AIChatResponse.class
@@ -673,6 +679,7 @@ ai\youthmind\dto\QueueResponse.class
 ai\youthmind\service\ModelTrainingService.class
 ai\youthmind\entity\BuddhistPsychologyFactor$Polarity.class
 ai\youthmind\service\DeploymentManager$DeploymentHistory.class
+ai\youthmind\dto\FeedBlockResponse.class
 ai\youthmind\service\AdaptiveLearningRateService$UserBehaviorProfile.class
 ai\youthmind\service\AIServiceBulkhead$BulkheadConfig$BulkheadConfigBuilder.class
 ai\youthmind\service\HikariCPConnectionPoolMonitor$ConnectionPoolOptimizationRecommendations$ConnectionPoolOptimizationRecommendationsBuilder.class
@@ -997,6 +1004,7 @@ ai\youthmind\service\DatabaseQueryOptimizer$IndexUsageStats.class
 ai\youthmind\service\AIServiceConnectionMetrics.class
 ai\youthmind\repository\RecommendationMappingRuleRepository.class
 ai\youthmind\service\AIChatService.class
+ai\youthmind\service\DataMigrationService$MigrationResult.class
 ai\youthmind\service\PsychologicalAnalysisBatchProcessor.class
 ai\youthmind\service\StateVectorCalculator.class
 ai\youthmind\service\DeepSeekRateLimitService$RateLimitStatus.class

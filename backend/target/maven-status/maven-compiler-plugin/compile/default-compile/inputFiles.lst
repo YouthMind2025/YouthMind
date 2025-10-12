@@ -137,7 +137,10 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\DraftUpdateRequest.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\EmotionalAnalysisResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\EmotionClassificationResult.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\EmotionDistributionDTO.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\EngagementPatternsDto.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\FeedBlockRequest.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\FeedBlockResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\FeedResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\FlaggedPostDto.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\InsightsRequest.java
@@ -182,6 +185,8 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\RegisterResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\RevokeUserTokensRequest.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\RevokeUserTokensResponse.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\RVectorResponse.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\RVectorUpdateRequest.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\SearchRequest.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\SearchResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\SendOtpRequest.java
@@ -248,6 +253,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\UserRecommendationVector.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\VectorEmbedding.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\WarningHistory.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\enums\Emotion.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\exception\AIServiceException.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\exception\AIServiceExceptionHandler.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\exception\ResourceNotFoundException.java
@@ -344,6 +350,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\ContextAwareModerationService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\ConversationService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\DatabaseQueryOptimizer.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\DataMigrationService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\DeepSeekAdapterService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\DeepSeekCostOptimizationService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\DeepSeekModelSelectionService.java

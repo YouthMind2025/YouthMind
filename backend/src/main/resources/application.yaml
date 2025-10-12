@@ -24,15 +24,15 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update  # Use update to create/update tables automatically
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
   
   # Flyway Configuration (Database Migration)
   flyway:
-    enabled: false  # Disable Flyway due to PostgreSQL version compatibility
+    enabled: false  # Disable Flyway by default (enable in production profile)
     locations: classpath:db/migration
     baseline-on-migrate: true
     validate-on-migrate: true

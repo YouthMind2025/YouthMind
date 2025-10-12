@@ -46,4 +46,44 @@ public interface PostViewRepository extends JpaRepository<PostView, UUID> {
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate
     );
+    
+    /**
+     * Find views with duration greater than or equal to threshold
+     * Used for identifying significant views (>= 15 seconds)
+     */
+    List<PostView> findByViewDurationSecondsGreaterThanEqual(Integer minDuration);
+
+    /**
+     * Count significant views for a post
+     * @param postId Post ID
+     * @param minDuration Minimum duration in seconds (typically 15)
+     * @return Count of significant views
+     */
+    @Query("SELECT COUNT(pv) FROM PostView pv WHERE pv.postId = :postId AND pv.viewDurationSeconds >= :minDuration")
+    Long countSignificantViewsByPostId(@Param("postId") UUID postId, @Param("minDuration") Integer minDuration);
+
+    /**
+     * Get average view duration for a post
+     * @param postId Post ID
+     * @return Average duration in seconds, or null if no views with duration
+     */
+    @Query("SELECT AVG(pv.viewDurationSeconds) FROM PostView pv WHERE pv.postId = :postId AND pv.viewDurationSeconds IS NOT NULL")
+    Double getAverageViewDurationByPostId(@Param("postId") UUID postId);
+
+    /**
+     * Find all views by user with duration data
+     * @param userId User ID
+     * @return List of views that have duration recorded
+     */
+    @Query("SELECT pv FROM PostView pv WHERE pv.userId = :userId AND pv.viewDurationSeconds IS NOT NULL ORDER BY pv.viewStartedAt DESC")
+    List<PostView> findByUserIdWithDuration(@Param("userId") UUID userId);
+
+    /**
+     * Get total significant view time for a user
+     * @param userId User ID
+     * @param minDuration Minimum duration to count as significant
+     * @return Total seconds of significant views
+     */
+    @Query("SELECT COALESCE(SUM(pv.viewDurationSeconds), 0) FROM PostView pv WHERE pv.userId = :userId AND pv.viewDurationSeconds >= :minDuration")
+    Long getTotalSignificantViewTimeByUserId(@Param("userId") UUID userId, @Param("minDuration") Integer minDuration);
 } 

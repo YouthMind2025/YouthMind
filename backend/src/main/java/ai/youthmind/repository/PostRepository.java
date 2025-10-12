@@ -205,4 +205,116 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         String emotion, 
         LocalDateTime createdAt, 
         Pageable pageable);
+    
+    // ==================== RECOMMENDATION ENGINE QUERIES ====================
+
+    /**
+     * Find posts by emotion with time range and view count filters
+     * Used for hot/normal/cold post selection in recommendation engine
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.createdAt > :afterDate AND " +
+           "p.view BETWEEN :minViews AND :maxViews AND " +
+           "p.flagged = false " +
+           "ORDER BY p.createdAt DESC")
+    List<Post> findByEmotionAndTimeAndViewRange(
+        @Param("emotion") String emotion,
+        @Param("afterDate") LocalDateTime afterDate,
+        @Param("minViews") Integer minViews,
+        @Param("maxViews") Integer maxViews,
+        Pageable pageable
+    );
+
+    /**
+     * Find hot posts by emotion (>= 100 views, within time range)
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.createdAt > :since AND " +
+           "p.view >= 100 AND " +
+           "p.flagged = false " +
+           "ORDER BY p.view DESC, p.createdAt DESC")
+    List<Post> findHotPostsByEmotion(
+        @Param("emotion") String emotion,
+        @Param("since") LocalDateTime since,
+        Pageable pageable
+    );
+
+    /**
+     * Find normal posts by emotion (50-99 views, within time range)
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.createdAt > :since AND " +
+           "p.view >= 50 AND p.view < 100 AND " +
+           "p.flagged = false " +
+           "ORDER BY p.createdAt DESC")
+    List<Post> findNormalPostsByEmotion(
+        @Param("emotion") String emotion,
+        @Param("since") LocalDateTime since,
+        Pageable pageable
+    );
+
+    /**
+     * Find cold posts by emotion (< 50 views, within time range)
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.createdAt > :since AND " +
+           "p.view < 50 AND " +
+           "p.flagged = false " +
+           "ORDER BY p.createdAt DESC")
+    List<Post> findColdPostsByEmotion(
+        @Param("emotion") String emotion,
+        @Param("since") LocalDateTime since,
+        Pageable pageable
+    );
+
+    /**
+     * Find posts with emotion distribution (for balanced feed)
+     * Excludes posts the user has already seen
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.createdAt > :since AND " +
+           "p.id NOT IN :excludedPostIds AND " +
+           "p.flagged = false " +
+           "ORDER BY FUNCTION('RANDOM')")
+    List<Post> findByEmotionExcludingSeen(
+        @Param("emotion") String emotion,
+        @Param("since") LocalDateTime since,
+        @Param("excludedPostIds") List<UUID> excludedPostIds,
+        Pageable pageable
+    );
+
+    /**
+     * Count posts by emotion in time range (for availability check)
+     */
+    @Query("SELECT COUNT(p) FROM Post p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.createdAt > :since AND " +
+           "p.flagged = false")
+    Long countByEmotionSince(
+        @Param("emotion") String emotion,
+        @Param("since") LocalDateTime since
+    );
+
+    /**
+     * Find posts by emotion for feed generation (excludes already seen)
+     * Uses random sampling for variety
+     */
+    @Query(value = "SELECT * FROM posts p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.created_at > :since AND " +
+           "p.id NOT IN :excludedIds AND " +
+           "p.flagged = false " +
+           "ORDER BY RANDOM() " +
+           "LIMIT :limit", nativeQuery = true)
+    List<Post> findRandomByEmotionExcluding(
+        @Param("emotion") String emotion,
+        @Param("since") LocalDateTime since,
+        @Param("excludedIds") List<UUID> excludedIds,
+        @Param("limit") int limit
+    );
 } 
