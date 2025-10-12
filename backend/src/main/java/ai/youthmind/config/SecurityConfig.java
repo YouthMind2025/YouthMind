@@ -36,7 +36,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .headers(headers -> headers
-                .frameOptions(frameOptions -> frameOptions.deny())
+                .frameOptions(frameOptions -> frameOptions.sameOrigin())
                 .contentTypeOptions(contentTypeOptions -> contentTypeOptions.and())
                 .httpStrictTransportSecurity(hstsConfig -> hstsConfig
                     .maxAgeInSeconds(31536000)
@@ -45,17 +45,31 @@ public class SecurityConfig {
                 .referrerPolicy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)
                 .and()
                 .addHeaderWriter((request, response) -> {
-                    // Content Security Policy
-                    response.setHeader("Content-Security-Policy", 
-                        "default-src 'self'; " +
-                        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-                        "style-src 'self' 'unsafe-inline'; " +
-                        "img-src 'self' data: https:; " +
-                        "font-src 'self' data:; " +
-                        "connect-src 'self' https://api.deepseek.com; " +
-                        "frame-ancestors 'none'; " +
-                        "base-uri 'self'; " +
-                        "form-action 'self'");
+                    // Content Security Policy - Allow frames for H2 console
+                    String requestUri = request.getRequestURI();
+                    if (requestUri != null && requestUri.startsWith("/h2-console")) {
+                        response.setHeader("Content-Security-Policy", 
+                            "default-src 'self'; " +
+                            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+                            "style-src 'self' 'unsafe-inline'; " +
+                            "img-src 'self' data: https:; " +
+                            "font-src 'self' data:; " +
+                            "connect-src 'self' https://api.deepseek.com; " +
+                            "frame-ancestors 'self'; " +
+                            "base-uri 'self'; " +
+                            "form-action 'self'");
+                    } else {
+                        response.setHeader("Content-Security-Policy", 
+                            "default-src 'self'; " +
+                            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+                            "style-src 'self' 'unsafe-inline'; " +
+                            "img-src 'self' data: https:; " +
+                            "font-src 'self' data:; " +
+                            "connect-src 'self' https://api.deepseek.com; " +
+                            "frame-ancestors 'none'; " +
+                            "base-uri 'self'; " +
+                            "form-action 'self'");
+                    }
                     
                     // Additional security headers
                     response.setHeader("X-Content-Type-Options", "nosniff");

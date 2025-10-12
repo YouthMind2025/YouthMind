@@ -5,7 +5,7 @@ spring:
   application:
     name: youthmind-backend
   profiles:
-    active: default  # Use PostgreSQL configuration
+    active: dev  # Use H2 configuration for development
   
   datasource:
     url: jdbc:postgresql://localhost:5432/youthmind_db

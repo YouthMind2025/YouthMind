@@ -841,6 +841,7 @@ ai\youthmind\config\EmbeddingConfig$ModelConfig.class
 ai\youthmind\service\DatabaseQueryOptimizer$IndexRecommendationType.class
 ai\youthmind\service\CacheSecurityManager.class
 ai\youthmind\util\CircuitBreaker$ServiceHealth$ServiceHealthBuilder.class
+ai\youthmind\config\H2ConsoleConfig.class
 ai\youthmind\entity\PostResonance.class
 ai\youthmind\dto\RevokeUserTokensResponse.class
 ai\youthmind\dto\NotificationResponse.class
