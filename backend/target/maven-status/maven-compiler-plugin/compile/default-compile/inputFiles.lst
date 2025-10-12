@@ -37,6 +37,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\config\RedisConfig.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\config\RedisHealthIndicator.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\config\SecurityConfig.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\controller\AdminController.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\controller\AdminPostController.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\controller\AdvancedModerationTestController.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\controller\AIChatApiController.java
@@ -135,6 +136,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\DraftPublishResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\DraftUpdateRequest.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\EmotionalAnalysisResponse.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\EmotionClassificationResult.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\EngagementPatternsDto.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\FeedResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\FlaggedPostDto.java
@@ -168,6 +170,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PostEngagementResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PostListResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PostUpdateRequest.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PostViewDurationRequest.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PostViewStats.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PsychologicalAnalysisRequest.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PsychologicalAnalysisResponse.java
@@ -206,6 +209,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\UserSharedResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\UserStatisticsDto.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\ValidationResultDto.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\ViewSession.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\WarningRequest.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\WarningResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\AIAnalysis.java
@@ -218,6 +222,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\ContentSafetyCache.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\Conversation.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\Draft.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\FeedBlockCache.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\JsonbListConverter.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\MemoryItem.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\Message.java
@@ -231,13 +236,16 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\PostView.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\PsychologicalAnalysisResult.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\PsychologicalStateVector.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\RecommendationMappingRule.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\StateUpdateHistory.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\User.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\UserConsent.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\UserEngagement.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\UserFeedState.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\UserInteractionModulation.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\UserModerationStatus.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\UserPreferences.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\UserRecommendationVector.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\VectorEmbedding.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\entity\WarningHistory.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\exception\AIServiceException.java
@@ -271,6 +279,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\CommentRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\ConversationRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\DraftRepository.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\FeedBlockCacheRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\MemoryItemRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\MessageRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\ModerationAuditRepository.java
@@ -281,12 +290,15 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\PostResonanceRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\PostViewRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\PsychologicalStateVectorRepository.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\RecommendationMappingRuleRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\StateUpdateHistoryRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\UserConsentRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\UserEngagementRepository.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\UserFeedStateRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\UserInteractionModulationRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\UserModerationStatusRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\UserPreferencesRepository.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\UserRecommendationVectorRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\UserRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\VectorEmbeddingRepository.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\repository\WarningHistoryRepository.java
@@ -296,6 +308,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\AIAsyncProcessingService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\AIChatService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\AIDatabaseOptimizationService.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\AIEmotionClassificationService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\AIErrorHandler.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\AIFallbackService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\AIHealthCheckService.java
@@ -348,6 +361,8 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\FeatureFlagAnalyticsService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\FeatureFlagIntegrationService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\FeatureFlagManager.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\FeedBlockGeneratorService.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\FeedBlockPreCalculationService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\FileUploadService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\HikariCPConnectionPoolMonitor.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\InsightsService.java
@@ -376,6 +391,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\PersonalizedAIChatService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\PositiveBalanceCalculator.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\PostModerationService.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\PostSelectionService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\PostService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\PsychologicalAnalysisBatchProcessor.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\PsychologicalStateCacheService.java
@@ -386,9 +402,11 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\QdrantRestClient.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\QueryPerformanceProfiler.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\RAGContextBuilderService.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\RecommendationMappingService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\RedisService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\RequestQueueService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\ResonanceProcessor.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\RVectorService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\SearchService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\StateNormalizationService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\StateSimilarityCalculator.java
@@ -413,6 +431,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\VectorSearchCache.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\VectorSearchMetrics.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\VectorSearchService.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\ViewDurationTrackingService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\WarningService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\WordMaskingService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\util\ApplicationContextProvider.java

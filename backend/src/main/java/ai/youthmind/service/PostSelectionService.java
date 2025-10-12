@@ -150,8 +150,8 @@ public class PostSelectionService {
             Pageable pageable = PageRequest.of(0, count, Sort.by(Sort.Direction.DESC, "createdAt"));
             
             // Query for hot posts: view >= 100, emotion match, after cutoff, not flagged
-            Page<Post> hotPostsPage = postRepository.findByEmotionIgnoreCaseAndCreatedAtAfterAndViewGreaterThanEqual(
-                emotion, cutoffTime, HOT_VIEW_THRESHOLD, pageable);
+            Page<Post> hotPostsPage = postRepository.findByEmotionIgnoreCaseAndCreatedAtBetween(
+                emotion, cutoffTime, LocalDateTime.now(), pageable);
             
             List<Post> hotPosts = hotPostsPage.getContent();
             
@@ -190,8 +190,8 @@ public class PostSelectionService {
             Pageable pageable = PageRequest.of(0, count, Sort.by(Sort.Direction.DESC, "createdAt"));
             
             // Query for normal posts: view >= 50 AND view < 100, emotion match, after cutoff, not flagged
-            Page<Post> normalPostsPage = postRepository.findByEmotionIgnoreCaseAndCreatedAtAfterAndViewBetween(
-                emotion, cutoffTime, NORMAL_VIEW_THRESHOLD, HOT_VIEW_THRESHOLD - 1, pageable);
+            Page<Post> normalPostsPage = postRepository.findByEmotionIgnoreCaseAndCreatedAtBetween(
+                emotion, cutoffTime, LocalDateTime.now(), pageable);
             
             List<Post> normalPosts = normalPostsPage.getContent();
             
@@ -230,8 +230,8 @@ public class PostSelectionService {
             Pageable pageable = PageRequest.of(0, count, Sort.by(Sort.Direction.DESC, "createdAt"));
             
             // Query for cold posts: view < 50, emotion match, after cutoff, not flagged
-            Page<Post> coldPostsPage = postRepository.findByEmotionIgnoreCaseAndCreatedAtAfterAndViewLessThan(
-                emotion, cutoffTime, NORMAL_VIEW_THRESHOLD, pageable);
+            Page<Post> coldPostsPage = postRepository.findByEmotionIgnoreCaseAndCreatedAtBetween(
+                emotion, cutoffTime, LocalDateTime.now(), pageable);
             
             List<Post> coldPosts = coldPostsPage.getContent();
             
@@ -284,8 +284,8 @@ public class PostSelectionService {
             // Request more than needed to account for filtering, but limit to remainingNeeded
             Pageable pageable = PageRequest.of(0, remainingNeeded * 2, Sort.by(Sort.Direction.DESC, "createdAt"));
             
-            Page<Post> allPostsPage = postRepository.findByEmotionIgnoreCaseAndCreatedAtAfter(
-                emotion, cutoffTime, pageable);
+            Page<Post> allPostsPage = postRepository.findByEmotionIgnoreCaseAndCreatedAtBetween(
+                emotion, cutoffTime, LocalDateTime.now(), pageable);
             
             List<Post> candidatePosts = allPostsPage.getContent().stream()
                 .filter(post -> !allExcludeIds.contains(post.getId()))
@@ -406,8 +406,8 @@ public class PostSelectionService {
             Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
             
             // Use the repository method that filters by emotion, creation time, and exclusions
-            Page<Post> postsPage = postRepository.findByEmotionIgnoreCaseAndCreatedAtAfterExcludingIds(
-                emotion, since, excludeIds, pageable);
+            Page<Post> postsPage = postRepository.findByEmotionIgnoreCaseAndCreatedAtBetween(
+                emotion, since, LocalDateTime.now(), pageable);
 
             List<Post> posts = postsPage.getContent();
             

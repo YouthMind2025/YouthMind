@@ -86,6 +86,21 @@ public class RVectorService {
     }
     
     /**
+     * Get a specific version of recommendation vector for a user
+     */
+    public UserRecommendationVector getVectorByVersion(UUID userId, int version) {
+        logger.debug("Getting recommendation vector version {} for user: {}", version, userId);
+        
+        Optional<UserRecommendationVector> vectorOpt = rVectorRepository.findByUserIdAndVersion(userId, version);
+        if (vectorOpt.isEmpty()) {
+            logger.warn("No recommendation vector version {} found for user {}", version, userId);
+            return null;
+        }
+        
+        return vectorOpt.get();
+    }
+    
+    /**
      * Update recommendation vector when user creates a post
      */
     public UserRecommendationVector updateOnPost(UUID userId, String emotion) {

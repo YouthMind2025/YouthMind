@@ -1,6 +1,6 @@
 package ai.youthmind.service;
 
-import ai.youthmind.exception.DeepSeekScoringException;
+import ai.youthmind.exception.AIServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -140,8 +140,8 @@ public class PsychologicalVectorGenerator {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
     
-    @Autowired(required = false)
-    private DeepSeekVectorScoringService deepSeekScoringService;
+    // @Autowired(required = false)
+    // private DeepSeekVectorScoringService deepSeekScoringService;
     
     // Configuration flag to enable/disable DeepSeek RAG scoring
     @Value("${youthmind.vector.use-deepseek:true}")
@@ -252,29 +252,29 @@ public class PsychologicalVectorGenerator {
         logger.info("  ┌─────────────────────────────────────────────────");
         logger.info("  │ GENERATING PSYCHOLOGICAL COMPONENTS");
         logger.info("  │ DeepSeek enabled: {}", useDeepSeekScoring);
-        logger.info("  │ DeepSeek service available: {}", deepSeekScoringService != null);
+        logger.info("  │ DeepSeek service available: false (service removed)");
         logger.info("  └─────────────────────────────────────────────────");
         
         // Try DeepSeek RAG scoring first (if enabled and service is available)
-        if (useDeepSeekScoring && deepSeekScoringService != null) {
+        if (false) { // DeepSeek service removed
             logger.info("  → Attempting DeepSeek RAG scoring...");
             try {
                 logger.debug("Attempting DeepSeek RAG scoring for user {}", userId);
-                List<Double> deepSeekScores = deepSeekScoringService.scoreTextWithDeepSeek(content, userId);
+                // List<Double> deepSeekScores = deepSeekScoringService.scoreTextWithDeepSeek(content, userId);
                 
                 // Calculate statistics for logging
-                double mean = deepSeekScores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-                long nonZeroCount = deepSeekScores.stream().filter(s -> s > 0.0).count();
+                // double mean = deepSeekScores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+                // long nonZeroCount = deepSeekScores.stream().filter(s -> s > 0.0).count();
                 
-                logger.info("  ✓ DeepSeek RAG scoring SUCCEEDED");
-                logger.info("    - Mean score: {:.3f}", mean);
-                logger.info("    - Non-zero scores: {}/43", nonZeroCount);
-                logger.info("    - Generation method: DEEPSEEK_RAG");
+                // logger.info("  ✓ DeepSeek RAG scoring SUCCEEDED");
+                // logger.info("    - Mean score: {:.3f}", mean);
+                // logger.info("    - Non-zero scores: {}/43", nonZeroCount);
+                // logger.info("    - Generation method: DEEPSEEK_RAG");
                 
-                lastGenerationMethod.set("DEEPSEEK_RAG");
-                return deepSeekScores;
+                // lastGenerationMethod.set("DEEPSEEK_RAG");
+                // return deepSeekScores;
                 
-            } catch (DeepSeekScoringException e) {
+            } catch (AIServiceException e) {
                 logger.warn("  ✗ DeepSeek scoring FAILED: {}", e.getMessage());
                 logger.info("  → Falling back to keyword-based scoring...");
                 // Fall through to keyword method

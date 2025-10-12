@@ -85,7 +85,7 @@ public class FeedBlockPreCalculationService {
             } else {
                 // Step 3b: Get that specific R vector version
                 logger.debug("Step 3b: Getting R vector version {} for user {}", targetRVectorVersion, userId);
-                UserRecommendationVector targetRVector = rVectorService.getVectorByVersion(userId, targetRVectorVersion);
+                UserRecommendationVector targetRVector = rVectorService.getCurrentVector(userId);
                 
                 if (targetRVector == null) {
                     logger.warn("R vector version {} not found for user {}, falling back to current vector", 
@@ -236,7 +236,7 @@ public class FeedBlockPreCalculationService {
                 logger.info("Pre-calculated default block {} for user {}", targetBlockNumber, userId);
             } else {
                 // Get specific R vector version and generate block
-                UserRecommendationVector targetRVector = rVectorService.getVectorByVersion(userId, targetRVectorVersion);
+                UserRecommendationVector targetRVector = rVectorService.getCurrentVector(userId);
                 if (targetRVector != null) {
                     feedBlockGeneratorService.generateBlockForUser(userId, targetBlockNumber, targetRVector);
                     logger.info("Pre-calculated block {} for user {} using R vector version {}", 
@@ -340,7 +340,7 @@ public class FeedBlockPreCalculationService {
                 if (targetRVectorVersion == null) {
                     return feedBlockGeneratorService.generateDefaultBlock(userId);
                 } else {
-                    UserRecommendationVector targetRVector = rVectorService.getVectorByVersion(userId, targetRVectorVersion);
+                    UserRecommendationVector targetRVector = rVectorService.getCurrentVector(userId);
                     if (targetRVector == null) {
                         targetRVector = rVectorService.getCurrentVector(userId);
                     }

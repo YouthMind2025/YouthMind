@@ -17,6 +17,7 @@ ai\youthmind\repository\OtpCodeRepository.class
 ai\youthmind\dto\PsychologicalAnalysisResponse$Insight.class
 ai\youthmind\service\PsychologyFactorService$EmotionalPatternAnalysis.class
 ai\youthmind\dto\UserDto.class
+ai\youthmind\service\ViewDurationTrackingService.class
 ai\youthmind\service\RequestQueueService$ProcessingTimeStats.class
 ai\youthmind\util\RetryUtil$RetryConfig$RetryConfigBuilder.class
 ai\youthmind\service\DeepSeekCostOptimizationService.class
@@ -77,6 +78,7 @@ ai\youthmind\service\AIServiceCircuitBreakerMetrics$CircuitBreakerHealthSummary$
 ai\youthmind\service\ContextAwareModerationService.class
 ai\youthmind\service\VectorSearchService$SearchResult.class
 ai\youthmind\entity\Article.class
+ai\youthmind\dto\EmotionClassificationResult.class
 ai\youthmind\service\DeploymentManager$DeploymentMetrics$DeploymentMetricsBuilder.class
 ai\youthmind\service\FeatureFlagManager$FeatureFlagEvent$FeatureFlagEventBuilder.class
 ai\youthmind\util\CircuitBreaker$CircuitBreakerHealthStatus$CircuitBreakerHealthStatusBuilder.class
@@ -175,12 +177,14 @@ ai\youthmind\dto\ApiUsageAnalytics$ErrorStatistic$ErrorStatisticBuilder.class
 ai\youthmind\service\ResonanceProcessor.class
 ai\youthmind\service\VectorNormalizationService$1.class
 ai\youthmind\dto\UserSharedResponse.class
+ai\youthmind\service\AIEmotionClassificationService.class
 ai\youthmind\cli\PsychologicalVectorCLITest$2.class
 ai\youthmind\entity\ModerationLog.class
 ai\youthmind\service\IntelligentCacheManager$CacheLevel.class
 ai\youthmind\entity\UserInteractionModulation$InteractionType.class
 ai\youthmind\service\StateUpdateRollbackManager$StateUpdateHistory$StateUpdateHistoryBuilder.class
 ai\youthmind\service\VectorCollectionManager.class
+ai\youthmind\entity\RecommendationMappingRule.class
 ai\youthmind\dto\UserProfileDto.class
 ai\youthmind\service\CachePartitionManager$CachePartition.class
 ai\youthmind\util\NLPAnalyzer.class
@@ -255,12 +259,14 @@ ai\youthmind\entity\VectorEmbedding$VectorEmbeddingBuilder.class
 ai\youthmind\dto\StateUpdateResponse.class
 ai\youthmind\service\CircuitBreakerService$CircuitBreaker.class
 ai\youthmind\service\ConversationService.class
+ai\youthmind\repository\FeedBlockCacheRepository.class
 ai\youthmind\service\ModernPsychologyBridge$ComprehensiveMapping.class
 ai\youthmind\service\BatchProcessingService.class
 ai\youthmind\service\WordMaskingService$MaskingStrategy.class
 ai\youthmind\service\ConcurrencyManager$RateLimiter.class
 ai\youthmind\service\CacheCompressionService$CompressionAlgorithm.class
 ai\youthmind\service\RequestQueueService$StateUpdateStatus.class
+ai\youthmind\service\FeedBlockGeneratorService.class
 ai\youthmind\util\CircuitBreaker$CircuitBreakerConfig.class
 ai\youthmind\controller\ArticleController.class
 ai\youthmind\service\PsychologyFactorService$PsychologicalState.class
@@ -359,9 +365,11 @@ ai\youthmind\service\VectorSearchService$VectorSearchHealthStatus.class
 ai\youthmind\service\DeploymentMonitoringService.class
 ai\youthmind\service\HikariCPConnectionPoolMonitor$ConnectionPoolHealthStatus.class
 ai\youthmind\service\VectorSearchMetrics$VectorSearchMetricsSummary$VectorSearchMetricsSummaryBuilder.class
+ai\youthmind\service\RVectorService.class
 ai\youthmind\controller\TestController.class
 ai\youthmind\util\RetryUtil$RetryExhaustedException.class
 ai\youthmind\dto\ApiUsageAnalytics$ModelUsage.class
+ai\youthmind\entity\UserFeedState.class
 ai\youthmind\service\AIHealthScheduler.class
 ai\youthmind\service\VectorDatabaseService$VectorSearchResult$VectorSearchResultBuilder.class
 ai\youthmind\controller\HealthController.class
@@ -419,6 +427,7 @@ ai\youthmind\dto\ApiResponse.class
 ai\youthmind\exception\WarningSystemExceptionHandler.class
 ai\youthmind\service\DeploymentManager$DeploymentResult.class
 ai\youthmind\service\FeatureFlagAnalyticsService$FeatureFlagMetrics$FeatureFlagMetricsBuilder.class
+ai\youthmind\controller\AdminController$RecommendationToggleRequest.class
 ai\youthmind\service\AIServiceLoadBalancer$LoadBalancingConfig.class
 ai\youthmind\service\StateUpdateValidator.class
 ai\youthmind\entity\ContentSafetyCache.class
@@ -477,6 +486,7 @@ ai\youthmind\service\DeploymentManager$RollbackResult.class
 ai\youthmind\service\BuddhistPsychologyMapper$BuddhistFactor.class
 ai\youthmind\service\EnhancedRedisQueryCache$CacheEntry.class
 ai\youthmind\controller\InteractionProcessingController.class
+ai\youthmind\repository\UserFeedStateRepository.class
 ai\youthmind\service\ToxicityOverloadPreventionService$ToxicityLevel.class
 ai\youthmind\service\StateUpdateBatchProcessor$BatchStateUpdateResult$BatchStateUpdateResultBuilder.class
 ai\youthmind\dto\UserInteractionItem.class
@@ -510,6 +520,7 @@ ai\youthmind\service\AutoScalingService.class
 ai\youthmind\service\QueryPerformanceProfiler.class
 ai\youthmind\dto\ApiUsageRequest.class
 ai\youthmind\service\SearchService$PostWithRelevance.class
+ai\youthmind\controller\UserProfileController$RecommendationEngineSettingRequest.class
 ai\youthmind\dto\PostUpdateRequest.class
 ai\youthmind\controller\PsychologicalStateController.class
 ai\youthmind\repository\ConversationRepository.class
@@ -534,6 +545,7 @@ ai\youthmind\service\CommentService.class
 ai\youthmind\memory\entity\AiMemory.class
 ai\youthmind\dto\QueueRequest$QueueRequestBuilder.class
 ai\youthmind\dto\ModerationHistoryResponse$ModerationHistoryEntry.class
+ai\youthmind\entity\UserRecommendationVector.class
 ai\youthmind\repository\ArticleRepository.class
 ai\youthmind\service\ContextAwareModerationService$ContextualWord.class
 ai\youthmind\service\RequestQueueService$QueueHealthStatus$QueueHealthStatusBuilder.class
@@ -654,6 +666,7 @@ ai\youthmind\repository\AIAnalysisRepository.class
 ai\youthmind\service\AIServiceConnectionPoolManager$ServicePoolHealth$ServicePoolHealthBuilder.class
 ai\youthmind\dto\PostDto$PostDtoBuilder.class
 ai\youthmind\config\JacksonConfig.class
+ai\youthmind\dto\PostViewDurationRequest.class
 ai\youthmind\dto\MessageCreateRequest.class
 ai\youthmind\dto\RefreshTokenResponse.class
 ai\youthmind\dto\QueueResponse.class
@@ -678,7 +691,9 @@ ai\youthmind\service\RequestQueueService$StateUpdateRequest$StateUpdateRequestBu
 ai\youthmind\service\UserConsentService$1.class
 ai\youthmind\interests\controller\InterestController.class
 ai\youthmind\service\DeploymentConfigurationService.class
+ai\youthmind\service\FeedBlockPreCalculationService.class
 ai\youthmind\service\CacheCompressionService$CompressionStats.class
+ai\youthmind\controller\AdminController$BatchEmotionClassificationRequest.class
 ai\youthmind\service\PsychologyFactorService$TherapeuticRecommendation.class
 ai\youthmind\dto\PsychologicalAnalysisRequest.class
 ai\youthmind\service\DeepSeekOffPeakRoutingService.class
@@ -686,6 +701,7 @@ ai\youthmind\controller\InsightsController.class
 ai\youthmind\util\ModerationResponseParser.class
 ai\youthmind\entity\BuddhistPsychologyFactor.class
 ai\youthmind\service\DeepSeekAdapterService$DeepSeekAdapterException.class
+ai\youthmind\repository\UserRecommendationVectorRepository.class
 ai\youthmind\service\FeatureFlagManager$FeatureFlagEvent.class
 ai\youthmind\entity\BuddhistPsychologyFactor$Category.class
 ai\youthmind\entity\UserInteractionModulation$1.class
@@ -743,8 +759,10 @@ ai\youthmind\controller\AdvancedModerationTestController.class
 ai\youthmind\entity\OtpCode.class
 ai\youthmind\service\IntelligentCacheManager$WarmingRecommendation$WarmingRecommendationBuilder.class
 ai\youthmind\dto\BatchRequest$BatchRequestBuilder.class
+ai\youthmind\service\RecommendationMappingService.class
 ai\youthmind\dto\PostCreateRequest.class
 ai\youthmind\service\PsychologicalStateCacheService.class
+ai\youthmind\entity\FeedBlockCache.class
 ai\youthmind\service\RequestQueueService$RequestStatus.class
 ai\youthmind\service\AIServiceBulkhead$BulkheadStatistics.class
 ai\youthmind\dto\ConversationDto.class
@@ -752,6 +770,7 @@ ai\youthmind\entity\User$Role.class
 ai\youthmind\filter\JWTFilter.class
 ai\youthmind\config\SecurityConfig.class
 ai\youthmind\dto\ApiUsageAnalytics$DailyUsage$DailyUsageBuilder.class
+ai\youthmind\dto\ViewSession.class
 ai\youthmind\dto\BatchRequest.class
 ai\youthmind\service\FeatureFlagAnalyticsService$AnalyticsDashboard$AnalyticsDashboardBuilder.class
 ai\youthmind\entity\JsonbListConverter.class
@@ -793,6 +812,8 @@ ai\youthmind\service\ConcurrencyManager$ResourcePool.class
 ai\youthmind\dto\PsychologicalAnalysisResponse$Recommendation.class
 ai\youthmind\repository\UserConsentRepository.class
 ai\youthmind\service\DatabaseQueryOptimizer$OptimizationRecommendation.class
+ai\youthmind\service\PostSelectionService$TimeWindow.class
+ai\youthmind\service\PostSelectionService.class
 ai\youthmind\service\DraftService.class
 ai\youthmind\repository\ModerationAuditRepository.class
 ai\youthmind\dto\AuthResponse.class
@@ -974,6 +995,7 @@ ai\youthmind\service\DeepSeekOffPeakRoutingService$RoutingMetrics.class
 ai\youthmind\memory\service\MemoryService.class
 ai\youthmind\service\DatabaseQueryOptimizer$IndexUsageStats.class
 ai\youthmind\service\AIServiceConnectionMetrics.class
+ai\youthmind\repository\RecommendationMappingRuleRepository.class
 ai\youthmind\service\AIChatService.class
 ai\youthmind\service\PsychologicalAnalysisBatchProcessor.class
 ai\youthmind\service\StateVectorCalculator.class
@@ -996,6 +1018,7 @@ ai\youthmind\controller\NotificationController.class
 ai\youthmind\dto\AIChatSuggestionsRequest.class
 ai\youthmind\service\AIServiceTimeoutHandler$TimeoutStatistics.class
 ai\youthmind\dto\SuggestionsResponse.class
+ai\youthmind\controller\AdminController.class
 ai\youthmind\entity\WarningHistory.class
 ai\youthmind\service\DeploymentManager$HealthValidationResult.class
 ai\youthmind\dto\BatchResponse.class

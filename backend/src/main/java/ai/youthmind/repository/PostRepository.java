@@ -169,4 +169,40 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         @Param("tag") String tag, 
         @Param("term") String term, 
         Pageable pageable);
+    
+    /**
+     * Find posts by emotion with view count greater than or equal to threshold after a specific date
+     */
+    Page<Post> findByEmotionIgnoreCaseAndCreatedAtAfterAndViewGreaterThanEqual(
+        String emotion, 
+        LocalDateTime createdAt, 
+        int viewThreshold, 
+        Pageable pageable);
+    
+    /**
+     * Find posts by emotion with view count between min and max after a specific date
+     */
+    Page<Post> findByEmotionIgnoreCaseAndCreatedAtAfterAndViewBetween(
+        String emotion, 
+        LocalDateTime createdAt, 
+        int minView, 
+        int maxView, 
+        Pageable pageable);
+    
+    /**
+     * Find posts by emotion with view count less than threshold after a specific date
+     */
+    Page<Post> findByEmotionIgnoreCaseAndCreatedAtAfterAndViewLessThan(
+        String emotion, 
+        LocalDateTime createdAt, 
+        int viewThreshold, 
+        Pageable pageable);
+    
+    /**
+     * Find posts by emotion created after a specific date
+     */
+    Page<Post> findByEmotionIgnoreCaseAndCreatedAtAfter(
+        String emotion, 
+        LocalDateTime createdAt, 
+        Pageable pageable);
 } 

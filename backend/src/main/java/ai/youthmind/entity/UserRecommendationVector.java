@@ -130,6 +130,41 @@ public class UserRecommendationVector {
     }
     
     /**
+     * Set emotion weight by emotion name (convenience method for int values)
+     * Alias for setEmotionWeight for backward compatibility
+     */
+    public void setEmotionValue(String emotion, int value) {
+        setEmotionWeight(emotion, BigDecimal.valueOf(value));
+    }
+    
+    /**
+     * Convenience setter methods for individual emotions (accepting int values)
+     */
+    public void setSad(int value) {
+        this.sadWeight = BigDecimal.valueOf(value);
+    }
+    
+    public void setFear(int value) {
+        this.fearWeight = BigDecimal.valueOf(value);
+    }
+    
+    public void setAngry(int value) {
+        this.angryWeight = BigDecimal.valueOf(value);
+    }
+    
+    public void setHappy(int value) {
+        this.happyWeight = BigDecimal.valueOf(value);
+    }
+    
+    public void setConflicted(int value) {
+        this.conflictedWeight = BigDecimal.valueOf(value);
+    }
+    
+    public void setSurprised(int value) {
+        this.surprisedWeight = BigDecimal.valueOf(value);
+    }
+    
+    /**
      * Get all emotion weights as a map
      */
     public java.util.Map<String, BigDecimal> getAllEmotionWeights() {

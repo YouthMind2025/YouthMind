@@ -207,7 +207,12 @@ public class AdminController {
             long startTime = System.currentTimeMillis();
             
             // Find posts without user-provided emotions
-            List<Post> postsToProcess = postRepository.findByEmotionIsNullOrEmotionIsEmpty(limit);
+            // Find posts without emotions - using a simpler approach
+            List<Post> allPosts = postRepository.findAll();
+            List<Post> postsToProcess = allPosts.stream()
+                .filter(post -> post.getEmotion() == null || post.getEmotion().trim().isEmpty())
+                .limit(limit)
+                .collect(java.util.stream.Collectors.toList());
             
             if (postsToProcess.isEmpty()) {
                 Map<String, Object> response = new HashMap<>();

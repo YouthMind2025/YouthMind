@@ -108,7 +108,8 @@ public interface FeedBlockCacheRepository extends JpaRepository<FeedBlockCache, 
      * @param rVectorVersion The R vector version
      * @return List of feed blocks with matching R vector version
      */
-    List<FeedBlockCache> findByUserIdAndRVectorVersion(UUID userId, Integer rVectorVersion);
+    @Query("SELECT fbc FROM FeedBlockCache fbc WHERE fbc.userId = :userId AND fbc.rVectorVersion = :rVectorVersion")
+    List<FeedBlockCache> findByUserIdAndRVectorVersion(@Param("userId") UUID userId, @Param("rVectorVersion") Integer rVectorVersion);
     
     /**
      * Delete all feed blocks for a user
