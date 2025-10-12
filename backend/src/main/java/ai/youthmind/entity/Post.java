@@ -1,6 +1,9 @@
 package ai.youthmind.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,6 +33,19 @@ public class Post {
     
     @Column(name = "emotion", length = 100)
     private String emotion;
+    
+    @Column(name = "ai_emotion", length = 100)
+    @Size(max = 100, message = "AI emotion must not exceed 100 characters")
+    private String aiEmotion;
+    
+    @Column(name = "emotion_confidence")
+    @DecimalMin(value = "0.0", message = "Emotion confidence must be at least 0.0")
+    @DecimalMax(value = "1.0", message = "Emotion confidence must be at most 1.0")
+    private Double emotionConfidence;
+    
+    @Column(name = "emotion_source", length = 50)
+    @Size(max = 50, message = "Emotion source must not exceed 50 characters")
+    private String emotionSource = "user";
     
     @Column(name = "pre_img", length = 500)
     private String preImg;

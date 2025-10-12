@@ -7,6 +7,7 @@ import ai.youthmind.dto.PostCreateResponse;
 import ai.youthmind.dto.PostDto;
 import ai.youthmind.dto.PostDtoBuilder;
 import ai.youthmind.dto.PostUpdateRequest;
+import ai.youthmind.dto.PostViewDurationRequest;
 import ai.youthmind.dto.PostViewStats;
 import ai.youthmind.dto.PsychologicalAnalysisRequest;
 import ai.youthmind.dto.PsychologicalAnalysisResponse;
@@ -16,6 +17,7 @@ import ai.youthmind.service.PostService;
 import ai.youthmind.service.RedisService;
 import ai.youthmind.service.PsychologicalStateCacheService;
 import ai.youthmind.service.AIServiceClient;
+import ai.youthmind.service.ViewDurationTrackingService;
 import ai.youthmind.util.AuthenticationUtils;
 import ai.youthmind.util.ResponseBuilder;
 import org.springframework.http.ResponseEntity;
@@ -84,6 +86,9 @@ public class PostController {
     
     @Autowired
     private AIServiceClient aiServiceClient;
+    
+    @Autowired
+    private ViewDurationTrackingService viewDurationTrackingService;
 
     @PostMapping("/create")
     @Operation(
@@ -109,7 +114,6 @@ public class PostController {
             .content(savedPost.getContent())
             .preImg(savedPost.getPreImg())
             .emotion(savedPost.getEmotion())
-            .topics(savedPost.getTopics())
             .date(savedPost.getCreatedAt())
             .resonance(savedPost.getResonance())
             .view(savedPost.getView())
@@ -185,8 +189,8 @@ public class PostController {
         @Parameter(description = "Search term", example = "anxiety")
         @RequestParam(required = false) String term
     ) {
-        // Extract user ID from JWT token (null if not authenticated)
-        UUID userId = AuthenticationUtils.getCurrentUserIdOrNull();
+        // Extract user ID from JWT token
+        UUID userId = AuthenticationUtils.getCurrentUserId();
         
         // Validate pagination parameters
         if (page < 0) page = 0;
@@ -466,6 +470,96 @@ public class PostController {
             return ResponseBuilder.notFound(e.getMessage());
         } catch (Exception e) {
             return ResponseBuilder.internalServerError("Failed to track view");
+        }
+    }
+    
+    @PostMapping("/{id}/view/duration")
+    @Operation(
+        summary = "Track post view with duration",
+        description = "Track a post view with duration and update R vector if duration >= 15 seconds"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "View with duration tracked successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request body")
+    })
+    public ResponseEntity<ApiResponse<PostDto>> trackPostViewWithDuration(
+        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id,
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "View duration request")
+        @Valid @RequestBody PostViewDurationRequest request
+    ) {
+        try {
+            // Extract user from authentication
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            
+            // Track the view with duration using PostService
+            PostDto updatedPost = postService.trackPostViewWithDuration(id, currentUserId, request.getDurationSeconds());
+            
+            return ResponseBuilder.success(updatedPost, "View with duration tracked successfully");
+        } catch (ResourceNotFoundException e) {
+            return ResponseBuilder.notFound(e.getMessage());
+        } catch (Exception e) {
+            return ResponseBuilder.internalServerError("Failed to track view with duration");
+        }
+    }
+    
+    @PostMapping("/{id}/view/start")
+    @Operation(
+        summary = "Start tracking post view session",
+        description = "Start tracking a post view session for duration-based analytics and R vector updates"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "View session started successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<String>> startPostView(
+        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id
+    ) {
+        try {
+            // Extract user from authentication
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            
+            // Start view session tracking
+            viewDurationTrackingService.startView(currentUserId, id);
+            
+            return ResponseBuilder.success("View session started", "View tracking started successfully");
+        } catch (ResourceNotFoundException e) {
+            return ResponseBuilder.notFound(e.getMessage());
+        } catch (Exception e) {
+            return ResponseBuilder.internalServerError("Failed to start view session");
+        }
+    }
+    
+    @PostMapping("/{id}/view/end")
+    @Operation(
+        summary = "End tracking post view session",
+        description = "End a post view session and process duration-based analytics and R vector updates"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "View session ended successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Post not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    public ResponseEntity<ApiResponse<String>> endPostView(
+        @Parameter(description = "Post ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id
+    ) {
+        try {
+            // Extract user from authentication
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            
+            // End view session tracking
+            viewDurationTrackingService.endView(currentUserId, id);
+            
+            return ResponseBuilder.success("View session ended", "View tracking completed successfully");
+        } catch (ResourceNotFoundException e) {
+            return ResponseBuilder.notFound(e.getMessage());
+        } catch (Exception e) {
+            return ResponseBuilder.internalServerError("Failed to end view session");
         }
     }
     

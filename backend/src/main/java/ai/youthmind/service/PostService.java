@@ -1,5 +1,6 @@
 package ai.youthmind.service;
 
+import ai.youthmind.dto.EmotionClassificationResult;
 import ai.youthmind.dto.ModerationResult;
 import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.dto.PostDto;
@@ -9,8 +10,6 @@ import ai.youthmind.dto.FlaggedPostDto;
 import ai.youthmind.dto.PostViewStats;
 import ai.youthmind.dto.PostUpdateRequest;
 import ai.youthmind.dto.PsychologicalAnalysisRequest;
-import ai.youthmind.dto.UserInteractionItem;
-import ai.youthmind.dto.UserInteractionResponse;
 import ai.youthmind.dto.PsychologicalAnalysisResponse;
 import ai.youthmind.util.ModerationUtils;
 import ai.youthmind.entity.AIAnalysis;
@@ -25,7 +24,11 @@ import ai.youthmind.repository.PostCollectionRepository;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.PostResonanceRepository;
 import ai.youthmind.repository.PostViewRepository;
+import ai.youthmind.repository.UserRepository;
 import ai.youthmind.service.RedisService;
+import ai.youthmind.service.FeedBlockPreCalculationService;
+import ai.youthmind.entity.User;
+import ai.youthmind.entity.FeedBlockCache;
 import ai.youthmind.util.PerformanceMonitor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -34,14 +37,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.ArrayList;
 import java.util.UUID;
 import java.util.HashMap;
 import java.util.stream.Collectors;
@@ -51,6 +54,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Service
 @Transactional
 public class PostService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(PostService.class);
     
     @Autowired
     private PostRepository postRepository;
@@ -80,7 +85,13 @@ public class PostService {
     private AIServiceClient aiServiceClient;
     
     @Autowired
-    private UserService userService;
+    private PsychologicalVectorGenerator psychologicalVectorGenerator;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private FeedBlockPreCalculationService feedBlockPreCalculationService;
     
     /**
      * Update or insert AI analysis result for a post
@@ -128,14 +139,27 @@ public class PostService {
     @Autowired
     private ModerationLoggingService moderationLoggingService;
     
+    @Autowired
+    private RVectorService rVectorService;
+    
+    @Autowired
+    private AIEmotionClassificationService aiEmotionClassificationService;
+    
     public Post createPost(UUID userId, PostCreateRequest request) {
+        logger.info("========================================");
+        logger.info("POST CREATION STARTED");
+        logger.info("User ID: {}", userId);
+        logger.info("Post title: {}", request.getTitle());
+        logger.info("Post content length: {} characters", request.getContent().length());
+        logger.info("Post emotion: {}", request.getEmotion());
+        logger.info("========================================");
+        
         Post post = new Post();
         post.setUserId(userId);
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
         post.setEmotion(request.getEmotion());
         post.setPreImg(request.getPreImg());
-        post.setTopics(request.getTopics());
         post.setResonance(0); // New post starts with 0 resonance
         post.setView(0); // New post starts with 0 views
         post.setCollect(0); // New post starts with 0 collections
@@ -185,30 +209,90 @@ public class PostService {
         }
         
         Post savedPost = postRepository.save(post);
+        logger.info("✓ Post saved to database with ID: {}", savedPost.getId());
+        
+        // AI Emotion Classification
+        try {
+            String userEmotion = request.getEmotion();
+            boolean userProvidedEmotion = userEmotion != null && !userEmotion.trim().isEmpty();
+            
+            if (userProvidedEmotion) {
+                // User provided emotion - set emotionSource to "user"
+                savedPost.setEmotionSource("user");
+                logger.info("→ User provided emotion: {} - setting emotionSource to 'user'", userEmotion);
+            } else {
+                // No user emotion - classify with AI
+                logger.info("→ No user emotion provided - calling AI emotion classification");
+                EmotionClassificationResult aiResult = aiEmotionClassificationService.classifyEmotion(savedPost.getContent());
+                
+                if (aiResult != null && aiResult.isValid()) {
+                    // Set AI classification results
+                    savedPost.setAiEmotion(aiResult.getEmotion());
+                    savedPost.setEmotionConfidence(aiResult.getConfidence());
+                    savedPost.setEmotionSource(aiResult.getSource());
+                    
+                    // Also set the main emotion field for R vector updates
+                    savedPost.setEmotion(aiResult.getEmotion());
+                    
+                    logger.info("✓ AI emotion classification completed: {} (confidence: {})", 
+                               aiResult.getEmotion(), aiResult.getConfidence());
+                } else {
+                    // AI classification failed - set fallback values
+                    savedPost.setEmotionSource("ai_fallback");
+                    savedPost.setEmotion("neutral");
+                    savedPost.setAiEmotion("neutral");
+                    savedPost.setEmotionConfidence(0.0);
+                    
+                    logger.warn("✗ AI emotion classification failed - using fallback: neutral");
+                }
+            }
+            
+            // Save the post again with AI classification data
+            savedPost = postRepository.save(savedPost);
+            logger.info("✓ Post updated with emotion classification data");
+            
+        } catch (Exception e) {
+            // Log error but don't fail post creation
+            logger.error("✗ Failed to perform AI emotion classification for post: {} - {}", 
+                        savedPost.getId(), e.getMessage(), e);
+            
+            // Set fallback values to ensure post has valid emotion data
+            if (savedPost.getEmotion() == null || savedPost.getEmotion().trim().isEmpty()) {
+                savedPost.setEmotion("neutral");
+                savedPost.setEmotionSource("ai_fallback");
+                savedPost.setAiEmotion("neutral");
+                savedPost.setEmotionConfidence(0.0);
+                savedPost = postRepository.save(savedPost);
+                logger.info("✓ Post updated with fallback emotion data");
+            }
+        }
+        
+        // Update R vector based on post emotion
+        try {
+            String emotion = savedPost.getEmotion();
+            if (emotion != null && !emotion.trim().isEmpty()) {
+                logger.info("→ Updating R vector for user: {} with emotion: {}", userId, emotion);
+                var updatedRVector = rVectorService.updateOnPost(userId, emotion);
+                logger.info("✓ R vector updated successfully - emotion: {}, new version: {}", 
+                           emotion, updatedRVector.getVersion());
+            } else {
+                logger.warn("→ Skipping R vector update - post emotion is null or empty");
+            }
+        } catch (Exception e) {
+            // Log error but don't fail post creation
+            logger.error("✗ Failed to update R vector for user: {} with emotion: {} - {}", 
+                        userId, savedPost.getEmotion(), e.getMessage(), e);
+        }
         
         // Trigger psychological analysis for the post content
+        logger.info("→ Starting psychological analysis for post: {}", savedPost.getId());
         try {
-            // Create psychological analysis request
-            PsychologicalAnalysisRequest analysisRequest = new PsychologicalAnalysisRequest();
-            analysisRequest.setUserId(userId);
-            analysisRequest.setContent(savedPost.getContent());
-            analysisRequest.setContentType("post");
-            analysisRequest.setTimestamp(LocalDateTime.now());
-            
-            // Set analysis configuration
-            PsychologicalAnalysisRequest.AnalysisConfig config = new PsychologicalAnalysisRequest.AnalysisConfig();
-            config.setGeneratePsychologicalVector(true);
-            config.setAnalyzeBuddhistFactors(true);
-            config.setCalculateIntensityFactor(true);
-            config.setProcessStateVector(true);
-            config.setIncludeDetailedAnalysis(true);
-            config.setIncludeRecommendations(false); // Skip recommendations for post creation
-            config.setMaxAnalysisDepth(3);
-            config.setAnalysisMode("standard");
-            analysisRequest.setAnalysisConfig(config);
-            
-            // Perform psychological analysis asynchronously
-            PsychologicalAnalysisResponse analysisResponse = aiServiceClient.performPsychologicalAnalysis(analysisRequest);
+            // Perform psychological analysis using our new RAG DeepSeek system
+            logger.info("→ Calling PsychologicalVectorGenerator.generateVector() (RAG DeepSeek system)...");
+            long analysisStartTime = System.currentTimeMillis();
+            Map<String, Object> vectorResult = psychologicalVectorGenerator.generateVector(savedPost.getContent(), userId);
+            long analysisDuration = System.currentTimeMillis() - analysisStartTime;
+            logger.info("✓ RAG DeepSeek vector generation completed in {}ms", analysisDuration);
             
             // Store psychological analysis results in post metadata
             String aiMetadataJson = savedPost.getAiMetadata();
@@ -224,18 +308,35 @@ public class PostService {
                 }
             }
             
-            // Add psychological analysis results to metadata
-            if (analysisResponse.getPsychologicalVector() != null) {
-                aiMetadata.put("psychological_vector", analysisResponse.getPsychologicalVector().getVector());
-                aiMetadata.put("psychological_confidence", analysisResponse.getPsychologicalVector().getConfidenceScore());
-            }
+            // Process psychological analysis results from RAG DeepSeek system
+            logger.info("→ Processing RAG DeepSeek vector results...");
             
-            if (analysisResponse.getBuddhistFactors() != null) {
-                aiMetadata.put("buddhist_factors", analysisResponse.getBuddhistFactors().getFactorScores());
-            }
+            // Extract vector from result
+            @SuppressWarnings("unchecked")
+            List<Double> psychologicalVector = (List<Double>) vectorResult.get("psychologicalVector");
+            String generationMethod = (String) vectorResult.get("generationMethod");
+            Boolean isValid = (Boolean) vectorResult.get("isValid");
             
-            if (analysisResponse.getIntensityFactor() != null) {
-                aiMetadata.put("intensity_factor", analysisResponse.getIntensityFactor().getIntensityScore());
+            if (psychologicalVector != null) {
+                logger.info("  ✓ Psychological vector received: {} dimensions", psychologicalVector.size());
+                logger.info("  ✓ Generation method: {}", generationMethod);
+                logger.info("  ✓ Vector valid: {}", isValid);
+                
+                // Store in metadata
+                aiMetadata.put("psychological_vector", psychologicalVector);
+                aiMetadata.put("generation_method", generationMethod);
+                aiMetadata.put("vector_valid", isValid);
+                
+                // Calculate confidence score (mean of non-zero values)
+                double confidence = psychologicalVector.stream()
+                    .filter(s -> s > 0.0)
+                    .mapToDouble(Double::doubleValue)
+                    .average()
+                    .orElse(0.0);
+                aiMetadata.put("psychological_confidence", confidence);
+                
+            } else {
+                logger.warn("  ✗ No psychological vector in RAG result");
             }
             
             aiMetadata.put("analysis_timestamp", LocalDateTime.now());
@@ -246,41 +347,118 @@ public class PostService {
             String aiMetadataJsonFinal = mapper2.writeValueAsString(aiMetadata);
             
             // Update post with psychological metadata
+            logger.info("→ Updating post with psychological metadata...");
             savedPost.setAiMetadata(aiMetadataJsonFinal);
             postRepository.save(savedPost);
+            logger.info("✓ Post updated with psychological metadata");
             
             // Update user's psychological state based on post content
+            logger.info("→ Warming up psychological state cache for user: {}", userId);
             psychologicalStateCacheService.warmUpCache(userId);
+            logger.info("✓ Psychological state cache warmed up");
             
         } catch (Exception e) {
             // Log error but don't fail post creation
-            System.err.println("Failed to perform psychological analysis for post " + savedPost.getId() + ": " + e.getMessage());
+            logger.error("✗ Failed to perform psychological analysis for post {}: {}", 
+                savedPost.getId(), e.getMessage(), e);
         }
         
         // Invalidate feed cache after creating a post
         // // redisService.invalidateFeedCache();
+        
+        logger.info("========================================");
+        logger.info("POST CREATION COMPLETED");
+        logger.info("Post ID: {}", savedPost.getId());
+        logger.info("========================================");
         
         return savedPost;
     }
     
     
     /**
-     * Get feed with optimized batch operations and caching
+     * Get feed with recommendation engine toggle support
+     * Routes to personalized feed if enabled, chronological feed if disabled
      */
     public FeedResponse getFeed(int page, int size, String sortBy, String emotion, 
                                LocalDateTime startDate, LocalDateTime endDate, UUID userId) {
         PerformanceMonitor.start("PostService.getFeed");
         try {
+            // Get user preferences
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+            
+            boolean useRecommendations = user.getRecommendationEngineEnabled();
+            logger.info("Feed request for user {}: recommendations={}, page={}, size={}", 
+                       userId, useRecommendations, page, size);
+            
+            if (useRecommendations) {
+                // Route to personalized recommendation feed
+                logger.debug("Using personalized feed for user {}", userId);
+                return getPersonalizedFeed(page, size, userId);
+            } else {
+                // Route to chronological feed
+                logger.debug("Using chronological feed for user {}", userId);
+                return getChronologicalFeed(page, size, sortBy, emotion, startDate, endDate, userId);
+            }
+        } finally {
+            PerformanceMonitor.end("PostService.getFeed");
+        }
+    }
+    
+    /**
+     * Get personalized feed using recommendation engine
+     * Falls back to chronological feed if personalized generation fails
+     */
+    private FeedResponse getPersonalizedFeed(int page, int size, UUID userId) {
+        try {
+            logger.debug("Generating personalized feed for user {} page {}", userId, page);
+            
+            // Get personalized feed block
+            FeedBlockCache block = feedBlockPreCalculationService.getOrGenerateBlock(userId, page + 1);
+            
+            // Convert block posts to DTOs
+            List<PostDto> postDtos = convertBlockPostsToDtos(block.getPostIds(), userId);
+            
+            // Build response
+            FeedResponse feedResponse = new FeedResponse();
+            feedResponse.setPosts(postDtos);
+            feedResponse.setCurrentPage(page);
+            feedResponse.setTotalPages(1); // Feed blocks are self-contained
+            feedResponse.setTotalElements(postDtos.size());
+            feedResponse.setHasNext(false); // Each block is complete
+            feedResponse.setPageSize(size);
+            feedResponse.setFirst(page == 0);
+            feedResponse.setLast(true);
+            
+            logger.info("Successfully generated personalized feed for user {}: {} posts", userId, postDtos.size());
+            return feedResponse;
+            
+        } catch (Exception e) {
+            logger.warn("Failed to generate personalized feed for user {}, falling back to chronological feed: {}", 
+                       userId, e.getMessage(), e);
+            
+            // Fallback to chronological feed
+            return getChronologicalFeed(page, size, "newest", null, null, null, userId);
+        }
+    }
+    
+    /**
+     * Get chronological feed with filtering and sorting
+     * This is the fallback/default behavior for when recommendations are disabled
+     */
+    private FeedResponse getChronologicalFeed(int page, int size, String sortBy, String emotion, 
+                                            LocalDateTime startDate, LocalDateTime endDate, UUID userId) {
+        try {
             // Try to get from cache first
             String cacheKey = String.format("feed:page:%d:size:%d:sort:%s:emotion:%s:start:%s:end:%s:user:%s",
                 page, size, sortBy, emotion, startDate, endDate, userId);
             
-            FeedResponse cachedFeed = null; // // redisService.getCachedFeed(cacheKey);
-        if (cachedFeed != null) {
-            return cachedFeed;
-        }
+            FeedResponse cachedFeed = null; // redisService.getCachedFeed(cacheKey);
+            if (cachedFeed != null) {
+                return cachedFeed;
+            }
 
-        // Create pageable with sorting
+            // Create pageable with sorting
             Pageable pageable = PageRequest.of(page, size, getSortFromString(sortBy));
 
             // Get posts based on filters
@@ -294,30 +472,76 @@ public class PostService {
                 postsPage = postRepository.findByEmotionIgnoreCase(emotion, pageable);
             } else if (startDate != null && endDate != null) {
                 postsPage = postRepository.findByCreatedAtBetween(startDate, endDate, pageable);
-        } else {
+            } else {
                 postsPage = postRepository.findAll(pageable);
-        }
-        
+            }
+            
             // Convert to DTOs with batch user engagement lookup
             List<PostDto> postDtos = convertPostsToDtosWithBatchEngagement(postsPage.getContent(), userId);
         
-        // Build response
+            // Build response
             FeedResponse feedResponse = new FeedResponse();
             feedResponse.setPosts(postDtos);
             feedResponse.setCurrentPage(page);
             feedResponse.setTotalPages(postsPage.getTotalPages());
             feedResponse.setTotalElements(postsPage.getTotalElements());
-            feedResponse.setPageSize(size);
             feedResponse.setHasNext(postsPage.hasNext());
+            feedResponse.setPageSize(postsPage.getSize());
             feedResponse.setFirst(postsPage.isFirst());
             feedResponse.setLast(postsPage.isLast());
             
             // Cache for 2 minutes - temporarily disabled to fix Redis connection issue
-            // // redisService.cacheFeed(cacheKey, feedResponse);
+            // redisService.cacheFeed(cacheKey, feedResponse);
             
+            logger.debug("Generated chronological feed for user {}: {} posts", userId, postDtos.size());
             return feedResponse;
-        } finally {
-            PerformanceMonitor.end("PostService.getFeed");
+            
+        } catch (Exception e) {
+            logger.error("Failed to generate chronological feed for user {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Failed to generate chronological feed", e);
+        }
+    }
+    
+    /**
+     * Convert feed block post IDs to PostDto list with engagement data
+     * Maintains order from the postIds list
+     */
+    private List<PostDto> convertBlockPostsToDtos(List<UUID> postIds, UUID userId) {
+        if (postIds == null || postIds.isEmpty()) {
+            logger.warn("Empty post IDs list for user {}", userId);
+            return List.of();
+        }
+        
+        try {
+            // Fetch posts by IDs in the order specified
+            List<Post> posts = postRepository.findAllById(postIds);
+            
+            // Create a map for quick lookup
+            Map<UUID, Post> postMap = posts.stream()
+                .collect(Collectors.toMap(Post::getId, post -> post));
+            
+            // Convert to DTOs maintaining the original order
+            List<PostDto> postDtos = postIds.stream()
+                .map(postId -> {
+                    Post post = postMap.get(postId);
+                    if (post != null) {
+                        return convertToPostDto(post, userId);
+                    } else {
+                        logger.warn("Post {} not found for user {}", postId, userId);
+                        return null;
+                    }
+                })
+                .filter(dto -> dto != null)
+                .collect(Collectors.toList());
+            
+            logger.debug("Converted {} posts to DTOs for user {} (requested: {})", 
+                        postDtos.size(), userId, postIds.size());
+            
+            return postDtos;
+            
+        } catch (Exception e) {
+            logger.error("Failed to convert block posts to DTOs for user {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Failed to convert block posts to DTOs", e);
         }
     }
     
@@ -373,16 +597,7 @@ public class PostService {
     public List<PostDto> getLikedPostsByUser(UUID userId) {
         List<PostResonance> resonances = postResonanceRepository.findByUserId(userId);
         return resonances.stream()
-                .map(resonance -> {
-                    try {
-                        return getPostById(resonance.getPostId(), userId);
-                    } catch (ResourceNotFoundException e) {
-                        // Log the error and skip this post if it doesn't exist
-                        System.err.println("Liked post not found: " + resonance.getPostId() + " for user: " + userId);
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull) // Remove null entries
+                .map(resonance -> getPostById(resonance.getPostId(), userId))
                 .collect(Collectors.toList());
     }
 
@@ -392,16 +607,7 @@ public class PostService {
     public List<PostDto> getBookmarkedPostsByUser(UUID userId) {
         List<PostCollection> collections = postCollectionRepository.findByUserId(userId);
         return collections.stream()
-                .map(collection -> {
-                    try {
-                        return getPostById(collection.getPostId(), userId);
-                    } catch (ResourceNotFoundException e) {
-                        // Log the error and skip this post if it doesn't exist
-                        System.err.println("Bookmarked post not found: " + collection.getPostId() + " for user: " + userId);
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull) // Remove null entries
+                .map(collection -> getPostById(collection.getPostId(), userId))
                 .collect(Collectors.toList());
     }
 
@@ -498,6 +704,23 @@ public class PostService {
             
             // Increment resonance count
             post.setResonance(post.getResonance() + 1);
+            
+            // Update R vector based on post emotion (only on like, not unlike)
+            try {
+                String emotion = post.getEmotion();
+                if (emotion != null && !emotion.trim().isEmpty()) {
+                    logger.info("→ Updating R vector for user: {} with emotion: {} (like)", userId, emotion);
+                    var updatedRVector = rVectorService.updateOnLike(userId, emotion);
+                    logger.info("✓ R vector updated successfully - emotion: {}, new version: {} (like)", 
+                               emotion, updatedRVector.getVersion());
+                } else {
+                    logger.warn("→ Skipping R vector update - post emotion is null or empty (like)");
+                }
+            } catch (Exception e) {
+                // Log error but don't fail the like operation
+                logger.error("✗ Failed to update R vector for user: {} with emotion: {} (like) - {}", 
+                            userId, post.getEmotion(), e.getMessage(), e);
+            }
         }
         
         // Save the updated post
@@ -583,6 +806,48 @@ public class PostService {
         
         // Convert to DTO and return
         return convertToPostDto(post, userId);
+    }
+    
+    /**
+     * Track post view with duration and update R vector if duration >= 15 seconds
+     * 
+     * @param postId The post ID
+     * @param userId The user ID
+     * @param durationSeconds Duration in seconds the user viewed the post
+     * @return PostDto with updated view information
+     */
+    @Transactional
+    public PostDto trackPostViewWithDuration(UUID postId, UUID userId, Integer durationSeconds) {
+        // Use existing trackPostView logic
+        PostDto postDto = trackPostView(postId, userId);
+        
+        // Check if duration is sufficient for R vector update (>= 15 seconds)
+        if (durationSeconds != null && durationSeconds >= 15) {
+            try {
+                // Get the post to extract emotion
+                Post post = postRepository.findById(postId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Post", "id", postId));
+                
+                String emotion = post.getEmotion();
+                if (emotion != null && !emotion.trim().isEmpty()) {
+                    logger.info("→ Updating R vector for user: {} with emotion: {} (view, {}s)", 
+                               userId, emotion, durationSeconds);
+                    var updatedRVector = rVectorService.updateOnView(userId, emotion, durationSeconds);
+                    logger.info("✓ R vector updated successfully - emotion: {}, duration: {}s, new version: {} (view)", 
+                               emotion, durationSeconds, updatedRVector.getVersion());
+                } else {
+                    logger.warn("→ Skipping R vector update - post emotion is null or empty (view, {}s)", durationSeconds);
+                }
+            } catch (Exception e) {
+                // Log error but don't fail the view tracking
+                logger.error("✗ Failed to update R vector for user: {} with duration: {}s (view) - {}", 
+                            userId, durationSeconds, e.getMessage(), e);
+            }
+        } else {
+            logger.debug("→ Skipping R vector update - duration {}s < 15 seconds threshold", durationSeconds);
+        }
+        
+        return postDto;
     }
     
     /**
@@ -972,69 +1237,5 @@ public class PostService {
         
         // Invalidate cache if needed
         // redisService.invalidateFeedCache();
-    }
-
-    /**
-     * Get user interactions (resonances received on user's posts)
-     */
-    public List<UserInteractionItem> getUserInteractions(UUID userId, int page, int limit) {
-        // Get posts by the user
-        List<Post> userPosts = postRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        List<UUID> userPostIds = userPosts.stream().map(Post::getId).collect(Collectors.toList());
-        
-        if (userPostIds.isEmpty()) {
-            return new ArrayList<>();
-        }
-        
-        // Get resonances on user's posts
-        List<PostResonance> resonances = postResonanceRepository.findByPostIdInOrderByResonancedAtDesc(userPostIds);
-        
-        // Convert to UserInteractionItem
-        List<UserInteractionItem> interactions = new ArrayList<>();
-        
-        for (PostResonance resonance : resonances) {
-            try {
-                // Get the post details
-                Post post = userPosts.stream()
-                    .filter(p -> p.getId().equals(resonance.getPostId()))
-                    .findFirst()
-                    .orElse(null);
-                
-                if (post != null) {
-                    // Get user who made the resonance
-                    Optional<ai.youthmind.entity.User> fromUserOpt = userService.getUserById(resonance.getUserId());
-                    if (fromUserOpt.isPresent()) {
-                        ai.youthmind.entity.User fromUser = fromUserOpt.get();
-                        
-                        UserInteractionItem item = new UserInteractionItem();
-                        item.setId(resonance.getId());
-                        item.setInteractionType("RESONANCE");
-                        item.setFromUserId(fromUser.getId());
-                        item.setFromUserName(fromUser.getUsername());
-                        item.setFromUserAvatar(fromUser.getAvatar());
-                        item.setPostId(post.getId());
-                        item.setPostTitle(post.getTitle());
-                        item.setPostPreview(post.getContent().length() > 100 ? 
-                            post.getContent().substring(0, 100) + "..." : post.getContent());
-                        item.setCreatedAt(resonance.getResonancedAt());
-                        
-                        interactions.add(item);
-                    }
-                }
-            } catch (Exception e) {
-                // Log error but continue processing other interactions
-                System.err.println("Error processing interaction: " + e.getMessage());
-            }
-        }
-        
-        // Apply pagination
-        int startIndex = (page - 1) * limit;
-        int endIndex = Math.min(startIndex + limit, interactions.size());
-        
-        if (startIndex >= interactions.size()) {
-            return new ArrayList<>();
-        }
-        
-        return interactions.subList(startIndex, endIndex);
     }
 } 
