@@ -1,5 +1,6 @@
 package ai.youthmind.entity;
 
+import ai.youthmind.enums.Emotion;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -168,6 +169,23 @@ public class RecommendationMappingRule {
         percentages.put("conflicted", conflictedPercentage);
         percentages.put("surprised", surprisedPercentage);
         return percentages;
+    }
+    
+    /**
+     * Get emotion distribution as a map using Emotion enum keys
+     * This is the recommended method for type-safe emotion handling
+     * 
+     * @return Map of Emotion enum to percentages
+     */
+    public java.util.Map<Emotion, Integer> getEmotionDistribution() {
+        java.util.Map<Emotion, Integer> distribution = new java.util.HashMap<>();
+        distribution.put(Emotion.SAD, sadPercentage);
+        distribution.put(Emotion.FEAR, fearPercentage);
+        distribution.put(Emotion.ANGRY, angryPercentage);
+        distribution.put(Emotion.HAPPY, happyPercentage);
+        distribution.put(Emotion.CONFLICTED, conflictedPercentage);
+        distribution.put(Emotion.SURPRISED, surprisedPercentage);
+        return distribution;
     }
 }
 

@@ -66,6 +66,13 @@ public class FeedBlockCache {
     @NotNull(message = "Expires at timestamp is required")
     private LocalDateTime expiresAt;
     
+    @Column(name = "is_consumed", nullable = false)
+    @NotNull(message = "Is consumed flag is required")
+    private Boolean isConsumed = false;
+    
+    @Column(name = "consumed_at")
+    private LocalDateTime consumedAt;
+    
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     
@@ -112,12 +119,31 @@ public class FeedBlockCache {
     }
     
     /**
-     * Check if this feed block is valid (not expired and has posts)
+     * Check if this feed block is valid (not expired, not consumed, and has posts)
      * 
      * @return true if block is valid
      */
     public boolean isValid() {
-        return !isExpired() && getPostCount() > 0;
+        return !isExpired() && !isConsumed && getPostCount() > 0;
+    }
+    
+    /**
+     * Mark this feed block as consumed
+     * Sets isConsumed to true and records the consumption timestamp
+     * Once consumed, this block should not be served to the user again
+     */
+    public void markAsConsumed() {
+        this.isConsumed = true;
+        this.consumedAt = LocalDateTime.now();
+    }
+    
+    /**
+     * Check if this feed block has been consumed by the user
+     * 
+     * @return true if block has been consumed
+     */
+    public boolean wasConsumed() {
+        return Boolean.TRUE.equals(this.isConsumed);
     }
     
     /**

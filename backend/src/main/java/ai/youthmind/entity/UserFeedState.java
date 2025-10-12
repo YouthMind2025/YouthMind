@@ -164,6 +164,33 @@ public class UserFeedState {
     }
     
     /**
+     * Alias for incrementBlockNumber() for API consistency
+     * Increments the current block number to move to the next block
+     * 
+     * @return the new block number
+     */
+    public int incrementBlock() {
+        return incrementBlockNumber();
+    }
+    
+    /**
+     * Get the current R vector version being used
+     * 
+     * @return the current R vector version
+     */
+    public Integer getCurrentRVersion() {
+        return this.currentRVectorVersion;
+    }
+    
+    /**
+     * Alias for updateLastAccessed() for API consistency
+     * Updates the last accessed timestamp (scroll time) to current time
+     */
+    public void updateScrollTime() {
+        updateLastAccessed();
+    }
+    
+    /**
      * Increment the total blocks generated counter
      * 
      * @return the new total count

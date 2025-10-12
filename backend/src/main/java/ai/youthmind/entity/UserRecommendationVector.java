@@ -212,4 +212,64 @@ public class UserRecommendationVector {
             surprisedWeight = surprisedWeight.divide(total, 4, BigDecimal.ROUND_HALF_UP);
         }
     }
+    
+    /**
+     * Get the top three emotions by weight
+     * Used for determining which emotions dominate a user's preferences
+     * Returns emotions sorted by weight in descending order
+     * 
+     * @return List of top 3 emotion names (e.g., ["sad", "fear", "angry"])
+     */
+    public java.util.List<String> getTopThreeEmotions() {
+        java.util.Map<String, BigDecimal> weights = new java.util.HashMap<>();
+        weights.put("sad", sadWeight);
+        weights.put("fear", fearWeight);
+        weights.put("angry", angryWeight);
+        weights.put("happy", happyWeight);
+        weights.put("conflicted", conflictedWeight);
+        weights.put("surprised", surprisedWeight);
+        
+        return weights.entrySet().stream()
+            .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
+            .limit(3)
+            .map(java.util.Map.Entry::getKey)
+            .collect(java.util.stream.Collectors.toList());
+    }
+    
+    /**
+     * Get the total score across all emotions
+     * Alias for getTotalWeight() for backward compatibility
+     * 
+     * @return Sum of all emotion weights
+     */
+    public BigDecimal getTotalScore() {
+        return getTotalWeight();
+    }
+    
+    /**
+     * Check if this R vector needs halving
+     * Returns true if total score >= 80 (threshold defined in recommendation spec)
+     * 
+     * @return true if R vector should be halved to prevent runaway growth
+     */
+    public boolean needsHalving() {
+        BigDecimal total = getTotalWeight();
+        BigDecimal threshold = new BigDecimal("80.0");
+        return total.compareTo(threshold) >= 0;
+    }
+    
+    /**
+     * Halve all emotion weights
+     * Used when R vector grows too large (total >= 80)
+     * Divides all weights by 2 while maintaining proportions
+     */
+    public void halveWeights() {
+        BigDecimal two = new BigDecimal("2.0");
+        sadWeight = sadWeight.divide(two, 4, BigDecimal.ROUND_HALF_UP);
+        fearWeight = fearWeight.divide(two, 4, BigDecimal.ROUND_HALF_UP);
+        angryWeight = angryWeight.divide(two, 4, BigDecimal.ROUND_HALF_UP);
+        happyWeight = happyWeight.divide(two, 4, BigDecimal.ROUND_HALF_UP);
+        conflictedWeight = conflictedWeight.divide(two, 4, BigDecimal.ROUND_HALF_UP);
+        surprisedWeight = surprisedWeight.divide(two, 4, BigDecimal.ROUND_HALF_UP);
+    }
 }

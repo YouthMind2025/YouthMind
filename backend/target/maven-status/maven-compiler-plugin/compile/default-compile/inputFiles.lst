@@ -173,6 +173,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PostEngagementResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PostListResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PostUpdateRequest.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PostViewDurationEvent.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PostViewDurationRequest.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PostViewStats.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\PsychologicalAnalysisRequest.java
@@ -336,6 +337,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\ArticleService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\AsyncModerationService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\AutoScalingService.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\BackfillPostEmotionsJob.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\BackgroundProcessingService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\BatchProcessingService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\BuddhistFactorAnalyzer.java
