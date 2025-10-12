@@ -69,6 +69,9 @@ public class User {
     @Column(name = "ban_expires_at")
     private LocalDateTime banExpiresAt;
     
+    @Column(name = "recommendation_engine_enabled", nullable = false)
+    private Boolean recommendationEngineEnabled = true;
+    
     public enum Role {
         USER, ADMIN
     }
@@ -223,5 +226,13 @@ public class User {
     
     public void setBanExpiresAt(LocalDateTime banExpiresAt) {
         this.banExpiresAt = banExpiresAt;
+    }
+    
+    public Boolean getRecommendationEngineEnabled() {
+        return recommendationEngineEnabled;
+    }
+    
+    public void setRecommendationEngineEnabled(Boolean recommendationEngineEnabled) {
+        this.recommendationEngineEnabled = recommendationEngineEnabled;
     }
 } 
