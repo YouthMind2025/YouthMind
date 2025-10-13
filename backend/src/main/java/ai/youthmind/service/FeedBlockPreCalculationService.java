@@ -50,6 +50,23 @@ public class FeedBlockPreCalculationService {
     }
 
     /**
+     * Get or generate a feed block for a user
+     */
+    public ai.youthmind.entity.FeedBlockCache getOrGenerateBlock(UUID userId, Integer blockNumber) {
+        log.info("TODO: Get or generate block {} for user {}", blockNumber, userId);
+        // TODO: Check cache first, then generate if not available
+        return null;
+    }
+
+    /**
+     * Handle user scroll event to trigger prefetching
+     */
+    public void handleUserScroll(UUID userId) {
+        log.info("TODO: Handle user scroll for user {}", userId);
+        // TODO: Trigger prefetching of next blocks
+    }
+
+    /**
      * Prioritize users based on activity level
      */
     public List<UUID> getActiveUsers() {

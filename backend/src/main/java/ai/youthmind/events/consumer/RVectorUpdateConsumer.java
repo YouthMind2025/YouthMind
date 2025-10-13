@@ -15,8 +15,7 @@ import org.springframework.data.redis.connection.stream.StreamOffset;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.stream.StreamListener;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
+// Spring retry removed - dependency not available
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;

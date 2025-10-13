@@ -146,11 +146,16 @@ public class AdminController {
             try {
                 UserRecommendationVector rVector = rVectorService.getCurrentVector(userId);
                 Map<String, Object> rVectorInfo = new HashMap<>();
-                rVectorInfo.put("version", rVector.getVersion());
-                rVectorInfo.put("createdAt", rVector.getCreatedAt());
-                rVectorInfo.put("updatedAt", rVector.getUpdatedAt());
-                rVectorInfo.put("topEmotions", rVectorService.getTopThreeEmotions(rVector));
-                response.put("rVector", rVectorInfo);
+                if (rVector != null) {
+                    rVectorInfo.put("version", rVector.getVersion());
+                    rVectorInfo.put("createdAt", rVector.getCreatedAt());
+                    rVectorInfo.put("updatedAt", rVector.getUpdatedAt());
+                    rVectorInfo.put("topEmotions", rVectorService.getTopThreeEmotions(rVector));
+                    response.put("rVector", rVectorInfo);
+                } else {
+                    response.put("rVector", null);
+                    response.put("rVectorError", "No R vector found for user");
+                }
             } catch (Exception e) {
                 response.put("rVector", null);
                 response.put("rVectorError", "No R vector found for user");

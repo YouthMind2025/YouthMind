@@ -5,10 +5,7 @@ import ai.youthmind.dto.FeedScrollResponse;
 import ai.youthmind.dto.FeedStatusResponse;
 import ai.youthmind.events.publisher.RecommendationEventPublisher;
 import ai.youthmind.service.FeedBlockService;
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Bucket4j;
-import io.github.bucket4j.Refill;
+// Rate limiting removed - bucket4j dependency not available
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -38,8 +35,9 @@ public class FeedController {
     private final RecommendationEventPublisher eventPublisher;
     private final MeterRegistry meterRegistry;
 
-    // Rate limiting buckets per user
-    private final Map<UUID, Bucket> userBuckets = new ConcurrentHashMap<>();
+    // Simple rate limiting - track request counts per user
+    private final Map<UUID, Integer> userRequestCounts = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> userLastRequestTime = new ConcurrentHashMap<>();
     private static final int MAX_REQUESTS_PER_MINUTE = 100;
 
     // Metrics
@@ -208,21 +206,24 @@ public class FeedController {
     }
 
     /**
-     * Check rate limiting for user
+     * Check rate limiting for user - simple implementation
      */
     private boolean checkRateLimit(UUID userId) {
-        Bucket bucket = userBuckets.computeIfAbsent(userId, this::createBucket);
-        return bucket.tryConsume(1);
-    }
-
-    /**
-     * Create rate limiting bucket for user
-     */
-    private Bucket createBucket(UUID userId) {
-        Bandwidth limit = Bandwidth.classic(MAX_REQUESTS_PER_MINUTE, 
-                Refill.intervally(MAX_REQUESTS_PER_MINUTE, Duration.ofMinutes(1)));
-        return Bucket4j.builder()
-                .addLimit(limit)
-                .build();
+        long currentTime = System.currentTimeMillis();
+        Long lastRequestTime = userLastRequestTime.get(userId);
+        
+        // Reset counter if more than 1 minute has passed
+        if (lastRequestTime == null || (currentTime - lastRequestTime) > 60000) {
+            userRequestCounts.put(userId, 0);
+            userLastRequestTime.put(userId, currentTime);
+        }
+        
+        int currentCount = userRequestCounts.getOrDefault(userId, 0);
+        if (currentCount >= MAX_REQUESTS_PER_MINUTE) {
+            return false;
+        }
+        
+        userRequestCounts.put(userId, currentCount + 1);
+        return true;
     }
 }

@@ -2,6 +2,7 @@ package ai.youthmind.service;
 
 import ai.youthmind.dto.ViewSession;
 import ai.youthmind.entity.Post;
+import ai.youthmind.events.model.Emotion;
 import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.repository.PostRepository;
 import org.slf4j.Logger;
@@ -158,9 +159,9 @@ public class ViewDurationTrackingService {
         if (emotion != null && !emotion.trim().isEmpty()) {
             try {
                 // Use the threshold as the duration for R vector update
-                var updatedRVector = rVectorService.updateOnView(userId, emotion, QUALIFIED_VIEW_THRESHOLD_SECONDS);
-                logger.info("✓ R vector updated for qualified view - user: {}, emotion: {}, version: {}", 
-                           userId, emotion, updatedRVector.getVersion());
+                rVectorService.updateOnView(userId, postId, Emotion.valueOf(emotion.toUpperCase()), QUALIFIED_VIEW_THRESHOLD_SECONDS);
+                logger.info("✓ R vector updated for qualified view - user: {}, emotion: {}", 
+                           userId, emotion);
             } catch (Exception e) {
                 logger.error("✗ Failed to update R vector for qualified view - user: {}, emotion: {} - {}", 
                            userId, emotion, e.getMessage(), e);

@@ -70,15 +70,13 @@ public class RVectorController {
                     .map(Emotion::getValue)
                     .toList();
             
-            RVectorResponse response = new RVectorResponse(
-                    userId,
-                    rVector,
-                    topEmotions,
-                    LocalDateTime.now(), // TODO: Get actual last updated time
-                    10, // TODO: Get actual interaction count
-                    "v1.0", // TODO: Get actual version
-                    0.8 // TODO: Get actual confidence score
-            );
+            RVectorResponse response = new RVectorResponse();
+            response.setUserId(userId);
+            response.setTopEmotions(topEmotions);
+            response.setUpdatedAt(LocalDateTime.now());
+            response.setVersion(10); // TODO: Get actual version
+            response.setTotalWeight(java.math.BigDecimal.valueOf(0.8)); // TODO: Get actual confidence score
+            // TODO: Set weights map from rVector
             
             rVectorRequests.increment();
             

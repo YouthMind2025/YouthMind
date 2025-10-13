@@ -183,4 +183,22 @@ public class RVectorService {
             case DISGUST -> 5; // Map DISGUST to CONFLICTED dimension
         };
     }
+
+    /**
+     * Get top three emotions from an R vector
+     */
+    public List<String> getTopThreeEmotions(Object rVector) {
+        log.info("TODO: Get top three emotions from R vector");
+        // TODO: Implement actual emotion extraction logic
+        return List.of("happy", "sad", "angry"); // Placeholder
+    }
+
+    /**
+     * Get current R vector for a user
+     */
+    public ai.youthmind.entity.UserRecommendationVector getCurrentVector(UUID userId) {
+        log.info("TODO: Get current R vector for user {}", userId);
+        // TODO: Implement actual R vector retrieval logic
+        return null; // Placeholder
+    }
 }

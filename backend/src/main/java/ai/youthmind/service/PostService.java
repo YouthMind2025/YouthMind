@@ -16,6 +16,7 @@ import ai.youthmind.dto.PsychologicalAnalysisResponse;
 import ai.youthmind.util.ModerationUtils;
 import ai.youthmind.entity.AIAnalysis;
 import ai.youthmind.entity.Post;
+import ai.youthmind.events.model.Emotion;
 import ai.youthmind.entity.PostCollection;
 import ai.youthmind.entity.PostResonance;
 import ai.youthmind.entity.PostView;
@@ -274,9 +275,8 @@ public class PostService {
             String emotion = savedPost.getEmotion();
             if (emotion != null && !emotion.trim().isEmpty()) {
                 logger.info("→ Updating R vector for user: {} with emotion: {}", userId, emotion);
-                var updatedRVector = rVectorService.updateOnPost(userId, emotion);
-                logger.info("✓ R vector updated successfully - emotion: {}, new version: {}", 
-                           emotion, updatedRVector.getVersion());
+                rVectorService.updateOnPost(userId, savedPost.getId(), Emotion.valueOf(emotion.toUpperCase()));
+                logger.info("✓ R vector updated successfully - emotion: {}", emotion);
             } else {
                 logger.warn("→ Skipping R vector update - post emotion is null or empty");
             }
@@ -712,9 +712,8 @@ public class PostService {
                 String emotion = post.getEmotion();
                 if (emotion != null && !emotion.trim().isEmpty()) {
                     logger.info("→ Updating R vector for user: {} with emotion: {} (like)", userId, emotion);
-                    var updatedRVector = rVectorService.updateOnLike(userId, emotion);
-                    logger.info("✓ R vector updated successfully - emotion: {}, new version: {} (like)", 
-                               emotion, updatedRVector.getVersion());
+                    rVectorService.updateOnLike(userId, post.getId(), Emotion.valueOf(emotion.toUpperCase()));
+                    logger.info("✓ R vector updated successfully - emotion: {} (like)", emotion);
                 } else {
                     logger.warn("→ Skipping R vector update - post emotion is null or empty (like)");
                 }
@@ -834,9 +833,9 @@ public class PostService {
                 if (emotion != null && !emotion.trim().isEmpty()) {
                     logger.info("→ Updating R vector for user: {} with emotion: {} (view, {}s)", 
                                userId, emotion, durationSeconds);
-                    var updatedRVector = rVectorService.updateOnView(userId, emotion, durationSeconds);
-                    logger.info("✓ R vector updated successfully - emotion: {}, duration: {}s, new version: {} (view)", 
-                               emotion, durationSeconds, updatedRVector.getVersion());
+                    rVectorService.updateOnView(userId, post.getId(), Emotion.valueOf(emotion.toUpperCase()), durationSeconds);
+                    logger.info("✓ R vector updated successfully - emotion: {}, duration: {}s (view)", 
+                               emotion, durationSeconds);
                 } else {
                     logger.warn("→ Skipping R vector update - post emotion is null or empty (view, {}s)", durationSeconds);
                 }

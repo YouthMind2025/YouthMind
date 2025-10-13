@@ -10,8 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.stream.RecordId;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
+// Spring retry removed - dependency not available
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -69,11 +68,7 @@ public class RecommendationEventPublisher {
     /**
      * Publish a PostCreatedEvent to the R vector updates stream
      */
-    @Retryable(
-        value = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100, multiplier = 2)
-    )
+    // Retry logic removed - spring-retry dependency not available
     public RecordId publishPostCreated(UUID userId, UUID postId, Emotion emotion) {
         return publishPostCreated(userId, postId, emotion, null, null, null);
     }
@@ -81,11 +76,7 @@ public class RecommendationEventPublisher {
     /**
      * Publish a PostCreatedEvent object directly
      */
-    @Retryable(
-        value = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100, multiplier = 2)
-    )
+    // Retry logic removed - spring-retry dependency not available
     public RecordId publishPostCreated(PostCreatedEvent event) {
         return publishToStream("recommendation:rvector-updates", event, postCreatedEventsPublished);
     }
@@ -93,11 +84,7 @@ public class RecommendationEventPublisher {
     /**
      * Publish a PostCreatedEvent with additional details
      */
-    @Retryable(
-        value = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100, multiplier = 2)
-    )
+    // Retry logic removed - spring-retry dependency not available
     public RecordId publishPostCreated(UUID userId, UUID postId, Emotion emotion, 
                                      String content, String category, String sessionId) {
         PostCreatedEvent event = new PostCreatedEvent(userId, postId, emotion, content, category);
@@ -111,11 +98,7 @@ public class RecommendationEventPublisher {
     /**
      * Publish a PostViewedEvent to the R vector updates stream (only if duration ≥ 15s)
      */
-    @Retryable(
-        value = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100, multiplier = 2)
-    )
+    // Retry logic removed - spring-retry dependency not available
     public RecordId publishPostViewed(UUID userId, UUID postId, Emotion emotion, Integer duration) {
         return publishPostViewed(userId, postId, emotion, duration, null);
     }
@@ -123,11 +106,7 @@ public class RecommendationEventPublisher {
     /**
      * Publish a PostViewedEvent object directly
      */
-    @Retryable(
-        value = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100, multiplier = 2)
-    )
+    // Retry logic removed - spring-retry dependency not available
     public RecordId publishPostViewed(PostViewedEvent event) {
         // Only publish if duration is sufficient for R vector update
         if (!event.shouldUpdateRVector()) {
@@ -141,11 +120,7 @@ public class RecommendationEventPublisher {
     /**
      * Publish a PostViewedEvent with session information
      */
-    @Retryable(
-        value = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100, multiplier = 2)
-    )
+    // Retry logic removed - spring-retry dependency not available
     public RecordId publishPostViewed(UUID userId, UUID postId, Emotion emotion, 
                                     Integer duration, String sessionId) {
         PostViewedEvent event = new PostViewedEvent(userId, postId, emotion, duration, sessionId);
@@ -163,11 +138,7 @@ public class RecommendationEventPublisher {
     /**
      * Publish a PostLikedEvent to the R vector updates stream
      */
-    @Retryable(
-        value = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100, multiplier = 2)
-    )
+    // Retry logic removed - spring-retry dependency not available
     public RecordId publishPostLiked(UUID userId, UUID postId, Emotion emotion) {
         return publishPostLiked(userId, postId, emotion, true, null, null);
     }
@@ -175,11 +146,7 @@ public class RecommendationEventPublisher {
     /**
      * Publish a PostLikedEvent object directly
      */
-    @Retryable(
-        value = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100, multiplier = 2)
-    )
+    // Retry logic removed - spring-retry dependency not available
     public RecordId publishPostLiked(PostLikedEvent event) {
         return publishToStream("recommendation:rvector-updates", event, postLikedEventsPublished);
     }
@@ -187,11 +154,7 @@ public class RecommendationEventPublisher {
     /**
      * Publish a PostLikedEvent with additional details
      */
-    @Retryable(
-        value = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100, multiplier = 2)
-    )
+    // Retry logic removed - spring-retry dependency not available
     public RecordId publishPostLiked(UUID userId, UUID postId, Emotion emotion, 
                                    Boolean isLike, UUID postCreatorId, String sessionId) {
         PostLikedEvent event = new PostLikedEvent(userId, postId, emotion, isLike, postCreatorId);
@@ -205,11 +168,7 @@ public class RecommendationEventPublisher {
     /**
      * Publish a UserScrolledEvent to the block pre-calculation stream
      */
-    @Retryable(
-        value = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100, multiplier = 2)
-    )
+    // Retry logic removed - spring-retry dependency not available
     public RecordId publishUserScrolled(UUID userId, Integer currentBlock) {
         return publishUserScrolled(userId, currentBlock, "down", null, null);
     }
@@ -217,11 +176,7 @@ public class RecommendationEventPublisher {
     /**
      * Publish a UserScrolledEvent object directly
      */
-    @Retryable(
-        value = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100, multiplier = 2)
-    )
+    // Retry logic removed - spring-retry dependency not available
     public RecordId publishUserScrolled(UserScrolledEvent event) {
         return publishToStream("recommendation:block-precalc", event, userScrolledEventsPublished);
     }
@@ -229,11 +184,7 @@ public class RecommendationEventPublisher {
     /**
      * Publish a UserScrolledEvent with additional details
      */
-    @Retryable(
-        value = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 100, multiplier = 2)
-    )
+    // Retry logic removed - spring-retry dependency not available
     public RecordId publishUserScrolled(UUID userId, Integer currentBlock, 
                                       String scrollDirection, Integer timeOnBlock, String sessionId) {
         UserScrolledEvent event = new UserScrolledEvent(userId, currentBlock, scrollDirection, timeOnBlock);
