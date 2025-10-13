@@ -65,7 +65,6 @@ public class RedisEventConfig {
                         .pollTimeout(Duration.ofMillis(100))
                         .batchSize(10)
                         .executor(java.util.concurrent.Executors.newFixedThreadPool(4))
-                        .targetType(String.class)
                         .build();
 
         StreamMessageListenerContainer<String, MapRecord<String, String, String>> container =
@@ -182,7 +181,8 @@ public class RedisEventConfig {
         
         private boolean checkConsumerGroup(RedisTemplate<String, Object> template, String streamName, String groupName) {
             try {
-                template.opsForStream().consumerGroups(streamName);
+                // Try to read from the stream to verify it exists
+                template.opsForStream().range(streamName, org.springframework.data.domain.Range.unbounded(), org.springframework.data.redis.connection.Limit.limit().count(1));
                 return true;
             } catch (Exception e) {
                 return false;

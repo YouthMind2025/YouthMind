@@ -66,8 +66,8 @@ public class PostService {
     @Autowired
     private CommentRepository commentRepository;
     
-    //@Autowired
-    //private RedisService redisService;
+    @Autowired
+    private RedisService redisService;
     
     @Autowired
     private PsychologicalStateCacheService psychologicalStateCacheService;
@@ -604,8 +604,7 @@ public class PostService {
             query.toLowerCase(), 
             emotion != null ? emotion.toLowerCase() : "all", 
             page, size, sortBy);
-        // FeedResponse cachedResults = redisService.getCachedFeed(cacheKey);
-        FeedResponse cachedResults = null; // Redis disabled, no cached results
+        FeedResponse cachedResults = redisService.getCachedFeed(cacheKey);
         if (cachedResults != null) {
             return cachedResults;
         }
