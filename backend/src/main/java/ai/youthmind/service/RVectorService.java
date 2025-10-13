@@ -1,339 +1,186 @@
 package ai.youthmind.service;
 
-import ai.youthmind.entity.UserRecommendationVector;
-import ai.youthmind.repository.UserRecommendationVectorRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import ai.youthmind.events.model.Emotion;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Service for managing user recommendation vectors
- * Handles emotion-based recommendation weight updates and retrieval
+ * Service for R vector operations with caching support.
+ * TODO: Implement actual R vector calculations and persistence.
  */
+@Slf4j
 @Service
-@Transactional
+@RequiredArgsConstructor
 public class RVectorService {
-    
-    private static final Logger logger = LoggerFactory.getLogger(RVectorService.class);
-    
-    @Autowired
-    private UserRecommendationVectorRepository rVectorRepository;
-    
-    // Default emotion weights for new users
-    private static final BigDecimal DEFAULT_WEIGHT = new BigDecimal("0.1000");
-    
-    // Update factors for different interactions
-    private static final BigDecimal POST_UPDATE_FACTOR = new BigDecimal("0.05");
-    private static final BigDecimal VIEW_UPDATE_FACTOR = new BigDecimal("0.03");
-    private static final BigDecimal LIKE_UPDATE_FACTOR = new BigDecimal("0.08");
-    
-    // Halving mechanism threshold
-    private static final BigDecimal HALVING_THRESHOLD = new BigDecimal("0.8");
-    
-    // Version history retention
-    private static final int DEFAULT_VERSION_RETENTION = 10;
-    
+
+    private final RecommendationCacheService cacheService;
+
     /**
-     * Initialize recommendation vector for a new user
+     * Update R vector when a user creates a post
      */
-    public UserRecommendationVector initializeForUser(UUID userId) {
-        logger.info("Initializing recommendation vector for user: {}", userId);
+    public void updateOnPost(UUID userId, UUID postId, Emotion emotion) {
+        log.info("TODO: Update R vector for user {} on post creation {} with emotion {}", 
+                userId, postId, emotion);
         
-        // Check if user already has a vector
-        if (rVectorRepository.existsByUserId(userId)) {
-            logger.warn("User {} already has a recommendation vector", userId);
-            return getCurrentVector(userId);
+        // Get current R vector
+        List<Double> currentRVector = getRVector(userId);
+        
+        // TODO: Implement actual R vector update logic for post creation
+        // For now, simulate a small update based on emotion
+        List<Double> updatedRVector = simulateRVectorUpdate(currentRVector, emotion, 0.1);
+        
+        // Cache the updated R vector
+        cacheService.cacheRVector(userId, updatedRVector);
+        
+        log.debug("Updated R vector for user {} after post creation", userId);
+    }
+
+    /**
+     * Update R vector when a user views a post (duration >= 15s)
+     */
+    public void updateOnView(UUID userId, UUID postId, Emotion emotion, Integer duration) {
+        log.info("TODO: Update R vector for user {} on post view {} with emotion {} for {}s", 
+                userId, postId, emotion, duration);
+        
+        // Get current R vector
+        List<Double> currentRVector = getRVector(userId);
+        
+        // TODO: Implement actual R vector update logic for post viewing
+        // For now, simulate a small update based on emotion and duration
+        double intensity = Math.min(duration / 60.0, 1.0); // Normalize duration to 0-1
+        List<Double> updatedRVector = simulateRVectorUpdate(currentRVector, emotion, intensity * 0.05);
+        
+        // Cache the updated R vector
+        cacheService.cacheRVector(userId, updatedRVector);
+        
+        log.debug("Updated R vector for user {} after post view (duration: {}s)", userId, duration);
+    }
+
+    /**
+     * Update R vector when a user likes a post
+     */
+    public void updateOnLike(UUID userId, UUID postId, Emotion emotion) {
+        log.info("TODO: Update R vector for user {} on post like {} with emotion {}", 
+                userId, postId, emotion);
+        
+        // Get current R vector
+        List<Double> currentRVector = getRVector(userId);
+        
+        // TODO: Implement actual R vector update logic for post liking
+        // For now, simulate a moderate update based on emotion
+        List<Double> updatedRVector = simulateRVectorUpdate(currentRVector, emotion, 0.2);
+        
+        // Cache the updated R vector
+        cacheService.cacheRVector(userId, updatedRVector);
+        
+        log.debug("Updated R vector for user {} after post like", userId);
+    }
+
+    /**
+     * Get current R vector for a user (6-dimensional)
+     */
+    public List<Double> getRVector(UUID userId) {
+        // Try to get from cache first
+        List<Double> cachedRVector = cacheService.getRVector(userId);
+        if (cachedRVector != null) {
+            log.debug("Retrieved R vector from cache for user {}", userId);
+            return cachedRVector;
         }
         
-        // Create new vector with default weights
-        UserRecommendationVector newVector = new UserRecommendationVector();
-        newVector.setUserId(userId);
-        newVector.setVersion(1);
-        newVector.setSadWeight(DEFAULT_WEIGHT);
-        newVector.setFearWeight(DEFAULT_WEIGHT);
-        newVector.setAngryWeight(DEFAULT_WEIGHT);
-        newVector.setHappyWeight(DEFAULT_WEIGHT);
-        newVector.setConflictedWeight(DEFAULT_WEIGHT);
-        newVector.setSurprisedWeight(DEFAULT_WEIGHT);
+        log.info("TODO: Get R vector for user {} from database", userId);
         
-        UserRecommendationVector savedVector = rVectorRepository.save(newVector);
-        logger.info("✓ Initialized recommendation vector for user {} with version {}", userId, savedVector.getVersion());
+        // TODO: Get from database or create default
+        List<Double> defaultRVector = List.of(0.2, 0.1, 0.3, 0.1, 0.2, 0.1);
         
-        return savedVector;
+        // Cache the default R vector
+        cacheService.cacheRVector(userId, defaultRVector);
+        
+        return defaultRVector;
     }
-    
+
     /**
-     * Get the current (latest version) recommendation vector for a user
+     * Get top 3 emotions from R vector
      */
-    public UserRecommendationVector getCurrentVector(UUID userId) {
-        logger.debug("Getting current recommendation vector for user: {}", userId);
+    public List<Emotion> getTopEmotions(UUID userId, int count) {
+        log.debug("Getting top {} emotions for user {}", count, userId);
         
-        Optional<UserRecommendationVector> vectorOpt = rVectorRepository.findCurrentByUserId(userId);
-        if (vectorOpt.isEmpty()) {
-            logger.warn("No recommendation vector found for user {}, initializing...", userId);
-            return initializeForUser(userId);
+        List<Double> rVector = getRVector(userId);
+        
+        // TODO: Calculate top emotions from R vector
+        // For now, return based on highest values
+        return List.of(Emotion.HAPPY, Emotion.SAD, Emotion.ANGRY);
+    }
+
+    /**
+     * Reset R vector to default state
+     */
+    public void resetRVector(UUID userId) {
+        log.info("Resetting R vector for user {}", userId);
+        
+        // TODO: Reset R vector to default values in database
+        List<Double> defaultRVector = List.of(0.2, 0.1, 0.3, 0.1, 0.2, 0.1);
+        
+        // Update cache
+        cacheService.cacheRVector(userId, defaultRVector);
+        
+        log.debug("Reset R vector for user {}", userId);
+    }
+
+    /**
+     * Initialize R vector for new user
+     */
+    public void initializeRVector(UUID userId) {
+        log.info("Initializing R vector for new user {}", userId);
+        
+        // TODO: Initialize with default R vector in database
+        List<Double> defaultRVector = List.of(0.2, 0.1, 0.3, 0.1, 0.2, 0.1);
+        
+        // Cache the default R vector
+        cacheService.cacheRVector(userId, defaultRVector);
+        
+        log.debug("Initialized R vector for user {}", userId);
+    }
+
+    /**
+     * Simulate R vector update (placeholder implementation)
+     */
+    private List<Double> simulateRVectorUpdate(List<Double> currentRVector, Emotion emotion, double intensity) {
+        List<Double> updatedRVector = new java.util.ArrayList<>(currentRVector);
+        
+        // Get emotion index (0-5 for 6 emotions)
+        int emotionIndex = getEmotionIndex(emotion);
+        
+        // Update the specific emotion dimension
+        double currentValue = updatedRVector.get(emotionIndex);
+        double newValue = Math.min(1.0, currentValue + intensity);
+        updatedRVector.set(emotionIndex, newValue);
+        
+        // Normalize the vector to sum to 1.0
+        double sum = updatedRVector.stream().mapToDouble(Double::doubleValue).sum();
+        for (int i = 0; i < updatedRVector.size(); i++) {
+            updatedRVector.set(i, updatedRVector.get(i) / sum);
         }
         
-        return vectorOpt.get();
+        return updatedRVector;
     }
-    
+
     /**
-     * Get a specific version of recommendation vector for a user
+     * Get emotion index for R vector (6 dimensions)
      */
-    public UserRecommendationVector getVectorByVersion(UUID userId, int version) {
-        logger.debug("Getting recommendation vector version {} for user: {}", version, userId);
-        
-        Optional<UserRecommendationVector> vectorOpt = rVectorRepository.findByUserIdAndVersion(userId, version);
-        if (vectorOpt.isEmpty()) {
-            logger.warn("No recommendation vector version {} found for user {}", version, userId);
-            return null;
-        }
-        
-        return vectorOpt.get();
-    }
-    
-    /**
-     * Update recommendation vector when user creates a post
-     */
-    public UserRecommendationVector updateOnPost(UUID userId, String emotion) {
-        logger.info("Updating recommendation vector for user {} on post creation with emotion: {}", userId, emotion);
-        
-        UserRecommendationVector currentVector = getCurrentVector(userId);
-        UserRecommendationVector newVector = createNewVersion(currentVector);
-        
-        // Apply update factor
-        BigDecimal updateAmount = POST_UPDATE_FACTOR;
-        updateEmotionWeight(newVector, emotion, updateAmount);
-        
-        // Apply halving mechanism if needed
-        applyHalvingMechanism(newVector);
-        
-        // Normalize weights
-        newVector.normalize();
-        
-        UserRecommendationVector savedVector = rVectorRepository.save(newVector);
-        logger.info("✓ Updated recommendation vector for user {} to version {} (post: {})", 
-                   userId, savedVector.getVersion(), emotion);
-        
-        // Cleanup old versions
-        cleanupOldVersions(userId, DEFAULT_VERSION_RETENTION);
-        
-        return savedVector;
-    }
-    
-    /**
-     * Update recommendation vector when user views a post
-     */
-    public UserRecommendationVector updateOnView(UUID userId, String emotion, Integer durationSeconds) {
-        logger.info("Updating recommendation vector for user {} on post view with emotion: {} (duration: {}s)", 
-                   userId, emotion, durationSeconds);
-        
-        UserRecommendationVector currentVector = getCurrentVector(userId);
-        UserRecommendationVector newVector = createNewVersion(currentVector);
-        
-        // Apply update factor (scaled by duration)
-        BigDecimal baseUpdateAmount = VIEW_UPDATE_FACTOR;
-        BigDecimal durationMultiplier = BigDecimal.ONE;
-        
-        if (durationSeconds != null && durationSeconds > 0) {
-            // Scale update by duration (max 2x for 30+ seconds)
-            durationMultiplier = BigDecimal.valueOf(Math.min(2.0, 1.0 + (durationSeconds / 30.0)));
-        }
-        
-        BigDecimal updateAmount = baseUpdateAmount.multiply(durationMultiplier);
-        updateEmotionWeight(newVector, emotion, updateAmount);
-        
-        // Apply halving mechanism if needed
-        applyHalvingMechanism(newVector);
-        
-        // Normalize weights
-        newVector.normalize();
-        
-        UserRecommendationVector savedVector = rVectorRepository.save(newVector);
-        logger.info("✓ Updated recommendation vector for user {} to version {} (view: {}, duration: {}s)", 
-                   userId, savedVector.getVersion(), emotion, durationSeconds);
-        
-        // Cleanup old versions
-        cleanupOldVersions(userId, DEFAULT_VERSION_RETENTION);
-        
-        return savedVector;
-    }
-    
-    /**
-     * Update recommendation vector when user likes a post
-     */
-    public UserRecommendationVector updateOnLike(UUID userId, String emotion) {
-        logger.info("Updating recommendation vector for user {} on post like with emotion: {}", userId, emotion);
-        
-        UserRecommendationVector currentVector = getCurrentVector(userId);
-        UserRecommendationVector newVector = createNewVersion(currentVector);
-        
-        // Apply update factor
-        BigDecimal updateAmount = LIKE_UPDATE_FACTOR;
-        updateEmotionWeight(newVector, emotion, updateAmount);
-        
-        // Apply halving mechanism if needed
-        applyHalvingMechanism(newVector);
-        
-        // Normalize weights
-        newVector.normalize();
-        
-        UserRecommendationVector savedVector = rVectorRepository.save(newVector);
-        logger.info("✓ Updated recommendation vector for user {} to version {} (like: {})", 
-                   userId, savedVector.getVersion(), emotion);
-        
-        // Cleanup old versions
-        cleanupOldVersions(userId, DEFAULT_VERSION_RETENTION);
-        
-        return savedVector;
-    }
-    
-    /**
-     * Apply halving mechanism to prevent any single emotion from dominating
-     */
-    public void applyHalvingMechanism(UserRecommendationVector vector) {
-        logger.debug("Applying halving mechanism to recommendation vector");
-        
-        Map<String, BigDecimal> weights = vector.getAllEmotionWeights();
-        
-        for (Map.Entry<String, BigDecimal> entry : weights.entrySet()) {
-            if (entry.getValue().compareTo(HALVING_THRESHOLD) > 0) {
-                BigDecimal halvedWeight = entry.getValue().divide(BigDecimal.valueOf(2), 4, RoundingMode.HALF_UP);
-                vector.setEmotionWeight(entry.getKey(), halvedWeight);
-                logger.debug("Halved {} weight from {} to {}", entry.getKey(), entry.getValue(), halvedWeight);
-            }
-        }
-    }
-    
-    /**
-     * Get the top three emotions by weight
-     */
-    public List<String> getTopThreeEmotions(UserRecommendationVector vector) {
-        if (vector == null) {
-            return Arrays.asList("sad", "fear", "angry"); // Default fallback
-        }
-        
-        Map<String, BigDecimal> weights = vector.getAllEmotionWeights();
-        
-        return weights.entrySet().stream()
-                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
-                .limit(3)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * Get the top three emotions for a user
-     */
-    public List<String> getTopThreeEmotions(UUID userId) {
-        UserRecommendationVector vector = getCurrentVector(userId);
-        return getTopThreeEmotions(vector);
-    }
-    
-    /**
-     * Cleanup old recommendation vector versions
-     */
-    public int cleanupOldVersions(UUID userId, int keepLatestVersions) {
-        logger.info("Cleaning up old recommendation vector versions for user {} (keeping latest {})", 
-                   userId, keepLatestVersions);
-        
-        Optional<Integer> latestVersionOpt = rVectorRepository.findLatestVersionByUserId(userId);
-        if (latestVersionOpt.isEmpty()) {
-            logger.warn("No recommendation vectors found for user {}", userId);
-            return 0;
-        }
-        
-        Integer latestVersion = latestVersionOpt.get();
-        Integer cutoffVersion = latestVersion - keepLatestVersions;
-        
-        if (cutoffVersion <= 0) {
-            logger.info("No old versions to cleanup for user {} (latest version: {})", userId, latestVersion);
-            return 0;
-        }
-        
-        int deletedCount = rVectorRepository.deleteByUserIdAndVersionLessThan(userId, cutoffVersion);
-        logger.info("✓ Cleaned up {} old recommendation vector versions for user {}", deletedCount, userId);
-        
-        return deletedCount;
-    }
-    
-    /**
-     * Get recommendation vector statistics for a user
-     */
-    public Map<String, Object> getVectorStatistics(UUID userId) {
-        logger.debug("Getting recommendation vector statistics for user: {}", userId);
-        
-        Map<String, Object> stats = new HashMap<>();
-        
-        // Basic counts
-        long totalVectors = rVectorRepository.countByUserId(userId);
-        stats.put("totalVectors", totalVectors);
-        
-        // Current vector info
-        UserRecommendationVector currentVector = getCurrentVector(userId);
-        stats.put("currentVersion", currentVector.getVersion());
-        stats.put("currentWeights", currentVector.getAllEmotionWeights());
-        stats.put("topThreeEmotions", getTopThreeEmotions(currentVector));
-        
-        // Version history
-        List<UserRecommendationVector> allVectors = rVectorRepository.findByUserIdOrderByVersionDesc(userId);
-        stats.put("versionHistory", allVectors.stream()
-                .map(v -> Map.of("version", v.getVersion(), "createdAt", v.getCreatedAt()))
-                .collect(Collectors.toList()));
-        
-        return stats;
-    }
-    
-    /**
-     * Create a new version of the recommendation vector
-     */
-    private UserRecommendationVector createNewVersion(UserRecommendationVector currentVector) {
-        UserRecommendationVector newVector = new UserRecommendationVector();
-        newVector.setUserId(currentVector.getUserId());
-        newVector.setVersion(currentVector.getVersion() + 1);
-        
-        // Copy current weights
-        newVector.setSadWeight(currentVector.getSadWeight());
-        newVector.setFearWeight(currentVector.getFearWeight());
-        newVector.setAngryWeight(currentVector.getAngryWeight());
-        newVector.setHappyWeight(currentVector.getHappyWeight());
-        newVector.setConflictedWeight(currentVector.getConflictedWeight());
-        newVector.setSurprisedWeight(currentVector.getSurprisedWeight());
-        
-        return newVector;
-    }
-    
-    /**
-     * Update emotion weight with the specified amount
-     */
-    private void updateEmotionWeight(UserRecommendationVector vector, String emotion, BigDecimal updateAmount) {
-        if (emotion == null || emotion.trim().isEmpty()) {
-            logger.warn("Invalid emotion provided for weight update: {}", emotion);
-            return;
-        }
-        
-        BigDecimal currentWeight = vector.getEmotionWeight(emotion);
-        if (currentWeight == null) {
-            logger.warn("Unknown emotion for weight update: {}", emotion);
-            return;
-        }
-        
-        BigDecimal newWeight = currentWeight.add(updateAmount);
-        
-        // Ensure weight stays within bounds [0.0, 1.0]
-        newWeight = newWeight.max(BigDecimal.ZERO).min(BigDecimal.ONE);
-        
-        vector.setEmotionWeight(emotion, newWeight);
-        logger.debug("Updated {} weight from {} to {} (change: {})", 
-                    emotion, currentWeight, newWeight, updateAmount);
+    private int getEmotionIndex(Emotion emotion) {
+        return switch (emotion) {
+            case HAPPY, JOY -> 0;
+            case SAD, SADNESS -> 1;
+            case ANGRY, ANGER -> 2;
+            case FEAR -> 3;
+            case SURPRISED, SURPRISE -> 4;
+            case CONFLICTED -> 5;
+            case DISGUST -> 5; // Map DISGUST to CONFLICTED dimension
+        };
     }
 }
-
