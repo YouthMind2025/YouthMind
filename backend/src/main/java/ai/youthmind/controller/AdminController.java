@@ -8,8 +8,6 @@ import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.UserRepository;
 import ai.youthmind.service.AIEmotionClassificationService;
-import ai.youthmind.service.RVectorService;
-import ai.youthmind.service.FeedBlockPreCalculationService;
 import ai.youthmind.service.DataMigrationService;
 import ai.youthmind.util.ResponseBuilder;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,11 +43,6 @@ public class AdminController {
     @Autowired
     private UserRepository userRepository;
     
-    @Autowired
-    private RVectorService rVectorService;
-    
-    @Autowired
-    private FeedBlockPreCalculationService feedBlockPreCalculationService;
     
     @Autowired
     private PostRepository postRepository;
@@ -144,13 +137,15 @@ public class AdminController {
             
             // Get R vector information if available
             try {
-                UserRecommendationVector rVector = rVectorService.getCurrentVector(userId);
+                // UserRecommendationVector rVector = rVectorService.getCurrentVector(userId);
+                UserRecommendationVector rVector = null; // Service removed
                 Map<String, Object> rVectorInfo = new HashMap<>();
                 if (rVector != null) {
                     rVectorInfo.put("version", rVector.getVersion());
                     rVectorInfo.put("createdAt", rVector.getCreatedAt());
                     rVectorInfo.put("updatedAt", rVector.getUpdatedAt());
-                    rVectorInfo.put("topEmotions", rVectorService.getTopThreeEmotions(rVector));
+                    // rVectorInfo.put("topEmotions", rVectorService.getTopThreeEmotions(rVector));
+                    rVectorInfo.put("topEmotions", List.of("Service removed")); // Service removed
                     response.put("rVector", rVectorInfo);
                 } else {
                     response.put("rVector", null);

@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.stream.RecordId;
 import org.springframework.data.redis.core.RedisTemplate;
 // Spring retry removed - dependency not available
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -24,7 +25,7 @@ import java.util.UUID;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
+@ConditionalOnProperty(name = "youthmind.recommendation.enabled", havingValue = "true", matchIfMissing = false)
 public class RecommendationEventPublisher {
 
     private final RedisTemplate<String, Object> redisStreamsTemplate;

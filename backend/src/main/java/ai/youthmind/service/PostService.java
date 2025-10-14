@@ -29,7 +29,6 @@ import ai.youthmind.repository.PostResonanceRepository;
 import ai.youthmind.repository.PostViewRepository;
 import ai.youthmind.repository.UserRepository;
 import ai.youthmind.service.RedisService;
-import ai.youthmind.service.FeedBlockPreCalculationService;
 import ai.youthmind.entity.User;
 import ai.youthmind.entity.FeedBlockCache;
 import ai.youthmind.util.PerformanceMonitor;
@@ -93,8 +92,6 @@ public class PostService {
     @Autowired
     private UserRepository userRepository;
     
-    @Autowired
-    private FeedBlockPreCalculationService feedBlockPreCalculationService;
     
     /**
      * Update or insert AI analysis result for a post
@@ -142,8 +139,6 @@ public class PostService {
     @Autowired
     private ModerationLoggingService moderationLoggingService;
     
-    @Autowired
-    private RVectorService rVectorService;
     
     @Autowired
     private AIEmotionClassificationService aiEmotionClassificationService;
@@ -274,9 +269,9 @@ public class PostService {
         try {
             String emotion = savedPost.getEmotion();
             if (emotion != null && !emotion.trim().isEmpty()) {
-                logger.info("→ Updating R vector for user: {} with emotion: {}", userId, emotion);
-                rVectorService.updateOnPost(userId, savedPost.getId(), Emotion.valueOf(emotion.toUpperCase()));
-                logger.info("✓ R vector updated successfully - emotion: {}", emotion);
+                logger.info("→ R vector service removed - skipping R vector update for user: {} with emotion: {}", userId, emotion);
+                // rVectorService.updateOnPost(userId, savedPost.getId(), Emotion.valueOf(emotion.toUpperCase()));
+                logger.info("✓ R vector update skipped - service removed");
             } else {
                 logger.warn("→ Skipping R vector update - post emotion is null or empty");
             }
@@ -416,7 +411,8 @@ public class PostService {
             logger.debug("Generating personalized feed for user {} page {}", userId, page);
             
             // Get personalized feed block
-            FeedBlockCache block = feedBlockPreCalculationService.getOrGenerateBlock(userId, page + 1);
+            // FeedBlockCache block = feedBlockPreCalculationService.getOrGenerateBlock(userId, page + 1);
+            FeedBlockCache block = null; // Service removed
             
             // Convert block posts to DTOs
             List<PostDto> postDtos = convertBlockPostsToDtos(block.getPostIds(), userId);
@@ -712,7 +708,8 @@ public class PostService {
                 String emotion = post.getEmotion();
                 if (emotion != null && !emotion.trim().isEmpty()) {
                     logger.info("→ Updating R vector for user: {} with emotion: {} (like)", userId, emotion);
-                    rVectorService.updateOnLike(userId, post.getId(), Emotion.valueOf(emotion.toUpperCase()));
+                    // rVectorService.updateOnLike(userId, post.getId(), Emotion.valueOf(emotion.toUpperCase()));
+                    logger.info("R vector service removed - skipping like update");
                     logger.info("✓ R vector updated successfully - emotion: {} (like)", emotion);
                 } else {
                     logger.warn("→ Skipping R vector update - post emotion is null or empty (like)");
@@ -833,7 +830,8 @@ public class PostService {
                 if (emotion != null && !emotion.trim().isEmpty()) {
                     logger.info("→ Updating R vector for user: {} with emotion: {} (view, {}s)", 
                                userId, emotion, durationSeconds);
-                    rVectorService.updateOnView(userId, post.getId(), Emotion.valueOf(emotion.toUpperCase()), durationSeconds);
+                    // rVectorService.updateOnView(userId, post.getId(), Emotion.valueOf(emotion.toUpperCase()), durationSeconds);
+                    logger.info("R vector service removed - skipping view update");
                     logger.info("✓ R vector updated successfully - emotion: {}, duration: {}s (view)", 
                                emotion, durationSeconds);
                 } else {
@@ -1269,7 +1267,8 @@ public class PostService {
             
             // Step 1: Get or generate feed block
             logger.debug("Step 1: Getting or generating block {} for user {}", blockNumber, userId);
-            FeedBlockCache block = feedBlockPreCalculationService.getOrGenerateBlock(userId, blockNumber);
+            // FeedBlockCache block = feedBlockPreCalculationService.getOrGenerateBlock(userId, blockNumber);
+            FeedBlockCache block = null; // Service removed
             
             if (block == null) {
                 logger.error("Failed to get or generate block {} for user {}", blockNumber, userId);
@@ -1321,7 +1320,8 @@ public class PostService {
                 logger.info("Triggering prefetch for user {} next block {}", userId, blockNumber + 1);
                 try {
                     // Trigger prefetch asynchronously
-                    feedBlockPreCalculationService.handleUserScroll(userId);
+                    // feedBlockPreCalculationService.handleUserScroll(userId);
+                    logger.info("Feed block pre-calculation service removed - skipping scroll handling");
                     logger.debug("Prefetch triggered successfully for user {}", userId);
                 } catch (Exception e) {
                     logger.warn("Failed to trigger prefetch for user {}: {}", userId, e.getMessage(), e);
@@ -1391,7 +1391,8 @@ public class PostService {
             
             // Check if block exists in cache by trying to get it
             try {
-                FeedBlockCache cachedBlock = feedBlockPreCalculationService.getOrGenerateBlock(userId, nextBlockNumber);
+                // FeedBlockCache cachedBlock = feedBlockPreCalculationService.getOrGenerateBlock(userId, nextBlockNumber);
+                FeedBlockCache cachedBlock = null; // Service removed
                 boolean available = cachedBlock != null && !cachedBlock.isExpired();
                 logger.debug("Next block {} for user {} exists, available: {}", 
                            nextBlockNumber, userId, available);

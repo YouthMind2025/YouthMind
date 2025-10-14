@@ -29,8 +29,6 @@ public class PostSelectionService {
     @Autowired
     private PostRepository postRepository;
     
-    @Autowired
-    private RVectorService rVectorService;
     
     @Autowired
     private RecommendationMappingService recommendationMappingService;

@@ -18,7 +18,6 @@ import ai.youthmind.service.PostService;
 import ai.youthmind.service.RedisService;
 import ai.youthmind.service.PsychologicalStateCacheService;
 import ai.youthmind.service.AIServiceClient;
-import ai.youthmind.service.ViewDurationTrackingService;
 import ai.youthmind.util.AuthenticationUtils;
 import ai.youthmind.util.ResponseBuilder;
 import org.springframework.http.ResponseEntity;
@@ -88,8 +87,6 @@ public class PostController {
     @Autowired
     private AIServiceClient aiServiceClient;
     
-    @Autowired
-    private ViewDurationTrackingService viewDurationTrackingService;
 
     @PostMapping("/create")
     @Operation(
@@ -572,7 +569,8 @@ public class PostController {
             UUID currentUserId = AuthenticationUtils.getCurrentUserId();
             
             // Start view session tracking
-            viewDurationTrackingService.startView(currentUserId, id);
+            // viewDurationTrackingService.startView(currentUserId, id);
+            System.out.println("View duration tracking service removed - skipping start view");
             
             return ResponseBuilder.success("View session started", "View tracking started successfully");
         } catch (ResourceNotFoundException e) {
@@ -601,7 +599,8 @@ public class PostController {
             UUID currentUserId = AuthenticationUtils.getCurrentUserId();
             
             // End view session tracking
-            viewDurationTrackingService.endView(currentUserId, id);
+            // viewDurationTrackingService.endView(currentUserId, id);
+            System.out.println("View duration tracking service removed - skipping end view");
             
             return ResponseBuilder.success("View session ended", "View tracking completed successfully");
         } catch (ResourceNotFoundException e) {

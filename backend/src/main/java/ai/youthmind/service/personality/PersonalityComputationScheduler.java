@@ -10,10 +10,10 @@ import java.util.UUID;
 /**
  * Scheduler for periodic personality computation cycles.
  */
-@Service
-public class PersonalityScheduler {
+@Service("personalityComputationScheduler")
+public class PersonalityComputationScheduler {
 
-    private static final Logger logger = LoggerFactory.getLogger(PersonalityScheduler.class);
+    private static final Logger logger = LoggerFactory.getLogger(PersonalityComputationScheduler.class);
 
     // Run daily at 03:00 server time
     @Scheduled(cron = "0 0 3 * * *")
@@ -28,5 +28,4 @@ public class PersonalityScheduler {
         logger.info("[PersonalityScheduler] Weekly reconciliation triggered");
     }
 }
-
 
