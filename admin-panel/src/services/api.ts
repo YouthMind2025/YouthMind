@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { MappingRuleUpdateRequest } from '../types';
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -259,6 +260,19 @@ export const adminApi = {
   // Get user recommendation status
   getUserRecommendationStatus: (userId: string) => 
     api.get(`/admin/v1/users/${userId}/recommendation-status`)
+};
+
+// Mapping Rules API methods for recommendation mapping management
+export const mappingRulesApi = {
+  getAllRules: () => api.get('/admin/v1/recommendationmapping/rules'),
+  getRule: (id: string) => api.get(`/admin/v1/recommendationmapping/rules/${id}`),
+  updateRule: (id: string, data: MappingRuleUpdateRequest) => 
+    api.put(`/admin/v1/recommendationmapping/rules/${id}`, data)
+};
+
+// Queue management API methods
+export const queueApi = {
+  getStatistics: () => api.get('/v1/queue/statistics')
 };
 
 export default api; 

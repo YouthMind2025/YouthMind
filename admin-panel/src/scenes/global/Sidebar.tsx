@@ -74,6 +74,12 @@ const Sidebar: React.FC = () => {
           <Link to="/recommendation-analytics" className="sidebar-link">
             Recommendation Analytics
           </Link>
+          <Link to="/mapping-rules" className="sidebar-link">
+            Mapping Rules
+          </Link>
+          <Link to="/failed-events" className="sidebar-link">
+            Failed Events
+          </Link>
           <Link to="/settings" className="sidebar-link">
             Settings
           </Link>

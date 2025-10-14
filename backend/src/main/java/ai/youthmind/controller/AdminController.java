@@ -1,14 +1,18 @@
 package ai.youthmind.controller;
 
 import ai.youthmind.dto.ApiResponse;
+import ai.youthmind.dto.MappingRuleUpdateRequest;
 import ai.youthmind.entity.Post;
+import ai.youthmind.entity.RecommendationMappingRule;
 import ai.youthmind.entity.User;
 import ai.youthmind.entity.UserRecommendationVector;
 import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.repository.PostRepository;
+import ai.youthmind.repository.RecommendationMappingRuleRepository;
 import ai.youthmind.repository.UserRepository;
 import ai.youthmind.service.AIEmotionClassificationService;
 import ai.youthmind.service.DataMigrationService;
+import ai.youthmind.service.RecommendationMappingService;
 import ai.youthmind.util.ResponseBuilder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -52,6 +56,12 @@ public class AdminController {
     
     @Autowired
     private DataMigrationService dataMigrationService;
+    
+    @Autowired
+    private RecommendationMappingRuleRepository recommendationMappingRuleRepository;
+    
+    @Autowired
+    private RecommendationMappingService recommendationMappingService;
 
     /**
      * Update user's recommendation engine toggle
@@ -441,4 +451,118 @@ public class AdminController {
             this.batchSize = batchSize;
         }
     }
+    
+    // ===== MAPPING RULES MANAGEMENT ENDPOINTS =====
+    
+    /**
+     * Get all recommendation mapping rules
+     * GET /admin/v1/recommendationmapping/rules
+     */
+    @GetMapping("/recommendationmapping/rules")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Get all mapping rules",
+        description = "Retrieve all 20 recommendation mapping rules ordered by emotion combination"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Mapping rules retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - admin access required")
+    })
+    public ResponseEntity<ApiResponse<List<RecommendationMappingRule>>> getAllMappingRules() {
+        try {
+            List<RecommendationMappingRule> rules = recommendationMappingRuleRepository.findAllByOrderByEmotionCombinationAsc();
+            return ResponseBuilder.success(rules, "Mapping rules retrieved successfully");
+        } catch (Exception e) {
+            log.error("Failed to retrieve mapping rules", e);
+            return ResponseBuilder.internalServerError("Failed to retrieve mapping rules");
+        }
+    }
+    
+    /**
+     * Get single recommendation mapping rule by ID
+     * GET /admin/v1/recommendationmapping/rules/{id}
+     */
+    @GetMapping("/recommendationmapping/rules/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Get mapping rule by ID",
+        description = "Retrieve a specific recommendation mapping rule by its ID"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Mapping rule retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Mapping rule not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - admin access required")
+    })
+    public ResponseEntity<ApiResponse<RecommendationMappingRule>> getMappingRule(
+        @Parameter(description = "Mapping rule ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id
+    ) {
+        try {
+            RecommendationMappingRule rule = recommendationMappingRuleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("MappingRule", "id", id));
+            return ResponseBuilder.success(rule, "Mapping rule retrieved successfully");
+        } catch (ResourceNotFoundException e) {
+            return ResponseBuilder.notFound(e.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to retrieve mapping rule with ID: {}", id, e);
+            return ResponseBuilder.internalServerError("Failed to retrieve mapping rule");
+        }
+    }
+    
+    /**
+     * Update recommendation mapping rule percentages
+     * PUT /admin/v1/recommendationmapping/rules/{id}
+     */
+    @PutMapping("/recommendationmapping/rules/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Update mapping rule percentages",
+        description = "Update the emotion percentage distribution for a specific mapping rule. Percentages must sum to exactly 100."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Mapping rule updated successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request - percentages must sum to 100"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Mapping rule not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - admin access required")
+    })
+    public ResponseEntity<ApiResponse<RecommendationMappingRule>> updateMappingRule(
+        @Parameter(description = "Mapping rule ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id,
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated percentage distribution")
+        @Valid @RequestBody MappingRuleUpdateRequest request
+    ) {
+        try {
+            // Find existing rule
+            RecommendationMappingRule rule = recommendationMappingRuleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("MappingRule", "id", id));
+            
+            // Validate percentages sum to 100
+            request.validatePercentages();
+            
+            // Update percentages
+            rule.setSadPercentage(request.getSadPercentage());
+            rule.setFearPercentage(request.getFearPercentage());
+            rule.setAngryPercentage(request.getAngryPercentage());
+            rule.setHappyPercentage(request.getHappyPercentage());
+            rule.setConflictedPercentage(request.getConflictedPercentage());
+            rule.setSurprisedPercentage(request.getSurprisedPercentage());
+            
+            // Save updated rule
+            RecommendationMappingRule updatedRule = recommendationMappingRuleRepository.save(rule);
+            
+            return ResponseBuilder.success(updatedRule, "Mapping rule updated successfully");
+            
+        } catch (ResourceNotFoundException e) {
+            return ResponseBuilder.notFound(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseBuilder.badRequest(e.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to update mapping rule with ID: {}", id, e);
+            return ResponseBuilder.internalServerError("Failed to update mapping rule");
+        }
+    }
+    
 }

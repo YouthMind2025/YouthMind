@@ -191,3 +191,36 @@ export interface RecommendationStatus {
     bookmarksCount: number;
   };
 }
+
+// Mapping Rules interfaces for recommendation mapping management
+export interface MappingRule {
+  id: string;
+  emotionCombination: string;
+  sadPercentage: number;
+  fearPercentage: number;
+  angryPercentage: number;
+  happyPercentage: number;
+  conflictedPercentage: number;
+  surprisedPercentage: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MappingRuleUpdateRequest {
+  sadPercentage: number;
+  fearPercentage: number;
+  angryPercentage: number;
+  happyPercentage: number;
+  conflictedPercentage: number;
+  surprisedPercentage: number;
+}
+
+// Queue Statistics interface for Failed Events Dashboard
+export interface QueueStatistics {
+  queueSizes: Record<string, number>;
+  totalQueuedRequests: number;
+  totalProcessedRequests: number;
+  totalFailedRequests: number;
+  averageProcessingTime: number;
+  timestamp: string;
+}
