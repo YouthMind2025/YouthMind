@@ -221,4 +221,44 @@ export const systemApi = {
   testConnectivity: () => axios.get('http://localhost:8080/actuator/health', { timeout: 5000 }),
 };
 
+// R Vector API methods for recommendation vector management
+export const rVectorApi = {
+  getRVector: (userId: string) => 
+    api.get(`/v1/recommendation/rvector`, {
+      headers: { 'X-User-Id': userId }
+    }),
+  getRVectorHistory: (userId: string, limit: number = 10) =>
+    api.get(`/v1/recommendation/rvector/history?limit=${limit}`, {
+      headers: { 'X-User-Id': userId }
+    }),
+  resetRVector: (userId: string, reason?: string) =>
+    api.post(`/v1/recommendation/rvector/reset${reason ? `?reason=${encodeURIComponent(reason)}` : ''}`, {}, {
+      headers: { 'X-User-Id': userId }
+    })
+};
+
+// Recommendation Analytics API methods
+export const recommendationApi = {
+  getPerformanceMetrics: () => api.get('/v1/analytics/recommendation/performance'),
+  getEmotionDistribution: () => api.get('/v1/analytics/recommendation/emotion-distribution'),
+};
+
+// Admin API methods for recommendation engine management
+export const adminApi = {
+  // Calculate stats from users list (client-side)
+  getRecommendationStats: async () => {
+    const response = await usersApi.getAllUsers();
+    const users = response.data.data || response.data;
+    return users;
+  },
+  
+  // Toggle user recommendation engine
+  updateUserRecommendationToggle: (userId: string, enabled: boolean) => 
+    api.put(`/admin/v1/users/${userId}/recommendation-toggle`, { enabled }),
+  
+  // Get user recommendation status
+  getUserRecommendationStatus: (userId: string) => 
+    api.get(`/admin/v1/users/${userId}/recommendation-status`)
+};
+
 export default api; 

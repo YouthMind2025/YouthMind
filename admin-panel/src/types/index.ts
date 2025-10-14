@@ -35,6 +35,7 @@ export interface User {
   lastName: string;
   createdAt?: string;
   updatedAt?: string;
+  recommendationEngineEnabled?: boolean;
 }
 
 // Flagged post interface for moderation
@@ -102,4 +103,91 @@ export interface ArticleListResponse {
   };
   totalElements: number;
   last: boolean;
+}
+
+// Recommendation Performance (from backend RecommendationPerformanceResponse)
+export interface RecommendationPerformance {
+  avgBlockGenerationTimeMs: number;
+  cacheHitRate: number;
+  eventProcessingRate: number;
+  rVectorUpdateSuccessRate: number;
+  consumerHealth: Record<string, boolean>;
+  streamMetrics: {
+    rvectorUpdatesStreamLength: number;
+    blockPrecalcStreamLength: number;
+    consumerLagMs: number;
+    dlqSize: number;
+  };
+  performanceTargets: Record<string, boolean>;
+  generatedAt: string;
+}
+
+// Emotion Distribution (from backend EmotionDistributionResponse)
+export interface EmotionDistribution {
+  overallEmotionDistribution: Record<string, number>;
+  topEmotionCombinations: Array<{
+    combination: string;
+    userCount: number;
+    percentage: number;
+  }>;
+  emotionTrends: Array<{
+    emotion: string;
+    averageValue: number;
+    trend: string;
+    timestamp: string;
+  }>;
+  userSegments: Record<string, number>;
+  generatedAt: string;
+}
+
+// R Vector interfaces for recommendation vector management
+export interface RVector {
+  userId: string;
+  version: number;
+  weights: Record<string, number>; // e.g., {"happy": 0.25, "sad": 0.15, ...}
+  topEmotions: string[]; // ["happy", "surprised", "sad"]
+  updatedAt: string;
+  totalWeight: number;
+}
+
+export interface RVectorHistoryItem {
+  vector: number[];
+  topEmotions: string[];
+  timestamp: string;
+  version: number;
+  trigger: string;
+  confidence: number;
+}
+
+export interface RVectorHistory {
+  userId: string;
+  history: RVectorHistoryItem[];
+}
+
+// Recommendation Engine Statistics
+export interface RecommendationStats {
+  totalUsers: number;
+  enabledCount: number;
+  disabledCount: number;
+  enabledPercentage: number;
+  disabledPercentage: number;
+}
+
+// User Recommendation Status Response
+export interface RecommendationStatus {
+  userId: string;
+  username: string;
+  email: string;
+  recommendationEngineEnabled: boolean;
+  rVector?: {
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+    topEmotions: string[];
+  };
+  feedStatistics: {
+    postsCount: number;
+    likesCount: number;
+    bookmarksCount: number;
+  };
 }
