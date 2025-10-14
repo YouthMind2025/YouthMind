@@ -70,7 +70,7 @@ public class User {
     private LocalDateTime banExpiresAt;
     
     @Column(name = "recommendation_engine_enabled", nullable = false)
-    private Boolean recommendationEngineEnabled = true;
+    private Boolean recommendationEngineEnabled = false;
     
     public enum Role {
         USER, ADMIN

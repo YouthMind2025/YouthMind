@@ -314,4 +314,93 @@ public class UserController {
                 .body(ApiResponse.<Map<String, Object>>error(null, 500));
         }
     }
+    
+    // ===== RECOMMENDATION ENGINE SETTINGS =====
+    
+    @PutMapping("/{userId}/recommendation-engine")
+    @Operation(
+        summary = "Toggle recommendation engine",
+        description = "Enable or disable the personalized recommendation engine for a user"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Recommendation engine setting updated successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> toggleRecommendationEngine(
+            @PathVariable @Parameter(description = "User ID", required = true) UUID userId,
+            @RequestBody @Parameter(description = "Recommendation engine enabled flag", required = true) 
+            Map<String, Boolean> request) {
+        
+        try {
+            // Validate request
+            if (!request.containsKey("enabled")) {
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.<Map<String, Object>>error(null, 400));
+            }
+            
+            Boolean enabled = request.get("enabled");
+            
+            // Check if user exists
+            Optional<User> userOpt = userService.getUserById(userId);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(404)
+                    .body(ApiResponse.<Map<String, Object>>error(null, 404));
+            }
+            
+            User user = userOpt.get();
+            user.setRecommendationEngineEnabled(enabled);
+            userService.saveUser(user);
+            
+            // Build response
+            Map<String, Object> response = new HashMap<>();
+            response.put("userId", userId);
+            response.put("recommendationEngineEnabled", enabled);
+            response.put("message", enabled ? "Personalized recommendations enabled" : "Chronological feed enabled");
+            
+            return ResponseEntity.ok(ApiResponse.success(response));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                .body(ApiResponse.<Map<String, Object>>error(null, 500));
+        }
+    }
+    
+    @GetMapping("/{userId}/recommendation-engine")
+    @Operation(
+        summary = "Get recommendation engine status",
+        description = "Check if the personalized recommendation engine is enabled for a user"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Recommendation engine status retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getRecommendationEngineStatus(
+            @PathVariable @Parameter(description = "User ID", required = true) UUID userId) {
+        
+        try {
+            // Check if user exists
+            Optional<User> userOpt = userService.getUserById(userId);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(404)
+                    .body(ApiResponse.<Map<String, Object>>error(null, 404));
+            }
+            
+            User user = userOpt.get();
+            
+            // Build response
+            Map<String, Object> response = new HashMap<>();
+            response.put("userId", userId);
+            response.put("recommendationEngineEnabled", user.getRecommendationEngineEnabled());
+            response.put("feedType", user.getRecommendationEngineEnabled() ? "personalized" : "chronological");
+            
+            return ResponseEntity.ok(ApiResponse.success(response));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                .body(ApiResponse.<Map<String, Object>>error(null, 500));
+        }
+    }
 }

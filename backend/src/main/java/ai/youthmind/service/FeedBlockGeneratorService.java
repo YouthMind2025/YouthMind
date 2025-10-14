@@ -5,10 +5,15 @@ import ai.youthmind.entity.Post;
 import ai.youthmind.entity.UserFeedState;
 import ai.youthmind.entity.UserRecommendationVector;
 import ai.youthmind.repository.FeedBlockCacheRepository;
+import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.UserFeedStateRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +49,9 @@ public class FeedBlockGeneratorService {
     
     @Autowired
     private UserFeedStateRepository userFeedStateRepository;
+    
+    @Autowired
+    private PostRepository postRepository;
     
     @Autowired(required = false)
     private RedisService redisService;
@@ -248,8 +256,23 @@ public class FeedBlockGeneratorService {
             }
         }
         
+        int requestedTotal = postCounts.values().stream().mapToInt(Integer::intValue).sum();
         logger.info("Assembled {} total posts for user {} (requested: {})", 
-                   allPosts.size(), userId, postCounts.values().stream().mapToInt(Integer::intValue).sum());
+                   allPosts.size(), userId, requestedTotal);
+        
+        // Fallback: if no posts were assembled, get ANY posts without emotion filtering
+        if (allPosts.isEmpty() && requestedTotal > 0) {
+            logger.warn("No posts assembled for user {} after trying all emotions, falling back to any posts", userId);
+            
+            try {
+                // Get any posts without emotion filtering
+                allPosts = getFallbackPosts(userId, requestedTotal, excludePostIds);
+                logger.info("Fallback assembled {} posts for user {} (requested: {})", 
+                           allPosts.size(), userId, requestedTotal);
+            } catch (Exception e) {
+                logger.error("Failed to get fallback posts for user {}", userId, e);
+            }
+        }
         
         return allPosts;
     }
@@ -516,6 +539,82 @@ public class FeedBlockGeneratorService {
         }
     }
     
+    /**
+     * Get fallback posts without emotion filtering when emotion-based selection fails
+     * 
+     * @param userId The user ID
+     * @param count Number of posts to retrieve
+     * @param excludePostIds Set of post IDs to exclude
+     * @return List of posts without emotion filtering
+     */
+    private List<Post> getFallbackPosts(UUID userId, int count, Set<UUID> excludePostIds) {
+        logger.info("Getting fallback posts for user {} - count: {}, excluding: {}", 
+                   userId, count, excludePostIds.size());
+        
+        List<Post> fallbackPosts = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        
+        // Try different time windows
+        List<LocalDateTime> timeWindows = Arrays.asList(
+            now.minusHours(24),
+            now.minusDays(7),
+            now.minusDays(30),
+            now.minusDays(90)
+        );
+        
+        for (LocalDateTime since : timeWindows) {
+            int remainingNeeded = count - fallbackPosts.size();
+            if (remainingNeeded <= 0) {
+                break;
+            }
+            
+            try {
+                Pageable pageable = PageRequest.of(0, remainingNeeded, Sort.by(Sort.Direction.DESC, "createdAt"));
+                Page<Post> postsPage = postRepository.findByCreatedAtBetween(since, now, pageable);
+                
+                List<Post> windowPosts = postsPage.getContent().stream()
+                    .filter(post -> !excludePostIds.contains(post.getId()))
+                    .filter(post -> !post.isFlagged())
+                    .limit(remainingNeeded)
+                    .collect(Collectors.toList());
+                
+                fallbackPosts.addAll(windowPosts);
+                windowPosts.forEach(post -> excludePostIds.add(post.getId()));
+                
+                logger.debug("Found {} fallback posts since {}", windowPosts.size(), since);
+                
+            } catch (Exception e) {
+                logger.error("Error getting fallback posts since {}", since, e);
+            }
+        }
+        
+        // If still not enough, get any posts from all time
+        if (fallbackPosts.size() < count) {
+            int remainingNeeded = count - fallbackPosts.size();
+            logger.warn("Still need {} posts, querying all posts without time filter", remainingNeeded);
+            
+            try {
+                Pageable pageable = PageRequest.of(0, remainingNeeded, Sort.by(Sort.Direction.DESC, "createdAt"));
+                Page<Post> allPostsPage = postRepository.findAll(pageable);
+                
+                List<Post> additionalPosts = allPostsPage.getContent().stream()
+                    .filter(post -> !excludePostIds.contains(post.getId()))
+                    .filter(post -> !post.isFlagged())
+                    .limit(remainingNeeded)
+                    .collect(Collectors.toList());
+                
+                fallbackPosts.addAll(additionalPosts);
+                logger.info("Added {} posts from all-time query", additionalPosts.size());
+                
+            } catch (Exception e) {
+                logger.error("Error getting all-time fallback posts", e);
+            }
+        }
+        
+        logger.info("Fallback posts retrieval completed - requested: {}, found: {}", count, fallbackPosts.size());
+        return fallbackPosts;
+    }
+
     /**
      * Clean up expired feed blocks from the database
      * Should be called periodically by a scheduled job

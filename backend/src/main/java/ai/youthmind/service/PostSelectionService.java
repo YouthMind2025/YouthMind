@@ -488,6 +488,13 @@ public class PostSelectionService {
                 logger.warn("Limited final result to requested count - had: {}, limited to: {}", 
                            selectedPosts.size() + (selectedPosts.size() - count), count);
             }
+            
+            // Step 5: Fallback - if no posts found for this emotion, get ANY posts without emotion filtering
+            if (selectedPosts.isEmpty()) {
+                logger.warn("No posts found for emotion '{}', falling back to any posts without emotion filtering", emotion);
+                selectedPosts = selectAnyPosts(count, collectedPostIds);
+                logger.info("Fallback selection found {} posts (requested: {})", selectedPosts.size(), count);
+            }
 
             String strategyUsed = remainingNeeded > 0 ? "popularity + time priority" : "popularity only";
             logger.info("Post selection completed for emotion '{}' - strategy: {}, requested: {}, selected: {}", 
@@ -550,6 +557,98 @@ public class PostSelectionService {
         }
 
         return uniquePosts;
+    }
+
+    /**
+     * Select posts without emotion filtering - fallback method when no posts found for specific emotion
+     * Uses time-based waterfall approach without emotion constraints
+     * 
+     * @param count Number of posts to select
+     * @param excludePostIds Set of post IDs to exclude
+     * @return List of posts without emotion filtering
+     */
+    private List<Post> selectAnyPosts(int count, Set<UUID> excludePostIds) {
+        if (count <= 0) {
+            return new ArrayList<>();
+        }
+        
+        logger.info("Selecting {} posts WITHOUT emotion filtering (fallback mode)", count);
+        
+        List<Post> selectedPosts = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        Set<UUID> collectedPostIds = new HashSet<>(excludePostIds != null ? excludePostIds : Collections.emptySet());
+        
+        // Define time windows in waterfall order
+        List<TimeWindow> timeWindows = Arrays.asList(
+            new TimeWindow("12 hours", now.minusHours(12)),
+            new TimeWindow("24 hours", now.minusHours(24)),
+            new TimeWindow("48 hours", now.minusHours(48)),
+            new TimeWindow("7 days", now.minusDays(7)),
+            new TimeWindow("30 days", now.minusDays(30))
+        );
+        
+        for (TimeWindow window : timeWindows) {
+            int remainingNeeded = count - selectedPosts.size();
+            if (remainingNeeded <= 0) {
+                logger.info("Enough posts collected ({}), stopping fallback selection", selectedPosts.size());
+                break;
+            }
+            
+            logger.debug("Querying {} window for {} more posts (no emotion filter)", 
+                       window.name, remainingNeeded);
+            
+            try {
+                Pageable pageable = PageRequest.of(0, remainingNeeded * 2, Sort.by(Sort.Direction.DESC, "createdAt"));
+                
+                // Get posts without emotion filtering
+                Page<Post> postsPage = postRepository.findByCreatedAtBetween(
+                    window.since, LocalDateTime.now(), pageable);
+                
+                List<Post> windowPosts = postsPage.getContent().stream()
+                    .filter(post -> !collectedPostIds.contains(post.getId()))
+                    .filter(post -> !post.isFlagged())
+                    .limit(remainingNeeded)
+                    .collect(Collectors.toList());
+                
+                if (!windowPosts.isEmpty()) {
+                    selectedPosts.addAll(windowPosts);
+                    windowPosts.forEach(post -> collectedPostIds.add(post.getId()));
+                    
+                    logger.info("Found {} posts in {} window (fallback). Total: {}/{}", 
+                               windowPosts.size(), window.name, selectedPosts.size(), count);
+                }
+                
+            } catch (Exception e) {
+                logger.error("Error querying {} window for fallback posts", window.name, e);
+            }
+        }
+        
+        // If still not enough posts, get from all time without any filters
+        if (selectedPosts.size() < count) {
+            int remainingNeeded = count - selectedPosts.size();
+            logger.warn("Still need {} posts after time windows, querying all posts", remainingNeeded);
+            
+            try {
+                Pageable pageable = PageRequest.of(0, remainingNeeded, Sort.by(Sort.Direction.DESC, "createdAt"));
+                Page<Post> allPostsPage = postRepository.findAll(pageable);
+                
+                List<Post> additionalPosts = allPostsPage.getContent().stream()
+                    .filter(post -> !collectedPostIds.contains(post.getId()))
+                    .filter(post -> !post.isFlagged())
+                    .limit(remainingNeeded)
+                    .collect(Collectors.toList());
+                
+                selectedPosts.addAll(additionalPosts);
+                logger.info("Added {} posts from all-time query. Total: {}/{}", 
+                           additionalPosts.size(), selectedPosts.size(), count);
+                
+            } catch (Exception e) {
+                logger.error("Error querying all posts for fallback", e);
+            }
+        }
+        
+        logger.info("Fallback selection completed - requested: {}, selected: {}", count, selectedPosts.size());
+        return selectedPosts;
     }
 
     /**

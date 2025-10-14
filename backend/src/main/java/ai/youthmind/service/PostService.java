@@ -416,8 +416,24 @@ public class PostService {
             // Get personalized feed block
             FeedBlockCache block = feedBlockPreCalculationService.getOrGenerateBlock(userId, page + 1);
             
+            // Check if block has posts
+            if (block == null || block.getPostIds() == null || block.getPostIds().isEmpty()) {
+                logger.warn("Personalized feed block is empty for user {} page {} - falling back to chronological feed", 
+                           userId, page);
+                return getChronologicalFeed(page, size, "newest", null, null, null, userId);
+            }
+            
+            logger.info("Got personalized feed block for user {} with {} post IDs", userId, block.getPostIds().size());
+            
             // Convert block posts to DTOs
             List<PostDto> postDtos = convertBlockPostsToDtos(block.getPostIds(), userId);
+            
+            // Check if DTOs were successfully created
+            if (postDtos.isEmpty()) {
+                logger.warn("No post DTOs created from feed block for user {} page {} - falling back to chronological feed", 
+                           userId, page);
+                return getChronologicalFeed(page, size, "newest", null, null, null, userId);
+            }
             
             // Build response
             FeedResponse feedResponse = new FeedResponse();
