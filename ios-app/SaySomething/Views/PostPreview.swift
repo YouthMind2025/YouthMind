@@ -74,8 +74,9 @@ struct PostPreview: View {
         .contentShape(Rectangle())
         .highPriorityGesture(
             TapGesture(count: 2).onEnded {
-                let newLiked = !isCurrentlyLiked
-                viewModel.updateResonance(for: post.id, liked: newLiked)
+                Task {
+                    await viewModel.toggleResonance(for: post.id)
+                }
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                     likeBounce = true
                 }
@@ -87,8 +88,9 @@ struct PostPreview: View {
         // Heart button at bottom-left overlay
         .overlay(alignment: .bottomLeading) {
             Button {
-                let newLiked = !isCurrentlyLiked
-                viewModel.updateResonance(for: post.id, liked: newLiked)
+                Task {
+                    await viewModel.toggleResonance(for: post.id)
+                }
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                     likeBounce = true
                 }

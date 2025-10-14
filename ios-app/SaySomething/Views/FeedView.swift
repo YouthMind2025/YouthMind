@@ -28,6 +28,14 @@ struct FeedView: View {
                             PostPreview(post: post, viewModel: viewModel)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .onAppear {
+                            // Load more when reaching near-end of left column
+                            if post == leftColumn.last && viewModel.hasMoreBlocks {
+                                Task {
+                                    await viewModel.loadNextBlock()
+                                }
+                            }
+                        }
                     }
                 }
                 // Right column
@@ -37,12 +45,47 @@ struct FeedView: View {
                             PostPreview(post: post, viewModel: viewModel)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .onAppear {
+                            // Load more when reaching near-end of right column
+                            if post == rightColumn.last && viewModel.hasMoreBlocks {
+                                Task {
+                                    await viewModel.loadNextBlock()
+                                }
+                            }
+                        }
                     }
                 }
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
             .padding(.bottom, 12)
+            
+            // Loading indicator at bottom
+            if viewModel.isLoadingMore {
+                VStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Loading more posts...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            }
+            
+            // Error retry button
+            if let error = viewModel.error, !viewModel.isLoadingMore {
+                RetryButton(
+                    error: error,
+                    action: {
+                        Task {
+                            await viewModel.loadNextBlock()
+                        }
+                    },
+                    title: "Failed to load more posts",
+                    message: "Please check your connection and try again."
+                )
+            }
         }
         .navigationTitle("Discovery")
         .navigationBarTitleDisplayMode(.inline)
@@ -66,7 +109,13 @@ struct FeedView: View {
             }
         }
         .refreshable {
-            await viewModel.fetchPosts()
+            await viewModel.refreshFeed()
+        }
+        .onAppear {
+            // Trigger initial scroll notification when view appears
+            Task {
+                await viewModel.notifyScroll()
+            }
         }
     }
 }

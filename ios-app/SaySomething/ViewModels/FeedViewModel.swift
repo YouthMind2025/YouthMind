@@ -6,13 +6,21 @@
 
 
 import SwiftUI
+import Combine
 
 class FeedViewModel: ObservableObject {
     @Published var posts: [Post] = []  // Updates View when changed
     @Published var isLoading = false  //Tracks loading state for progress indicators
+    @Published var isLoadingMore = false  // Tracks loading state for infinite scroll
     @Published var error: Error?  //Stores error information when requests fail
     @Published var comments: [UUID: [Comment]] = [:] // Post ID -> comments
     @Published var engagement: [UUID: PostEngagement] = [:] // Post ID -> engagement
+    
+    //Block-based pagination properties
+    @Published var hasMoreBlocks = true   // Whether more blocks are available
+    private var currentBlock = 0          // Current block number
+    private var cachedBlocks: [Int: [Post]] = [:]  // Local cache of blocks
+    private var cancellables = Set<AnyCancellable>()  // Combine cancellables
     
     
     // split the posts array into two halves to implment two-column grid in home page.
@@ -34,20 +42,192 @@ class FeedViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Block Loading Methods
+    
+    /// Load the next block of posts for infinite scroll
+    func loadNextBlock() async {
+        guard !isLoadingMore && hasMoreBlocks else { return }
+        
+        await MainActor.run { 
+            isLoadingMore = true
+            error = nil // Clear any previous errors
+        }
+        
+        do {
+            // Try to get from cache first
+            if let cachedPosts = loadCachedBlockIfAvailable(currentBlock + 1) {
+                await MainActor.run {
+                    posts.append(contentsOf: cachedPosts)
+                    currentBlock += 1
+                    isLoadingMore = false
+                }
+                return
+            }
+            
+            // Fetch from API
+            let response = try await withCheckedThrowingContinuation { continuation in
+                FeedAPI.fetchFeedBlock(blockNumber: currentBlock + 1, size: 20)
+                    .sink(
+                        receiveCompletion: { completion in
+                            if case .failure(let error) = completion {
+                                continuation.resume(throwing: error)
+                            }
+                        },
+                        receiveValue: { response in
+                            continuation.resume(returning: response)
+                        }
+                    )
+                    .store(in: &cancellables)
+            }
+            
+            await MainActor.run {
+                posts.append(contentsOf: response.data.posts)
+                currentBlock += 1
+                hasMoreBlocks = response.data.nextBlockAvailable ?? false
+                isLoadingMore = false
+            }
+            
+            // Cache the block for offline viewing
+            cacheBlock(currentBlock, posts: response.data.posts, metadata: response.data.blockMetadata)
+            
+            // Trigger pre-calculation for next block
+            notifyScroll()
+            
+        } catch {
+            await MainActor.run {
+                self.error = error
+                isLoadingMore = false
+            }
+        }
+    }
+    
+    /// Notify backend of scroll event to trigger pre-calculation
+    func notifyScroll() async {
+        do {
+            _ = try await withCheckedThrowingContinuation { continuation in
+                FeedAPI.notifyScroll(currentBlock: currentBlock)
+                    .sink(
+                        receiveCompletion: { completion in
+                            if case .failure(let error) = completion {
+                                continuation.resume(throwing: error)
+                            }
+                        },
+                        receiveValue: { response in
+                            continuation.resume(returning: response)
+                        }
+                    )
+                    .store(in: &cancellables)
+            }
+        } catch {
+            // Silently fail - scroll notification is not critical
+            print("Failed to notify scroll: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Cache a block locally for offline viewing
+    private func cacheBlock(_ blockNumber: Int, posts: [Post], metadata: BlockMetadata? = nil) {
+        Task {
+            try? await FeedCacheService.shared.cacheBlock(blockNumber, posts: posts, metadata: metadata)
+        }
+    }
+    
+    /// Load cached block if available
+    private func loadCachedBlockIfAvailable(_ blockNumber: Int) -> [Post]? {
+        return FeedCacheService.shared.getCachedBlock(blockNumber)
+    }
+    
+    /// Reset to initial state (useful for pull-to-refresh)
+    func resetToInitialState() {
+        posts = []
+        currentBlock = 0
+        hasMoreBlocks = true
+        error = nil
+        cachedBlocks.removeAll()
+    }
+    
+    /// Pull-to-refresh handler - clears cache and fetches Block 0
+    func refreshFeed() async {
+        await MainActor.run {
+            isLoading = true
+            error = nil
+        }
+        
+        // Clear local cache
+        try? await FeedCacheService.shared.clearAllCache()
+        
+        // Reset feed state
+        resetToInitialState()
+        
+        // Fetch Block 0 with default ratio
+        do {
+            let response = try await withCheckedThrowingContinuation { continuation in
+                FeedAPI.fetchFeedBlock(blockNumber: 0, size: 20)
+                    .sink(
+                        receiveCompletion: { completion in
+                            if case .failure(let error) = completion {
+                                continuation.resume(throwing: error)
+                            }
+                        },
+                        receiveValue: { response in
+                            continuation.resume(returning: response)
+                        }
+                    )
+                    .store(in: &cancellables)
+            }
+            
+            await MainActor.run {
+                posts = response.data.posts
+                currentBlock = 0
+                hasMoreBlocks = response.data.nextBlockAvailable ?? true
+                isLoading = false
+                
+                // Seed engagement data
+                for post in posts {
+                    engagement[post.id] = PostEngagement(
+                        postId: post.id,
+                        resonance: post.resonance,
+                        views: post.view,
+                        saves: post.collect,
+                        isResonanced: post.isresonanced,
+                        isCollected: post.isCollected
+                    )
+                }
+            }
+            
+            // Sync engagement state with backend
+            await syncEngagementState()
+            
+            // Cache Block 0
+            cacheBlock(0, posts: response.data.posts, metadata: response.data.blockMetadata)
+            
+            // Trigger pre-calculation for next block
+            await notifyScroll()
+            
+        } catch {
+            await MainActor.run {
+                self.error = error
+                isLoading = false
+            }
+        }
+    }
+    
     
     // Data methods:
     // Fetches posts from API (currently using mock data)
     // Handles loading states, errors, and updates UI thread
     func fetchPosts() async {
-            isLoading = true
-            error = nil // Reset error state
+        isLoading = true
+        error = nil // Reset error state
+        
+        // Reset block state for fresh load
+        resetToInitialState()
+        
+        do {
+            //If need a real API call, it will loooks like:
+            //let newPosts = try await APIService.fetchPosts()
             
-            do {
-                //If need a real API call, it will loooks like:
-                //let newPosts = try await APIService.fetchPosts()
-                
-                // Mock data - replace with real API call(maybe by above format)
-                let mockPosts = [
+            // Mock data - replace with real API call(maybe by above format)
+            let mockPosts = [
                     // Happy posts
                     Post(resonance: 45, view: 200, collect: 32,
                          title: "Summer outfit ideas",
@@ -185,6 +365,14 @@ class FeedViewModel: ObservableObject {
                         )
                     }
                     isLoading = false
+                }
+                
+                // Sync engagement state with backend
+                await syncEngagementState()
+                
+                // Set initial block state
+                currentBlock = 1
+                hasMoreBlocks = true
 //                    If Real API fetch:
 //                    posts = newPosts
 //                    isLoading = false
@@ -225,7 +413,10 @@ extension FeedViewModel {
         if var e = engagement[postId] { e.views += 1; engagement[postId] = e }
     }
 
+    @available(*, deprecated, message: "Use toggleResonance(for:) instead")
     func updateResonance(for postId: UUID, liked: Bool) {
+        // Keep for backward compatibility but log warning
+        print("Warning: Using deprecated updateResonance method")
         guard var e = engagement[postId] else { return }
         let delta: Int
         if liked && !e.isResonanced { delta = 1 }
@@ -236,7 +427,10 @@ extension FeedViewModel {
         engagement[postId] = e
     }
 
+    @available(*, deprecated, message: "Use toggleCollection(for:) instead")
     func updateCollection(for postId: UUID, collected: Bool) {
+        // Keep for backward compatibility but log warning
+        print("Warning: Using deprecated updateCollection method")
         guard var e = engagement[postId] else { return }
         let delta: Int
         if collected && !e.isCollected { delta = 1 }
@@ -245,6 +439,195 @@ extension FeedViewModel {
         e.saves += delta
         e.isCollected = collected
         engagement[postId] = e
+    }
+
+    // MARK: - Post Interaction Methods with API Integration
+
+    /// Toggle resonance (like/unlike) with optimistic UI update
+    func toggleResonance(for postId: UUID) async {
+        // Optimistic update
+        guard var engagement = engagement[postId] else { return }
+        let wasResonanced = engagement.isResonanced
+        let newResonanceState = !wasResonanced
+        
+        // Update UI immediately
+        await MainActor.run {
+            var updatedEngagement = engagement
+            updatedEngagement.isResonanced = newResonanceState
+            updatedEngagement.resonance += newResonanceState ? 1 : -1
+            self.engagement[postId] = updatedEngagement
+        }
+        
+        // Call backend API
+        do {
+            let response = try await withCheckedThrowingContinuation { continuation in
+                PostAPI.toggleResonance(postId: postId)
+                    .sink(
+                        receiveCompletion: { completion in
+                            if case .failure(let error) = completion {
+                                continuation.resume(throwing: error)
+                            }
+                        },
+                        receiveValue: { response in
+                            continuation.resume(returning: response)
+                        }
+                    )
+                    .store(in: &cancellables)
+            }
+            
+            // Sync with backend response
+            await MainActor.run {
+                if let post = posts.first(where: { $0.id == postId }),
+                   let index = posts.firstIndex(where: { $0.id == postId }) {
+                    // Update post with backend data
+                    var updatedPost = post
+                    updatedPost.isresonanced = response.data.isresonanced
+                    posts[index] = updatedPost
+                    
+                    // Sync engagement with actual backend values
+                    self.engagement[postId] = PostEngagement(
+                        postId: postId,
+                        resonance: response.data.resonance,
+                        views: response.data.view,
+                        saves: response.data.collect,
+                        isResonanced: response.data.isresonanced,
+                        isCollected: response.data.isCollected
+                    )
+                }
+            }
+            
+        } catch {
+            // Revert optimistic update on error
+            await MainActor.run {
+                var revertedEngagement = self.engagement[postId] ?? engagement
+                revertedEngagement.isResonanced = wasResonanced
+                revertedEngagement.resonance += wasResonanced ? 1 : -1
+                self.engagement[postId] = revertedEngagement
+                self.error = error
+            }
+            
+            // Retry logic
+            await retryInteraction(type: .resonance, postId: postId)
+        }
+    }
+
+    /// Toggle collection (save/unsave) with optimistic UI update
+    func toggleCollection(for postId: UUID) async {
+        // Optimistic update
+        guard var engagement = engagement[postId] else { return }
+        let wasCollected = engagement.isCollected
+        let newCollectionState = !wasCollected
+        
+        // Update UI immediately
+        await MainActor.run {
+            var updatedEngagement = engagement
+            updatedEngagement.isCollected = newCollectionState
+            updatedEngagement.saves += newCollectionState ? 1 : -1
+            self.engagement[postId] = updatedEngagement
+        }
+        
+        // Call backend API
+        do {
+            let response = try await withCheckedThrowingContinuation { continuation in
+                PostAPI.toggleCollection(postId: postId)
+                    .sink(
+                        receiveCompletion: { completion in
+                            if case .failure(let error) = completion {
+                                continuation.resume(throwing: error)
+                            }
+                        },
+                        receiveValue: { response in
+                            continuation.resume(returning: response)
+                        }
+                    )
+                    .store(in: &cancellables)
+            }
+            
+            // Sync with backend response
+            await MainActor.run {
+                if let post = posts.first(where: { $0.id == postId }),
+                   let index = posts.firstIndex(where: { $0.id == postId }) {
+                    // Update post with backend data
+                    var updatedPost = post
+                    updatedPost.isCollected = response.data.isCollected
+                    posts[index] = updatedPost
+                    
+                    // Sync engagement with actual backend values
+                    self.engagement[postId] = PostEngagement(
+                        postId: postId,
+                        resonance: response.data.resonance,
+                        views: response.data.view,
+                        saves: response.data.collect,
+                        isResonanced: response.data.isresonanced,
+                        isCollected: response.data.isCollected
+                    )
+                }
+            }
+            
+        } catch {
+            // Revert optimistic update on error
+            await MainActor.run {
+                var revertedEngagement = self.engagement[postId] ?? engagement
+                revertedEngagement.isCollected = wasCollected
+                revertedEngagement.saves += wasCollected ? 1 : -1
+                self.engagement[postId] = revertedEngagement
+                self.error = error
+            }
+            
+            // Retry logic
+            await retryInteraction(type: .collection, postId: postId)
+        }
+    }
+
+    // MARK: - Retry Logic
+
+    private enum InteractionType {
+        case resonance
+        case collection
+    }
+
+    private func retryInteraction(type: InteractionType, postId: UUID, attempt: Int = 0) async {
+        let maxRetries = 3
+        guard attempt < maxRetries else {
+            print("Max retries reached for \(type) on post \(postId)")
+            return
+        }
+        
+        // Exponential backoff: 1s, 2s, 4s
+        let delay = UInt64(pow(2.0, Double(attempt)) * 1_000_000_000)
+        try? await Task.sleep(nanoseconds: delay)
+        
+        // Retry the operation
+        switch type {
+        case .resonance:
+            await toggleResonance(for: postId)
+        case .collection:
+            await toggleCollection(for: postId)
+        }
+    }
+
+    // MARK: - State Synchronization
+
+    /// Sync engagement state with backend on app launch
+    func syncEngagementState() async {
+        guard !posts.isEmpty else { return }
+        
+        // For each post, verify engagement state matches backend
+        // This is called on app launch to ensure consistency
+        for post in posts {
+            // Backend data is already in the Post model
+            // Just sync local engagement dictionary
+            await MainActor.run {
+                engagement[post.id] = PostEngagement(
+                    postId: post.id,
+                    resonance: post.resonance,
+                    views: post.view,
+                    saves: post.collect,
+                    isResonanced: post.isresonanced,
+                    isCollected: post.isCollected
+                )
+            }
+        }
     }
 
     // Refresh comments for a specific post (simulates a network fetch)
