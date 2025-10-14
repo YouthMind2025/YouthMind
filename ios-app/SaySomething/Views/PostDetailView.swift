@@ -330,9 +330,10 @@ struct PostDetailView: View {
                         HStack(spacing: 20) {
                             // Resonance Button
                             Button(action: {
-                                let newLiked = !isResonanced
-                                feedVM.updateResonance(for: post.id, liked: newLiked)
-                                if newLiked { fireBalloon() }
+                                Task {
+                                    await feedVM.toggleResonance(for: post.id)
+                                }
+                                if !isResonanced { fireBalloon() }
                             }) {
                                 HStack(spacing: 8) {
                                     Image(systemName: isResonanced ? "heart.fill" : "heart")
@@ -357,8 +358,9 @@ struct PostDetailView: View {
                             
                             // Collect Button
                             Button(action: {
-                                let newCollected = !isCollected
-                                feedVM.updateCollection(for: post.id, collected: newCollected)
+                                Task {
+                                    await feedVM.toggleCollection(for: post.id)
+                                }
                             }) {
                                 HStack(spacing: 8) {
                                     Image(systemName: isCollected ? "bookmark.fill" : "bookmark")
@@ -416,9 +418,10 @@ struct PostDetailView: View {
             .contentShape(Rectangle())
             .highPriorityGesture(
                 TapGesture(count: 2).onEnded {
-                    let newLiked = !isResonanced
-                    feedVM.updateResonance(for: post.id, liked: newLiked)
-                    if newLiked { fireBalloon() }
+                    Task {
+                        await feedVM.toggleResonance(for: post.id)
+                    }
+                    if !isResonanced { fireBalloon() }
                 }
             )
         }
