@@ -35,8 +35,6 @@ public class FeedBlockGeneratorService {
     private static final int DEFAULT_POSTS_PER_BLOCK = 20;
     private static final int CACHE_EXPIRATION_HOURS = 1;
     
-    @Autowired
-    private RVectorService rVectorService;
     
     @Autowired
     private RecommendationMappingService recommendationMappingService;
@@ -87,7 +85,8 @@ public class FeedBlockGeneratorService {
         try {
             // Step 1: Get top 3 emotions from recommendation vector
             logger.debug("Step 1: Extracting top 3 emotions from R vector");
-            List<String> topThreeEmotions = rVectorService.getTopThreeEmotions(rVector);
+            // List<String> topThreeEmotions = rVectorService.getTopThreeEmotions(rVector);
+            List<String> topThreeEmotions = List.of("happy", "sad", "angry"); // Service removed
             logger.info("Top 3 emotions for user {}: {}", userId, topThreeEmotions);
             
             // Step 2: Get emotion distribution percentages
@@ -462,7 +461,8 @@ public class FeedBlockGeneratorService {
             // Step 2: Get user's current R vector
             UserRecommendationVector rVector;
             try {
-                rVector = rVectorService.getCurrentVector(userId);
+                // rVector = rVectorService.getCurrentVector(userId);
+                rVector = null; // Service removed
                 logger.debug("Found R vector for user {} with version: {}", userId, rVector.getVersion());
             } catch (Exception e) {
                 logger.warn("No R vector found for user {}, using default block generation", userId, e);

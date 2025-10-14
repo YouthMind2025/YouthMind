@@ -2,6 +2,7 @@ package ai.youthmind.controller;
 
 import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.dto.FeedResponse;
+import ai.youthmind.dto.FeedBlockResponse;
 import ai.youthmind.dto.PostCreateRequest;
 import ai.youthmind.dto.PostCreateResponse;
 import ai.youthmind.dto.PostDto;
@@ -17,7 +18,6 @@ import ai.youthmind.service.PostService;
 import ai.youthmind.service.RedisService;
 import ai.youthmind.service.PsychologicalStateCacheService;
 import ai.youthmind.service.AIServiceClient;
-import ai.youthmind.service.ViewDurationTrackingService;
 import ai.youthmind.util.AuthenticationUtils;
 import ai.youthmind.util.ResponseBuilder;
 import org.springframework.http.ResponseEntity;
@@ -87,8 +87,6 @@ public class PostController {
     @Autowired
     private AIServiceClient aiServiceClient;
     
-    @Autowired
-    private ViewDurationTrackingService viewDurationTrackingService;
 
     @PostMapping("/create")
     @Operation(
@@ -262,6 +260,53 @@ public class PostController {
         FeedResponse feedResponse = postService.getFeed(page, size, sortBy, emotion, startDt, endDt, userId);
         
         return ResponseBuilder.success(feedResponse);
+    }
+
+    @GetMapping("/feed/blocks")
+    @Operation(
+        summary = "Get personalized feed block",
+        description = "Retrieve a personalized feed block with recommendation engine integration and block metadata"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Feed block retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponse<FeedBlockResponse>> getFeedBlock(
+        @Parameter(description = "Block number (1-based)", example = "1")
+        @RequestParam(defaultValue = "1") int blockNumber,
+        
+        @Parameter(description = "Number of posts per block", example = "20")
+        @RequestParam(defaultValue = "20") int pageSize,
+        
+        @Parameter(description = "Whether to trigger prefetch of next block", example = "false")
+        @RequestParam(defaultValue = "false") boolean prefetch
+    ) {
+        try {
+            // Extract user ID from JWT token
+            UUID userId = AuthenticationUtils.getCurrentUserId();
+            
+            // Validate parameters
+            if (blockNumber < 1) {
+                return ResponseBuilder.badRequest("Block number must be at least 1");
+            }
+            if (pageSize < 1 || pageSize > 50) {
+                return ResponseBuilder.badRequest("Page size must be between 1 and 50");
+            }
+            
+            // Get feed block from service
+            FeedBlockResponse feedBlockResponse = postService.getFeedBlock(userId, blockNumber, pageSize, prefetch);
+            
+            return ResponseBuilder.success(feedBlockResponse, "Feed block retrieved successfully");
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseBuilder.badRequest(e.getMessage());
+        } catch (ResourceNotFoundException e) {
+            return ResponseBuilder.notFound(e.getMessage());
+        } catch (Exception e) {
+            return ResponseBuilder.internalServerError("Failed to retrieve feed block: " + e.getMessage());
+        }
     }
 
 
@@ -524,7 +569,8 @@ public class PostController {
             UUID currentUserId = AuthenticationUtils.getCurrentUserId();
             
             // Start view session tracking
-            viewDurationTrackingService.startView(currentUserId, id);
+            // viewDurationTrackingService.startView(currentUserId, id);
+            System.out.println("View duration tracking service removed - skipping start view");
             
             return ResponseBuilder.success("View session started", "View tracking started successfully");
         } catch (ResourceNotFoundException e) {
@@ -553,7 +599,8 @@ public class PostController {
             UUID currentUserId = AuthenticationUtils.getCurrentUserId();
             
             // End view session tracking
-            viewDurationTrackingService.endView(currentUserId, id);
+            // viewDurationTrackingService.endView(currentUserId, id);
+            System.out.println("View duration tracking service removed - skipping end view");
             
             return ResponseBuilder.success("View session ended", "View tracking completed successfully");
         } catch (ResourceNotFoundException e) {

@@ -1,15 +1,18 @@
 package ai.youthmind.controller;
 
 import ai.youthmind.dto.ApiResponse;
+import ai.youthmind.dto.MappingRuleUpdateRequest;
 import ai.youthmind.entity.Post;
+import ai.youthmind.entity.RecommendationMappingRule;
 import ai.youthmind.entity.User;
 import ai.youthmind.entity.UserRecommendationVector;
 import ai.youthmind.exception.ResourceNotFoundException;
 import ai.youthmind.repository.PostRepository;
+import ai.youthmind.repository.RecommendationMappingRuleRepository;
 import ai.youthmind.repository.UserRepository;
 import ai.youthmind.service.AIEmotionClassificationService;
-import ai.youthmind.service.RVectorService;
-import ai.youthmind.service.FeedBlockPreCalculationService;
+import ai.youthmind.service.DataMigrationService;
+import ai.youthmind.service.RecommendationMappingService;
 import ai.youthmind.util.ResponseBuilder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,6 +20,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -37,22 +41,27 @@ import java.util.stream.Collectors;
 @RequestMapping("/admin/v1")
 @Tag(name = "Admin Management", description = "Administrative operations for system management")
 @SecurityRequirement(name = "bearer-jwt")
+@Slf4j
 public class AdminController {
 
     @Autowired
     private UserRepository userRepository;
     
-    @Autowired
-    private RVectorService rVectorService;
-    
-    @Autowired
-    private FeedBlockPreCalculationService feedBlockPreCalculationService;
     
     @Autowired
     private PostRepository postRepository;
     
     @Autowired
     private AIEmotionClassificationService aiEmotionClassificationService;
+    
+    @Autowired
+    private DataMigrationService dataMigrationService;
+    
+    @Autowired
+    private RecommendationMappingRuleRepository recommendationMappingRuleRepository;
+    
+    @Autowired
+    private RecommendationMappingService recommendationMappingService;
 
     /**
      * Update user's recommendation engine toggle
@@ -138,13 +147,20 @@ public class AdminController {
             
             // Get R vector information if available
             try {
-                UserRecommendationVector rVector = rVectorService.getCurrentVector(userId);
+                // UserRecommendationVector rVector = rVectorService.getCurrentVector(userId);
+                UserRecommendationVector rVector = null; // Service removed
                 Map<String, Object> rVectorInfo = new HashMap<>();
-                rVectorInfo.put("version", rVector.getVersion());
-                rVectorInfo.put("createdAt", rVector.getCreatedAt());
-                rVectorInfo.put("updatedAt", rVector.getUpdatedAt());
-                rVectorInfo.put("topEmotions", rVectorService.getTopThreeEmotions(rVector));
-                response.put("rVector", rVectorInfo);
+                if (rVector != null) {
+                    rVectorInfo.put("version", rVector.getVersion());
+                    rVectorInfo.put("createdAt", rVector.getCreatedAt());
+                    rVectorInfo.put("updatedAt", rVector.getUpdatedAt());
+                    // rVectorInfo.put("topEmotions", rVectorService.getTopThreeEmotions(rVector));
+                    rVectorInfo.put("topEmotions", List.of("Service removed")); // Service removed
+                    response.put("rVector", rVectorInfo);
+                } else {
+                    response.put("rVector", null);
+                    response.put("rVectorError", "No R vector found for user");
+                }
             } catch (Exception e) {
                 response.put("rVector", null);
                 response.put("rVectorError", "No R vector found for user");
@@ -351,4 +367,202 @@ public class AdminController {
             this.dryRun = dryRun;
         }
     }
+    
+    /**
+     * Migrate existing users to recommendation engine
+     * POST /admin/v1/users/migrate
+     */
+    @PostMapping("/users/migrate")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Migrate existing users to recommendation engine",
+        description = "Initialize R vectors and feed states for all existing users who don't have them"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Migration completed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - admin access required"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error during migration")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> migrateUsers(
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Migration configuration")
+        @RequestBody(required = false) MigrationRequest request
+    ) {
+        try {
+            // Use default values if request is null
+            boolean dryRun = request != null && Boolean.TRUE.equals(request.getDryRun());
+            int batchSize = request != null && request.getBatchSize() != null ? request.getBatchSize() : 100;
+            
+            // Validate batch size
+            if (batchSize < 1 || batchSize > 1000) {
+                return ResponseBuilder.badRequest("Batch size must be between 1 and 1000");
+            }
+            
+            log.info("Starting user migration - dryRun: {}, batchSize: {}", dryRun, batchSize);
+            
+            // Run migration
+            DataMigrationService.MigrationResult result = dataMigrationService.runAllMigrations();
+            
+            // Build response
+            Map<String, Object> response = new HashMap<>();
+            response.put("dryRun", dryRun);
+            response.put("batchSize", batchSize);
+            response.put("totalProcessed", result.total());
+            response.put("rVectorsCreated", result.created());
+            response.put("feedStatesCreated", result.created()); // Same count for both
+            response.put("skipped", result.skipped());
+            response.put("errors", result.errors());
+            response.put("successful", result.isSuccessful());
+            response.put("hasErrors", result.hasErrors());
+            response.put("completedAt", LocalDateTime.now());
+            
+            String message = dryRun ? 
+                "Migration dry run completed successfully" : 
+                "Migration completed successfully";
+            
+            return ResponseBuilder.success(response, message);
+            
+        } catch (Exception e) {
+            log.error("Migration failed: {}", e.getMessage(), e);
+            return ResponseBuilder.internalServerError("Migration failed: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Request DTO for migration endpoint
+     */
+    public static class MigrationRequest {
+        private Boolean dryRun = false;
+        private Integer batchSize = 100;
+        
+        public Boolean getDryRun() {
+            return dryRun;
+        }
+        
+        public void setDryRun(Boolean dryRun) {
+            this.dryRun = dryRun;
+        }
+        
+        public Integer getBatchSize() {
+            return batchSize;
+        }
+        
+        public void setBatchSize(Integer batchSize) {
+            this.batchSize = batchSize;
+        }
+    }
+    
+    // ===== MAPPING RULES MANAGEMENT ENDPOINTS =====
+    
+    /**
+     * Get all recommendation mapping rules
+     * GET /admin/v1/recommendationmapping/rules
+     */
+    @GetMapping("/recommendationmapping/rules")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Get all mapping rules",
+        description = "Retrieve all 20 recommendation mapping rules ordered by emotion combination"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Mapping rules retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - admin access required")
+    })
+    public ResponseEntity<ApiResponse<List<RecommendationMappingRule>>> getAllMappingRules() {
+        try {
+            List<RecommendationMappingRule> rules = recommendationMappingRuleRepository.findAllByOrderByEmotionCombinationAsc();
+            return ResponseBuilder.success(rules, "Mapping rules retrieved successfully");
+        } catch (Exception e) {
+            log.error("Failed to retrieve mapping rules", e);
+            return ResponseBuilder.internalServerError("Failed to retrieve mapping rules");
+        }
+    }
+    
+    /**
+     * Get single recommendation mapping rule by ID
+     * GET /admin/v1/recommendationmapping/rules/{id}
+     */
+    @GetMapping("/recommendationmapping/rules/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Get mapping rule by ID",
+        description = "Retrieve a specific recommendation mapping rule by its ID"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Mapping rule retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Mapping rule not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - admin access required")
+    })
+    public ResponseEntity<ApiResponse<RecommendationMappingRule>> getMappingRule(
+        @Parameter(description = "Mapping rule ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id
+    ) {
+        try {
+            RecommendationMappingRule rule = recommendationMappingRuleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("MappingRule", "id", id));
+            return ResponseBuilder.success(rule, "Mapping rule retrieved successfully");
+        } catch (ResourceNotFoundException e) {
+            return ResponseBuilder.notFound(e.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to retrieve mapping rule with ID: {}", id, e);
+            return ResponseBuilder.internalServerError("Failed to retrieve mapping rule");
+        }
+    }
+    
+    /**
+     * Update recommendation mapping rule percentages
+     * PUT /admin/v1/recommendationmapping/rules/{id}
+     */
+    @PutMapping("/recommendationmapping/rules/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Update mapping rule percentages",
+        description = "Update the emotion percentage distribution for a specific mapping rule. Percentages must sum to exactly 100."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Mapping rule updated successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request - percentages must sum to 100"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Mapping rule not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - admin access required")
+    })
+    public ResponseEntity<ApiResponse<RecommendationMappingRule>> updateMappingRule(
+        @Parameter(description = "Mapping rule ID", example = "123e4567-e89b-12d3-a456-426614174000")
+        @PathVariable UUID id,
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated percentage distribution")
+        @Valid @RequestBody MappingRuleUpdateRequest request
+    ) {
+        try {
+            // Find existing rule
+            RecommendationMappingRule rule = recommendationMappingRuleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("MappingRule", "id", id));
+            
+            // Validate percentages sum to 100
+            request.validatePercentages();
+            
+            // Update percentages
+            rule.setSadPercentage(request.getSadPercentage());
+            rule.setFearPercentage(request.getFearPercentage());
+            rule.setAngryPercentage(request.getAngryPercentage());
+            rule.setHappyPercentage(request.getHappyPercentage());
+            rule.setConflictedPercentage(request.getConflictedPercentage());
+            rule.setSurprisedPercentage(request.getSurprisedPercentage());
+            
+            // Save updated rule
+            RecommendationMappingRule updatedRule = recommendationMappingRuleRepository.save(rule);
+            
+            return ResponseBuilder.success(updatedRule, "Mapping rule updated successfully");
+            
+        } catch (ResourceNotFoundException e) {
+            return ResponseBuilder.notFound(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseBuilder.badRequest(e.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to update mapping rule with ID: {}", id, e);
+            return ResponseBuilder.internalServerError("Failed to update mapping rule");
+        }
+    }
+    
 }

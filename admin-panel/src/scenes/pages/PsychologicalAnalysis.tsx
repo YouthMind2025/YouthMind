@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { psychologicalApi } from '../services/api';
+import { psychologicalApi } from '../../services/api';
 import './PsychologicalAnalysis.css';
 
 interface PsychologicalState {
