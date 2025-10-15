@@ -450,9 +450,31 @@ ai:
     api-key: ${YOUTHMIND_DEEPSEEK_API_KEY:}
     enabled: ${YOUTHMIND_AI_ENABLED:true}
 
-# Logging
+# Logging Configuration
 logging:
   level:
-    org.springframework.security: DEBUG
-    ai.youthmind: DEBUG
-    ai.youthmind.service.AIServiceClient: DEBUG 
+    org.springframework.security: WARN
+    ai.youthmind: INFO
+    ai.youthmind.events: INFO
+    ai.youthmind.service.FeedBlockGeneratorService: INFO
+    ai.youthmind.service.StateUpdateRuleEngine: INFO
+    ai.youthmind.service.PsychologicalStateService: INFO
+    ai.youthmind.service.AIServiceClient: DEBUG
+    ai.youthmind.filter.CorrelationIdFilter: DEBUG
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.springframework.data.redis: WARN
+    org.springframework.web.cors: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  config: classpath:logback-spring.xml
+
+# YouthMind Recommendation Engine Configuration
+youthmind:
+  recommendation:
+    enabled: ${YOUTHMIND_RECOMMENDATION_ENABLED:true}
+  logging:
+    structured: true
+    include-correlation-id: true
+    recommendation-events: true 

@@ -2,6 +2,7 @@ package ai.youthmind.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,10 +16,13 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import org.springframework.data.redis.stream.Subscription;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Redis Streams configuration for the recommendation engine event system.
@@ -28,11 +32,16 @@ import java.util.Map;
 @Configuration
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "youthmind.recommendation.enabled", havingValue = "true", matchIfMissing = false)
+@EnableScheduling
 public class RedisEventConfig {
 
     private final RedisConnectionFactory redisConnectionFactory;
     private final MeterRegistry meterRegistry;
     private final ObjectMapper objectMapper;
+    
+    // Queue depth tracking
+    private final AtomicLong rvectorQueueDepth = new AtomicLong(0);
+    private final AtomicLong blockPrecalcQueueDepth = new AtomicLong(0);
 
     /**
      * Redis template configured for Redis Streams operations
@@ -75,10 +84,79 @@ public class RedisEventConfig {
 
     /**
      * Initialize Redis Streams and consumer groups on startup
+     * Only if Redis supports Streams commands
      */
     @Bean
     public StreamInitializer streamInitializer() {
-        return new StreamInitializer();
+        if (supportsRedisStreams()) {
+            StreamInitializer initializer = new StreamInitializer();
+            registerQueueDepthGauges();
+            return initializer;
+        } else {
+            log.warn("Redis Streams not supported by current Redis server. Recommendation engine will use fallback mode.");
+            return new NoOpStreamInitializer();
+        }
+    }
+    
+    /**
+     * Check if Redis server supports Streams commands
+     */
+    private boolean supportsRedisStreams() {
+        try {
+            RedisTemplate<String, Object> template = redisStreamsTemplate();
+            // Try a simple XADD command to test Streams support
+            template.opsForStream().add("test-stream", Collections.singletonMap("test", "value"));
+            // Clean up test stream
+            template.delete("test-stream");
+            return true;
+        } catch (Exception e) {
+            log.debug("Redis Streams not supported: {}", e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Register queue depth gauges for monitoring
+     */
+    private void registerQueueDepthGauges() {
+        Gauge.builder("recommendation_event_queue_depth", rvectorQueueDepth, AtomicLong::get)
+                .tag("stream_name", "rvector-updates")
+                .description("Current depth of recommendation event queue")
+                .register(meterRegistry);
+                
+        Gauge.builder("recommendation_event_queue_depth", blockPrecalcQueueDepth, AtomicLong::get)
+                .tag("stream_name", "block-precalc")
+                .description("Current depth of recommendation event queue")
+                .register(meterRegistry);
+                
+        log.info("Registered queue depth gauges for monitoring");
+    }
+    
+    /**
+     * Update queue depth metrics every 30 seconds
+     */
+    @Scheduled(fixedRate = 30000)
+    public void updateQueueDepthMetrics() {
+        try {
+            RedisTemplate<String, Object> template = redisStreamsTemplate();
+            
+            // Update R vector updates queue depth
+            Long rvectorSize = template.opsForStream().size("recommendation:rvector-updates");
+            if (rvectorSize != null) {
+                rvectorQueueDepth.set(rvectorSize);
+            }
+            
+            // Update block precalc queue depth
+            Long blockSize = template.opsForStream().size("recommendation:block-precalc");
+            if (blockSize != null) {
+                blockPrecalcQueueDepth.set(blockSize);
+            }
+            
+            log.debug("Updated queue depths - rvector: {}, block-precalc: {}", rvectorSize, blockSize);
+            
+        } catch (Exception e) {
+            log.error("Failed to update queue depth metrics: {}", e.getMessage());
+        }
     }
 
     /**
@@ -93,6 +171,22 @@ public class RedisEventConfig {
     }
 
     /**
+     * No-op stream initializer for Redis servers that don't support Streams
+     */
+    public class NoOpStreamInitializer extends StreamInitializer {
+        public NoOpStreamInitializer() {
+            super(); // Call parent constructor
+            log.info("Redis Streams disabled - using fallback mode");
+        }
+        
+        @Override
+        protected void initializeStreams() {
+            // Override to do nothing - no streams initialization
+            log.info("Skipping Redis Streams initialization - using fallback mode");
+        }
+    }
+    
+    /**
      * Stream initializer that creates streams and consumer groups
      */
     public class StreamInitializer {
@@ -101,7 +195,7 @@ public class RedisEventConfig {
             initializeStreams();
         }
 
-        private void initializeStreams() {
+        protected void initializeStreams() {
             try {
                 RedisTemplate<String, Object> template = redisStreamsTemplate();
                 
