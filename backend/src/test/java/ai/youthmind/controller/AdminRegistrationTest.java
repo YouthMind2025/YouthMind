@@ -12,9 +12,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureWebMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -36,12 +38,37 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Test class for admin registration with environment variable configuration
  */
 @SpringBootTest
-@AutoConfigureWebMvc
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
     "admin.secret-key=TEST_ADMIN_SECRET_123"
 })
 public class AdminRegistrationTest {
+
+    @Configuration
+    static class TestConfig {
+        @Bean
+        @Primary
+        public PasswordEncoder testPasswordEncoder() {
+            return new PasswordEncoder() {
+                @Override
+                public String encode(CharSequence rawPassword) {
+                    return "$2a$10$test." + rawPassword.hashCode(); // Mock BCrypt-like encoding
+                }
+                
+                @Override
+                public boolean matches(CharSequence rawPassword, String encodedPassword) {
+                    return encodedPassword.equals(encode(rawPassword));
+                }
+            };
+        }
+        
+        @Bean
+        public AdminConfig adminConfig() {
+            AdminConfig config = new AdminConfig();
+            config.setSecretKey("TEST_ADMIN_SECRET_123");
+            return config;
+        }
+    }
 
     @Autowired
     private WebApplicationContext webApplicationContext;
@@ -54,9 +81,6 @@ public class AdminRegistrationTest {
 
     @MockBean
     private JWTService jwtService;
-
-    @MockBean
-    private PasswordEncoder passwordEncoder;
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
@@ -84,7 +108,6 @@ public class AdminRegistrationTest {
         mockUser.setRole(User.Role.ADMIN);
 
         when(userService.existsByEmail(anyString())).thenReturn(false);
-        when(passwordEncoder.encode(anyString())).thenReturn("encoded_password");
         when(userService.saveUser(any(User.class))).thenReturn(mockUser);
         when(jwtService.generateToken(anyString(), anyString())).thenReturn(
             org.springframework.data.util.Pair.of("jwt_token", new java.sql.Timestamp(System.currentTimeMillis()))

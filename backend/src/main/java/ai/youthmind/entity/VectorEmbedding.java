@@ -17,12 +17,7 @@ import java.util.UUID;
  * This serves as a reference table while actual vectors are stored in Qdrant.
  */
 @Entity
-@Table(name = "vector_embeddings", indexes = {
-    @Index(name = "idx_vector_content_type", columnList = "contentType"),
-    @Index(name = "idx_vector_content_id", columnList = "contentId"),
-    @Index(name = "idx_vector_model", columnList = "model"),
-    @Index(name = "idx_vector_created_at", columnList = "createdAt")
-})
+@Table(name = "vector_embeddings")
 @Data
 @Builder
 @NoArgsConstructor
@@ -52,10 +47,10 @@ public class VectorEmbedding {
     @Column(name = "vector_dimension", nullable = false)
     private Integer vectorDimension;
 
-    @Column(name = "embedding_text", columnDefinition = "TEXT")
+    @Column(name = "embedding_text")
     private String embeddingText;
 
-    @Column(name = "metadata", columnDefinition = "JSONB")
+    @Column(name = "metadata")
     private String metadata; // JSON string for additional metadata
 
     @Column(name = "quality_score")

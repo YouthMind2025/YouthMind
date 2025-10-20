@@ -49,7 +49,7 @@ public class ModerationAudit {
     @Column(name = "timestamp", nullable = false)
     private LocalDateTime timestamp;
     
-    @Column(name = "moderation_result", columnDefinition = "TEXT")
+    @Column(name = "moderation_result")
     private String moderationResultJson; // Serialized ModerationResult
     
     @Column(name = "context_hash", length = 100)

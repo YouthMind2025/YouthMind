@@ -83,8 +83,8 @@ class AsyncModerationServiceBatchTest {
             batchResults.add(result);
         }
 
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get(anyString())).thenReturn(null); // No cached results
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(valueOperations.get(anyString())).thenReturn(null); // No cached results
     }
 
     @Test

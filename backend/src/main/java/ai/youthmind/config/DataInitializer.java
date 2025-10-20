@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +26,7 @@ import java.util.UUID;
  * @author YouthMind Development Team
  */
 @Component
+@Profile("!test") // Skip in test environment
 public class DataInitializer implements CommandLineRunner {
     
     private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class);
@@ -40,23 +42,34 @@ public class DataInitializer implements CommandLineRunner {
     
     @Override
     public void run(String... args) throws Exception {
-        // Ensure admin user exists
-        if (!userRepository.existsByEmail("admin@youthmind.ai")) {
-            logger.info("Creating admin user...");
-            User adminUser = createAdminUser();
-            userRepository.save(adminUser);
-            logger.info("Admin user created: {}", adminUser.getEmail());
-        } else {
-            logger.info("Admin user already exists");
-        }
-        
-        // Only initialize sample data if no other data exists
-        if (userRepository.count() <= 1) { // Only admin user exists
-            logger.info("Initializing sample data...");
-            initializeSampleData();
-            logger.info("Sample data initialization completed");
-        } else {
-            logger.info("Sample data already exists, skipping initialization");
+        try {
+            // Debug PasswordEncoder injection
+            logger.debug("PasswordEncoder instance: {}", passwordEncoder != null ? passwordEncoder.getClass().getSimpleName() : "NULL");
+            if (passwordEncoder != null) {
+                logger.debug("PasswordEncoder test encode: {}", passwordEncoder.encode("test"));
+            }
+            
+            // Ensure admin user exists
+            if (!userRepository.existsByEmail("admin@youthmind.ai")) {
+                logger.info("Creating admin user...");
+                User adminUser = createAdminUser();
+                userRepository.save(adminUser);
+                logger.info("Admin user created: {}", adminUser.getEmail());
+            } else {
+                logger.info("Admin user already exists");
+            }
+            
+            // Only initialize sample data if no other data exists
+            if (userRepository.count() <= 1) { // Only admin user exists
+                logger.info("Initializing sample data...");
+                initializeSampleData();
+                logger.info("Sample data initialization completed");
+            } else {
+                logger.info("Sample data already exists, skipping initialization");
+            }
+        } catch (Exception e) {
+            logger.error("Error during data initialization: {}", e.getMessage(), e);
+            throw e; // Re-throw to fail fast
         }
     }
     
@@ -77,13 +90,25 @@ public class DataInitializer implements CommandLineRunner {
         User admin = new User();
         admin.setId(UUID.randomUUID());
         admin.setEmail("admin@youthmind.ai");
-        admin.setPassword(passwordEncoder.encode("admin123"));
+        
+        // Encode password and verify it's not null
+        String encodedPassword = passwordEncoder.encode("admin123");
+        logger.debug("Encoded password length: {}", encodedPassword != null ? encodedPassword.length() : "NULL");
+        admin.setPassword(encodedPassword);
+        
+        // Verify password was set correctly
+        logger.debug("Admin password after setting: {}", admin.getPassword() != null ? "SET" : "NULL");
+        
         admin.setFirstName("Admin");
         admin.setLastName("User");
         admin.setUsername("admin");
         admin.setRole(User.Role.ADMIN); // Set admin role
         admin.setCreatedAt(LocalDateTime.now());
         admin.setUpdatedAt(LocalDateTime.now());
+        
+        logger.debug("Admin user created: email={}, password={}", 
+                    admin.getEmail(), admin.getPassword() != null ? "SET" : "NULL");
+        
         return admin;
     }
 

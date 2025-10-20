@@ -41,19 +41,19 @@ public class UserConsent {
     @Column(name = "status", nullable = false)
     private ConsentStatus status = ConsentStatus.PENDING;
     
-    @Column(name = "original_content", columnDefinition = "TEXT")
+    @Column(name = "original_content")
     private String originalContent;
     
-    @Column(name = "masked_content", columnDefinition = "TEXT")
+    @Column(name = "masked_content")
     private String maskedContent;
     
-    @Column(name = "final_content", columnDefinition = "TEXT")
+    @Column(name = "final_content")
     private String finalContent;
     
     @Column(name = "masking_strategy")
     private String maskingStrategy;
     
-    @Column(name = "masking_options", columnDefinition = "TEXT")
+    @Column(name = "masking_options")
     private String maskingOptions; // JSON string of masking options
     
     @Column(name = "requested_at", nullable = false)
@@ -65,7 +65,7 @@ public class UserConsent {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
     
-    @Column(name = "notes", columnDefinition = "TEXT")
+    @Column(name = "notes")
     private String notes;
     
     @Column(name = "created_at", nullable = false)

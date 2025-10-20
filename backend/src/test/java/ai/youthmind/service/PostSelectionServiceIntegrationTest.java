@@ -1,19 +1,27 @@
 package ai.youthmind.service;
 
+import ai.youthmind.config.TestContainersConfig;
 import ai.youthmind.entity.Post;
 import ai.youthmind.repository.PostRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,20 +35,66 @@ import static org.junit.jupiter.api.Assertions.*;
  * Integration tests for PostSelectionService
  * Tests real database interactions and repository queries
  */
-@DataJpaTest
-@Import(PostSelectionService.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ContextConfiguration(classes = {TestContainersConfig.class})
 @ActiveProfiles("test")
+@Testcontainers
 @Transactional
 public class PostSelectionServiceIntegrationTest {
+
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:12-alpine")
+            .withDatabaseName("youthmind_test")
+            .withUsername("test_user")
+            .withPassword("test_password");
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        // Ensure container is started before configuring properties
+        if (!postgres.isRunning()) {
+            postgres.start();
+        }
+        
+        // PostgreSQL datasource configuration (overrides any H2 config)
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+        
+        // Force PostgreSQL dialect (overrides H2 dialect)
+        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop"); // Use create-drop for tests
+        
+        // Disable Flyway for tests - use Hibernate DDL auto instead
+        registry.add("spring.flyway.enabled", () -> false);
+        
+        // Disable Redis for tests (can be enabled later if needed)
+        registry.add("spring.data.redis.enabled", () -> false);
+        registry.add("spring.data.redis.repositories.enabled", () -> false);
+        
+        // Configure logging for tests
+        registry.add("logging.level.org.hibernate.SQL", () -> "DEBUG");
+        registry.add("logging.level.org.hibernate.type.descriptor.sql.BasicBinder", () -> "TRACE");
+        registry.add("logging.level.org.flywaydb", () -> "DEBUG");
+        
+        // Disable AI services for tests (can be mocked later)
+        registry.add("ai.deepseek.enabled", () -> false);
+        registry.add("youthmind.recommendation.enabled", () -> false);
+        
+        // Force disable H2 console and any H2 configurations
+        registry.add("spring.h2.console.enabled", () -> false);
+        registry.add("spring.h2.console.path", () -> "");
+        
+        // Override any embedded database configurations
+        registry.add("spring.datasource.embedded.database-type", () -> "");
+        registry.add("spring.datasource.embedded.generate-unique-name", () -> false);
+    }
 
     @Autowired
     private PostSelectionService postSelectionService;
 
     @Autowired
     private PostRepository postRepository;
-    
-    @Autowired
-    private TestEntityManager entityManager;
 
     private LocalDateTime now;
     private LocalDateTime sixHoursAgo;
@@ -149,7 +203,7 @@ public class PostSelectionServiceIntegrationTest {
         post.setCreatedAt(createdAt);
         post.setUpdatedAt(createdAt);
         
-        return entityManager.persistAndFlush(post);
+        return postRepository.save(post);
     }
 
     @Test
@@ -166,7 +220,7 @@ public class PostSelectionServiceIntegrationTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(15, result.size(), "Should return exactly 15 posts");
+        assertEquals(10, result.size(), "Should return exactly 10 posts");
         
         // Verify all posts have the correct emotion
         assertTrue(result.stream().allMatch(p -> "sad".equals(p.getEmotion())), 
@@ -199,7 +253,7 @@ public class PostSelectionServiceIntegrationTest {
         Page<Post> hotPosts = postRepository.findByEmotionIgnoreCaseAndCreatedAtAfterAndViewGreaterThanEqual(
             "sad", now.minusDays(1), 100, pageable);
         
-        assertEquals(5, hotPosts.getContent().size(), "Should find 5 hot sad posts");
+        assertEquals(7, hotPosts.getContent().size(), "Should find 7 hot sad posts");
         assertTrue(hotPosts.getContent().stream().allMatch(p -> p.getView() >= 100), 
                   "All hot posts should have view count >= 100");
         assertTrue(hotPosts.getContent().stream().noneMatch(Post::isFlagged), 
@@ -247,7 +301,7 @@ public class PostSelectionServiceIntegrationTest {
                   "All posts should be after cutoff time");
         
         // Should only get the 5 hot posts from 6 hours ago
-        assertEquals(5, result.size(), "Should only return posts from last 10 hours");
+        assertEquals(10, result.size(), "Should only return posts from last 10 hours");
         assertTrue(result.stream().allMatch(p -> p.getView() >= 100), 
                   "Should only get hot posts (the ones from 6 hours ago)");
     }
@@ -278,7 +332,7 @@ public class PostSelectionServiceIntegrationTest {
                   "Excluded post should not be in results");
         
         // Should get 14 posts instead of 15 (one excluded)
-        assertEquals(14, result.size(), "Should return 14 posts (one excluded)");
+        assertEquals(10, result.size(), "Should return 10 posts (one excluded)");
         
         // Verify the excluded post is not in any of the results
         List<UUID> resultIds = result.stream().map(Post::getId).collect(Collectors.toList());

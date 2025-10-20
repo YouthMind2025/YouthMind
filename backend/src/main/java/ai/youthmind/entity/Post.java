@@ -28,7 +28,7 @@ public class Post {
     @Column(name = "title", nullable = false, length = 255)
     private String title;
     
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false)
     private String content;
     
     @Column(name = "emotion", length = 100)
@@ -59,10 +59,10 @@ public class Post {
     @Column(name = "collect_count", nullable = false)
     private int collect = 0;
     
-    @Column(name = "topics", columnDefinition = "TEXT")
+    @Column(name = "topics")
     private String topics;
     
-    @Column(name = "ai_metadata", columnDefinition = "TEXT") 
+    @Column(name = "ai_metadata")
     private String aiMetadata;
 
     @Column(name = "flagged", nullable = false)
@@ -75,7 +75,7 @@ public class Post {
     private LocalDateTime flaggedAt;
     
     // Enhanced moderation fields
-    @Column(name = "masked_content", columnDefinition = "TEXT")
+    @Column(name = "masked_content")
     private String maskedContent;
     
     @Column(name = "moderation_layer", length = 50)
@@ -84,13 +84,13 @@ public class Post {
     @Column(name = "moderation_confidence", precision = 5, scale = 4)
     private BigDecimal moderationConfidence = BigDecimal.ZERO;
     
-    @Column(name = "moderation_details", columnDefinition = "jsonb")
+    @Column(name = "moderation_details")
     private String moderationDetails;
     
     @Column(name = "content_hash", length = 64)
     private String contentHash;
     
-    @Column(name = "original_content_backup", columnDefinition = "TEXT")
+    @Column(name = "original_content_backup")
     private String originalContentBackup;
     
     @Column(name = "created_at", nullable = false)

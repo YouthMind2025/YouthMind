@@ -25,7 +25,7 @@ public class Comment {
     @Column(name = "author_id", nullable = false)
     private UUID authorId;
     
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false)
     private String content;
     
     @Column(name = "likes", nullable = false)
@@ -41,7 +41,7 @@ public class Comment {
     @Column(name = "is_flagged", nullable = false)
     private Boolean isFlagged = false;
     
-    @Column(name = "flag_reason", columnDefinition = "TEXT")
+    @Column(name = "flag_reason")
     private String flagReason;
     
     @Column(name = "flagged_at")
@@ -53,7 +53,7 @@ public class Comment {
     @Column(name = "moderation_confidence")
     private Double moderationConfidence;
     
-    @Column(name = "moderation_reason", columnDefinition = "TEXT")
+    @Column(name = "moderation_reason")
     private String moderationReason;
     
     @Column(name = "moderation_status", length = 50)

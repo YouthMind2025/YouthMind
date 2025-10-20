@@ -30,7 +30,7 @@ public class WarningHistory {
     @Column(name = "warning_type", nullable = false)
     private WarningType warningType;
     
-    @Column(name = "reason", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "reason", nullable = false)
     private String reason;
     
     @Enumerated(EnumType.STRING)

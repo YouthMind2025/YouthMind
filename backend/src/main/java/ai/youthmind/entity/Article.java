@@ -21,7 +21,7 @@ public class Article {
     @Column(name = "title", nullable = false, length = 255)
     private String title;
     
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false)
     private String content;
     
     @Column(name = "intro", length = 500)

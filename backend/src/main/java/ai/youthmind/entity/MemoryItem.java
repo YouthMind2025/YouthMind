@@ -51,7 +51,7 @@ public class MemoryItem {
     @Column(name = "compressed_content", columnDefinition = "TEXT")
     private String compressedContent;
     
-    @Column(name = "context_tags", columnDefinition = "jsonb")
+    @Column(name = "context_tags")
     private String contextTags;
     
     @Column(name = "weight_score", precision = 10, scale = 6, nullable = false)

@@ -60,7 +60,7 @@ public class ModerationLog {
     @Column(name = "reason_code", length = 50)
     private String reasonCode;
     
-    @Column(name = "reason_details", columnDefinition = "TEXT")
+    @Column(name = "reason_details")
     private String reasonDetails;
     
     @Column(name = "moderator_id")
