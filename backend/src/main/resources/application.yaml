@@ -5,7 +5,7 @@ spring:
   application:
     name: youthmind-backend
   profiles:
-    active: dev  # Use H2 configuration for development
+    active: dev  # Use H2 configuration for development (tests will override this)
   
   datasource:
     url: jdbc:postgresql://localhost:5432/youthmind_db
@@ -23,16 +23,16 @@ spring:
   
   jpa:
     hibernate:
-      ddl-auto: update  # Use update to create/update tables automatically
+      ddl-auto: validate  # Use validate since Flyway handles schema creation
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
   
   # Flyway Configuration (Database Migration)
   flyway:
-    enabled: false  # Disable Flyway by default (enable in production profile)
+    enabled: true  # Enable Flyway by default for proper schema management
     locations: classpath:db/migration
     baseline-on-migrate: true
     validate-on-migrate: true
@@ -47,6 +47,7 @@ spring:
   
   data:
     redis:
+      enabled: false  # Disable Redis for API testing
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
@@ -448,18 +449,42 @@ ai:
   deepseek:
     base-url: ${YOUTHMIND_DEEPSEEK_API_URL:https://api.deepseek.com/v1}
     api-key: ${YOUTHMIND_DEEPSEEK_API_KEY:}
-    enabled: ${YOUTHMIND_AI_ENABLED:true}
+    enabled: false  # Disable AI services for API testing
 
-# Psychological Vector Generation Configuration
+# Logging Configuration
+logging:
+  level:
+    org.springframework.security: WARN
+    ai.youthmind: INFO
+    ai.youthmind.events: INFO
+    ai.youthmind.service.FeedBlockGeneratorService: INFO
+    ai.youthmind.service.StateUpdateRuleEngine: INFO
+    ai.youthmind.service.PsychologicalStateService: INFO
+    ai.youthmind.service.AIServiceClient: DEBUG
+    ai.youthmind.filter.CorrelationIdFilter: DEBUG
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.springframework.data.redis: WARN
+    org.springframework.web.cors: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  config: classpath:logback-spring.xml
+
+# YouthMind Configuration
 youthmind:
+  # Psychological Vector Generation Configuration
   vector:
     use-deepseek: ${YOUTHMIND_VECTOR_USE_DEEPSEEK:true}  # Enable DeepSeek for vector generation
     cache-ttl-minutes: ${YOUTHMIND_VECTOR_CACHE_TTL:60}   # Cache vectors for 60 minutes
     enable-optimization: ${YOUTHMIND_VECTOR_OPTIMIZE:true} # Enable vector optimization
-
-# Logging
-logging:
-  level:
-    org.springframework.security: DEBUG
-    ai.youthmind: DEBUG
-    ai.youthmind.service.AIServiceClient: DEBUG 
+  
+  # Recommendation Engine Configuration
+  recommendation:
+    enabled: false  # Disable recommendation engine for API testing
+  
+  # Logging Configuration
+  logging:
+    structured: true
+    include-correlation-id: true
+    recommendation-events: true 

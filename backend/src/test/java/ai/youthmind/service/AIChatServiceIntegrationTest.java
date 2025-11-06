@@ -12,11 +12,12 @@ import ai.youthmind.util.PersonalityAdapter;
 import ai.youthmind.util.SafetyFilter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -25,78 +26,44 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
+@SpringBootTest
+@ActiveProfiles("test")
 class AIChatServiceIntegrationTest {
 
-    @Mock
+    @MockBean
     private AIServiceClient aiServiceClient;
     
-    @Mock
+    @MockBean
     private ConversationRepository conversationRepository;
     
-    @Mock
+    @MockBean
     private MessageRepository messageRepository;
     
-    @Mock
+    @MockBean
     private UserRepository userRepository;
     
-    @Mock
+    @MockBean
     private RedisTemplate<String, Object> redisTemplate;
     
-    @Mock
+    @MockBean
     private ValueOperations<String, Object> valueOperations;
     
-    @Mock
+    @MockBean
     private NLPAnalyzer nlpAnalyzer;
     
-    @Mock
+    @MockBean
     private PersonalityAdapter personalityAdapter;
     
-    @Mock
+    @MockBean
     private SafetyFilter safetyFilter;
     
+    @Autowired
     private AIChatService aiChatService;
     
     @BeforeEach
     void setUp() {
-        aiChatService = new AIChatService();
-        // Use reflection to inject mocks (simplified for testing)
-        try {
-            java.lang.reflect.Field aiServiceClientField = AIChatService.class.getDeclaredField("aiServiceClient");
-            aiServiceClientField.setAccessible(true);
-            aiServiceClientField.set(aiChatService, aiServiceClient);
-            
-            java.lang.reflect.Field conversationRepositoryField = AIChatService.class.getDeclaredField("conversationRepository");
-            conversationRepositoryField.setAccessible(true);
-            conversationRepositoryField.set(aiChatService, conversationRepository);
-            
-            java.lang.reflect.Field messageRepositoryField = AIChatService.class.getDeclaredField("messageRepository");
-            messageRepositoryField.setAccessible(true);
-            messageRepositoryField.set(aiChatService, messageRepository);
-            
-            java.lang.reflect.Field userRepositoryField = AIChatService.class.getDeclaredField("userRepository");
-            userRepositoryField.setAccessible(true);
-            userRepositoryField.set(aiChatService, userRepository);
-            
-            java.lang.reflect.Field redisTemplateField = AIChatService.class.getDeclaredField("redisTemplate");
-            redisTemplateField.setAccessible(true);
-            redisTemplateField.set(aiChatService, redisTemplate);
-            
-            java.lang.reflect.Field nlpAnalyzerField = AIChatService.class.getDeclaredField("nlpAnalyzer");
-            nlpAnalyzerField.setAccessible(true);
-            nlpAnalyzerField.set(aiChatService, nlpAnalyzer);
-            
-            java.lang.reflect.Field personalityAdapterField = AIChatService.class.getDeclaredField("personalityAdapter");
-            personalityAdapterField.setAccessible(true);
-            personalityAdapterField.set(aiChatService, personalityAdapter);
-            
-            java.lang.reflect.Field safetyFilterField = AIChatService.class.getDeclaredField("safetyFilter");
-            safetyFilterField.setAccessible(true);
-            safetyFilterField.set(aiChatService, safetyFilter);
-            
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to inject dependencies", e);
-        }
+        // Spring will automatically inject the mocked dependencies via @MockBean
+        // No manual reflection injection needed
     }
     
     @Test

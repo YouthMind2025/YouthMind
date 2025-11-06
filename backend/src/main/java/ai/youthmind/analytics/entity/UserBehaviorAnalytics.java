@@ -21,7 +21,7 @@ public class UserBehaviorAnalytics {
 
     private String interactionType; // LIKE, COMMENT, SAVE, SHARE
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "metadata_json")
     private String metadataJson;
 
     @Column(nullable = false, updatable = false)

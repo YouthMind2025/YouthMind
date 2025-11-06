@@ -4,7 +4,6 @@ import ai.youthmind.entity.Post;
 import ai.youthmind.entity.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
 import java.time.LocalDateTime;
@@ -12,8 +11,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-public class PostRepositoryTest {
+public class PostRepositoryTest extends BaseRepositoryTest {
     
     @Autowired
     private TestEntityManager entityManager;

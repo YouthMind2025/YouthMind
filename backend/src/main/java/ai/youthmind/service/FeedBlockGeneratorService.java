@@ -7,8 +7,13 @@ import ai.youthmind.entity.UserRecommendationVector;
 import ai.youthmind.repository.FeedBlockCacheRepository;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.UserFeedStateRepository;
+import ai.youthmind.util.StructuredLogger;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,6 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static net.logstash.logback.argument.StructuredArguments.*;
+import static ai.youthmind.util.StructuredLogger.*;
 
 /**
  * Service for generating personalized feed blocks based on user recommendation vectors
@@ -35,24 +43,61 @@ public class FeedBlockGeneratorService {
     private static final int DEFAULT_POSTS_PER_BLOCK = 20;
     private static final int CACHE_EXPIRATION_HOURS = 1;
     
+    // Metrics
+    private final MeterRegistry meterRegistry;
+    private final Timer blockGenerationDuration;
+    private final Counter cacheHits;
+    private final Counter cacheMisses;
+    private final Map<String, Timer> postSelectionTimers;
+    
+    private final RecommendationMappingService recommendationMappingService;
+    private final PostSelectionService postSelectionService;
+    private final FeedBlockCacheRepository feedBlockCacheRepository;
+    private final UserFeedStateRepository userFeedStateRepository;
+    private final PostRepository postRepository;
+    private final RedisService redisService;
     
     @Autowired
-    private RecommendationMappingService recommendationMappingService;
-    
-    @Autowired
-    private PostSelectionService postSelectionService;
-    
-    @Autowired
-    private FeedBlockCacheRepository feedBlockCacheRepository;
-    
-    @Autowired
-    private UserFeedStateRepository userFeedStateRepository;
-    
-    @Autowired
-    private PostRepository postRepository;
-    
-    @Autowired(required = false)
-    private RedisService redisService;
+    public FeedBlockGeneratorService(
+            RecommendationMappingService recommendationMappingService,
+            PostSelectionService postSelectionService,
+            FeedBlockCacheRepository feedBlockCacheRepository,
+            UserFeedStateRepository userFeedStateRepository,
+            PostRepository postRepository,
+            @Autowired(required = false) RedisService redisService,
+            MeterRegistry meterRegistry
+    ) {
+        this.recommendationMappingService = recommendationMappingService;
+        this.postSelectionService = postSelectionService;
+        this.feedBlockCacheRepository = feedBlockCacheRepository;
+        this.userFeedStateRepository = userFeedStateRepository;
+        this.postRepository = postRepository;
+        this.redisService = redisService;
+        this.meterRegistry = meterRegistry;
+        
+        // Initialize metrics
+        this.blockGenerationDuration = Timer.builder("feed_block_generation_duration_seconds")
+                .description("Time taken to generate a feed block")
+                .register(meterRegistry);
+        
+        this.cacheHits = Counter.builder("feed_block_cache_hits_total")
+                .description("Total number of feed block cache hits")
+                .register(meterRegistry);
+        
+        this.cacheMisses = Counter.builder("feed_block_cache_misses_total")
+                .description("Total number of feed block cache misses")
+                .register(meterRegistry);
+        
+        // Initialize emotion-specific timers
+        this.postSelectionTimers = new HashMap<>();
+        for (String emotion : Arrays.asList("happy", "sad", "angry", "fear", "surprised", "conflicted")) {
+            postSelectionTimers.put(emotion, 
+                Timer.builder("feed_block_post_selection_duration_seconds")
+                    .tag("emotion", emotion)
+                    .description("Time taken to select posts for a specific emotion")
+                    .register(meterRegistry));
+        }
+    }
     
     /**
      * Generate a personalized feed block for a user based on their recommendation vector
@@ -65,8 +110,12 @@ public class FeedBlockGeneratorService {
      * @throws RuntimeException if generation fails
      */
     public FeedBlockCache generateBlockForUser(UUID userId, Integer blockNumber, UserRecommendationVector rVector) {
-        logger.info("Starting feed block generation - userId: {}, blockNumber: {}, rVectorVersion: {}", 
-                   userId, blockNumber, rVector != null ? rVector.getVersion() : "null");
+        long startTime = System.currentTimeMillis();
+        Timer.Sample sample = Timer.start(meterRegistry);
+        String correlationId = MDC.get("correlationId");
+        
+        // Log block generation start
+        logBlockGenerationStart(logger, userId, blockNumber, rVector.getVersion());
         
         // Validate parameters
         if (userId == null) {
@@ -131,21 +180,35 @@ public class FeedBlockGeneratorService {
             logger.info("Updated UserFeedState for user {}: currentBlock={}, totalBlocks={}", 
                        userId, userState.getCurrentBlockNumber(), userState.getTotalBlocksGenerated());
             
-            // Step 9: Log completion with stats
-            logger.info("Feed block generation completed successfully - userId: {}, blockNumber: {}, " +
-                       "postsGenerated: {}, rVectorVersion: {}, cacheExpiresAt: {}", 
-                       userId, blockNumber, assembledPosts.size(), rVector.getVersion(), 
-                       savedCache.getExpiresAt());
+            long durationMs = System.currentTimeMillis() - startTime;
+            
+            // Log block generation complete
+            logBlockGenerationComplete(logger, userId, blockNumber, durationMs, assembledPosts.size());
             
             return savedCache;
             
         } catch (IllegalArgumentException e) {
-            logger.error("Invalid parameters for feed block generation - userId: {}, blockNumber: {}", 
-                        userId, blockNumber, e);
+            long durationMs = System.currentTimeMillis() - startTime;
+            logger.error("Invalid parameters for feed block generation",
+                kv("userId", userId),
+                kv("blockNumber", blockNumber),
+                kv("durationMs", durationMs),
+                kv("error", e.getMessage()),
+                kv("errorType", e.getClass().getSimpleName())
+            );
             throw e;
         } catch (Exception e) {
-            logger.error("Failed to generate feed block for user: {}, block: {}", userId, blockNumber, e);
+            long durationMs = System.currentTimeMillis() - startTime;
+            logger.error("Feed block generation failed",
+                kv("userId", userId),
+                kv("blockNumber", blockNumber),
+                kv("durationMs", durationMs),
+                kv("error", e.getMessage()),
+                kv("errorType", e.getClass().getSimpleName())
+            );
             throw new RuntimeException("Failed to generate feed block for user: " + userId, e);
+        } finally {
+            sample.stop(blockGenerationDuration);
         }
     }
     
@@ -239,8 +302,17 @@ public class FeedBlockGeneratorService {
             
             if (count > 0) {
                 try {
+                    Timer emotionTimer = postSelectionTimers.getOrDefault(emotion,
+                        Timer.builder("feed_block_post_selection_duration_seconds")
+                            .tag("emotion", emotion)
+                            .register(meterRegistry));
+                    
+                    Timer.Sample sample = Timer.start(meterRegistry);
+                    
                     logger.debug("Selecting {} posts for emotion: {}", count, emotion);
                     List<Post> emotionPosts = postSelectionService.selectPostsForEmotion(emotion, count, excludePostIds);
+                    
+                    sample.stop(emotionTimer);
                     
                     allPosts.addAll(emotionPosts);
                     emotionPosts.forEach(post -> excludePostIds.add(post.getId()));
@@ -342,6 +414,7 @@ public class FeedBlockGeneratorService {
      * @throws RuntimeException if generation fails
      */
     public FeedBlockCache generateDefaultBlock(UUID userId) {
+        Timer.Sample sample = Timer.start(meterRegistry);
         logger.info("Starting default feed block generation for first-time user: {}", userId);
         
         if (userId == null) {
@@ -413,6 +486,8 @@ public class FeedBlockGeneratorService {
         } catch (Exception e) {
             logger.error("Failed to generate default block for user: {}", userId, e);
             throw new RuntimeException("Failed to generate default block for user: " + userId, e);
+        } finally {
+            sample.stop(blockGenerationDuration);
         }
     }
     
@@ -447,15 +522,19 @@ public class FeedBlockGeneratorService {
                 
                 // Check if block is expired
                 if (!block.isExpired()) {
-                    logger.info("Using cached block for user {} block {} (expires at: {})", 
-                               userId, blockNumber, block.getExpiresAt());
+                    cacheHits.increment();
+                    logCacheOperation(logger, "feed_block_cache", 
+                                    "user:" + userId + ":block:" + blockNumber, true);
                     return block;
                 } else {
-                    logger.info("Cached block for user {} block {} is expired (expired at: {}), generating new", 
-                               userId, blockNumber, block.getExpiresAt());
+                    cacheMisses.increment();
+                    logCacheOperation(logger, "feed_block_cache",
+                                    "user:" + userId + ":block:" + blockNumber, false);
                 }
             } else {
-                logger.info("No cached block found for user {} block {}, generating new", userId, blockNumber);
+                cacheMisses.increment();
+                logCacheOperation(logger, "feed_block_cache",
+                                "user:" + userId + ":block:" + blockNumber, false);
             }
             
             // Step 2: Get user's current R vector

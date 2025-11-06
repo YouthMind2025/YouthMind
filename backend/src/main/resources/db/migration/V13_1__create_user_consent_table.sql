@@ -20,11 +20,11 @@ CREATE TABLE user_consent (
 );
 
 -- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_user_consent_user_id ON user_consent(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_consent_content_id ON user_consent(content_id);
-CREATE INDEX IF NOT EXISTS idx_user_consent_status ON user_consent(status);
-CREATE INDEX IF NOT EXISTS idx_user_consent_expires_at ON user_consent(expires_at);
-CREATE INDEX IF NOT EXISTS idx_user_consent_user_content ON user_consent(user_id, content_id);
+CREATE INDEX idx_user_consent_user_id ON user_consent(user_id);
+CREATE INDEX idx_user_consent_content_id ON user_consent(content_id);
+CREATE INDEX idx_user_consent_status ON user_consent(status);
+CREATE INDEX idx_user_consent_expires_at ON user_consent(expires_at);
+CREATE INDEX idx_user_consent_user_content ON user_consent(user_id, content_id);
 
 -- Create trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_user_consent_updated_at()

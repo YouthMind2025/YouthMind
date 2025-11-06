@@ -5,26 +5,34 @@ spring:
   application:
     name: youthmind-backend-test
   
-  datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: 
-  
-  h2:
-    console:
-      enabled: true
+  # Database configuration will be provided by TestContainersConfig
+  # No datasource configuration needed here
   
   jpa:
     hibernate:
-      ddl-auto: create-drop
-    show-sql: false
+      ddl-auto: validate  # Use validate since Flyway handles schema
+    show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        globally_quoted_identifiers: true
+        id:
+          new_generator_mappings: true
+        use_sql_comments: true
   
   flyway:
-    enabled: false
+    enabled: true  # Enable Flyway migrations for PostgreSQL
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+  
+  # Redis configuration for tests - disabled for stability
+  data:
+    redis:
+      enabled: false
+      repositories:
+        enabled: false
   
   # Test CORS configuration
   web:
@@ -54,6 +62,11 @@ jwt:
 # Admin Configuration for tests
 admin:
   secret-key: TEST_ADMIN_SECRET_KEY
+
+# YouthMind Recommendation Engine Configuration for tests
+youthmind:
+  recommendation:
+    enabled: false  # Disable recommendation engine for tests
 
 # Logging for tests
 logging:

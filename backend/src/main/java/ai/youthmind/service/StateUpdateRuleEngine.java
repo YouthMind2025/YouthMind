@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import ai.youthmind.entity.StateUpdateHistory;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +17,9 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import ai.youthmind.dto.UserPersonalityProfile;
 import ai.youthmind.service.InteractionModulationService.ComprehensiveInteractionAnalysis;
+
+import static net.logstash.logback.argument.StructuredArguments.*;
+import static ai.youthmind.util.StructuredLogger.*;
 
 /**
  * Implement state update rules with dynamic α calculation
@@ -76,7 +81,14 @@ public class StateUpdateRuleEngine {
      */
     public List<Double> applyPostingUpdate(List<Double> currentState, List<Double> vRaw, double alpha) {
         try {
-            logger.debug("Applying posting update with alpha: {}", alpha);
+            // Log state update with before values
+            Map<String, Double> beforeState = extractDominantDimensions(currentState);
+            
+            logger.info("Applying posting update",
+                kv("beforeState", beforeState),
+                kv("alpha", alpha),
+                kv("updateType", "posting")
+            );
             
             // Validate inputs
             validateStateUpdateInputs(currentState, vRaw);
@@ -94,11 +106,23 @@ public class StateUpdateRuleEngine {
             // Calculate S_new = α·V_raw + (1-α)·S_prev
             List<Double> newState = stateVectorCalculator.addVectors(alphaVRaw, oneMinusAlphaSPrev);
             
-            logger.debug("Successfully applied posting update");
+            Map<String, Double> afterState = extractDominantDimensions(newState);
+            
+            logger.info("Posting update applied",
+                kv("beforeState", beforeState),
+                kv("afterState", afterState),
+                kv("alpha", alpha),
+                kv("dimensionsChanged", calculateChangedDimensions(beforeState, afterState))
+            );
+            
             return newState;
             
         } catch (Exception e) {
-            logger.error("Error applying posting update: {}", e.getMessage(), e);
+            logger.error("Posting update failed",
+                kv("error", e.getMessage()),
+                kv("alpha", alpha),
+                kv("errorType", e.getClass().getSimpleName())
+            );
             throw new RuntimeException("Failed to apply posting update", e);
         }
     }
@@ -657,5 +681,83 @@ public class StateUpdateRuleEngine {
             defaultVector.add(0.0);
         }
         return defaultVector;
+    }
+    
+    /**
+     * Extract dominant dimensions from state vector for logging
+     * Maps 43-dimensional Buddhist mental factors to meaningful psychological dimensions
+     */
+    private Map<String, Double> extractDominantDimensions(List<Double> state) {
+        Map<String, Double> dominant = new LinkedHashMap<>();
+        try {
+            if (state == null || state.size() < VECTOR_DIMENSIONS) {
+                logger.warn("Invalid state vector: null or insufficient dimensions (expected {}, got {})", 
+                           VECTOR_DIMENSIONS, state != null ? state.size() : 0);
+                return dominant;
+            }
+            
+            // Map key psychological dimensions to meaningful names
+            // Based on Buddhist mental factors from PsychologicalVectorGenerator
+            Map<Integer, String> keyDimensions = new HashMap<>();
+            keyDimensions.put(0, "attention");           // mindful awareness and focus
+            keyDimensions.put(1, "contact");             // sensory and mental contact  
+            keyDimensions.put(2, "feeling");             // emotional sensations
+            keyDimensions.put(3, "thinking");            // cognitive processes
+            keyDimensions.put(4, "deliberation");        // careful consideration
+            keyDimensions.put(16, "greed");              // desire and craving
+            keyDimensions.put(17, "anger");              // rage and hostility
+            keyDimensions.put(18, "arrogance");          // pride and conceit
+            keyDimensions.put(19, "foolishness");        // ignorance and unwisdom
+            keyDimensions.put(20, "doubt");              // uncertainty and confusion
+            keyDimensions.put(30, "jealousy");           // envy and resentment
+            keyDimensions.put(37, "torpor");             // dullness and lethargy
+            keyDimensions.put(38, "restlessness");       // agitation and anxiety
+            keyDimensions.put(39, "distraction");        // scatteredness and confusion
+            keyDimensions.put(42, "regret");             // remorse and sorrow
+            
+            // Extract values for key dimensions and sort by magnitude
+            Map<String, Double> dimensionValues = new HashMap<>();
+            for (Map.Entry<Integer, String> entry : keyDimensions.entrySet()) {
+                int index = entry.getKey();
+                String name = entry.getValue();
+                if (index < state.size()) {
+                    dimensionValues.put(name, state.get(index));
+                }
+            }
+            
+            // Sort by absolute value (descending) and take top 5
+            dimensionValues.entrySet().stream()
+                .sorted((e1, e2) -> Double.compare(Math.abs(e2.getValue()), Math.abs(e1.getValue())))
+                .limit(5)
+                .forEach(entry -> dominant.put(entry.getKey(), entry.getValue()));
+            
+            logger.debug("Extracted dominant psychological dimensions: {}", dominant);
+            
+        } catch (Exception e) {
+            logger.warn("Error extracting dominant dimensions: {}", e.getMessage());
+        }
+        return dominant;
+    }
+    
+    /**
+     * Calculate the number of changed dimensions between before and after states
+     */
+    private int calculateChangedDimensions(Map<String, Double> before, Map<String, Double> after) {
+        if (before == null || after == null) {
+            return 0;
+        }
+        
+        int changed = 0;
+        for (Map.Entry<String, Double> entry : before.entrySet()) {
+            String key = entry.getKey();
+            Double beforeValue = entry.getValue();
+            Double afterValue = after.get(key);
+            
+            if (afterValue == null || Math.abs(beforeValue - afterValue) > 0.001) {
+                changed++;
+            }
+        }
+        
+        return changed;
     }
 }

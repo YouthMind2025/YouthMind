@@ -36,11 +36,6 @@ class InteractionModulationServiceTest {
     @Mock
     private PostRepository postRepository;
     
-    @Mock
-    private RedisTemplate<String, Object> redisTemplate;
-    
-    @Mock
-    private ValueOperations<String, Object> valueOperations;
     
     @Mock
     private ResonanceProcessor resonanceProcessor;
@@ -81,12 +76,12 @@ class InteractionModulationServiceTest {
     void testProcessResonance_NewResonance() {
         // Arrange
         when(postResonanceRepository.existsByUserIdAndPostId(testUserId, testPostId)).thenReturn(false);
-        when(postRepository.findById(testPostId)).thenReturn(Optional.of(testPost));
+        lenient().when(postRepository.findById(testPostId)).thenReturn(Optional.of(testPost));
         when(resonanceProcessor.calculateResonanceImpact(testUserId, testPostId)).thenReturn(0.8);
         when(resonanceProcessor.updateStateFromResonance(testUserId, testPostId)).thenReturn(createMockStateUpdate());
         when(resonanceProcessor.trackResonancePatterns(testUserId)).thenReturn(createMockPatterns());
         when(positiveBalanceCalculator.calculatePositiveBalance(testUserId, testPostId)).thenReturn(0.7);
-        when(interactionWeightService.calculateBeta()).thenReturn(1.2);
+        lenient().when(interactionWeightService.calculateBeta()).thenReturn(1.2);
         
         // Act
         InteractionModulationService.InteractionModulationResult result = 
@@ -113,12 +108,12 @@ class InteractionModulationServiceTest {
     void testProcessResonance_ExistingResonance() {
         // Arrange
         when(postResonanceRepository.existsByUserIdAndPostId(testUserId, testPostId)).thenReturn(true);
-        when(postRepository.findById(testPostId)).thenReturn(Optional.of(testPost));
+        lenient().when(postRepository.findById(testPostId)).thenReturn(Optional.of(testPost));
         when(resonanceProcessor.calculateResonanceImpact(testUserId, testPostId)).thenReturn(0.6);
         when(resonanceProcessor.updateStateFromResonance(testUserId, testPostId)).thenReturn(createMockStateUpdate());
         when(resonanceProcessor.trackResonancePatterns(testUserId)).thenReturn(createMockPatterns());
         when(positiveBalanceCalculator.calculatePositiveBalance(testUserId, testPostId)).thenReturn(0.5);
-        when(interactionWeightService.calculateBeta()).thenReturn(1.1);
+        lenient().when(interactionWeightService.calculateBeta()).thenReturn(1.1);
         
         // Act
         InteractionModulationService.InteractionModulationResult result = 
@@ -172,7 +167,7 @@ class InteractionModulationServiceTest {
         double resonanceWeight = 0.8;
         double lingerWeight = 0.3;
         double balanceWeight = 0.6;
-        when(interactionWeightService.calculateBeta()).thenReturn(1.2);
+        lenient().when(interactionWeightService.calculateBeta()).thenReturn(1.2);
         
         // Act
         double modulation = interactionModulationService.calculateModulation(
@@ -212,7 +207,7 @@ class InteractionModulationServiceTest {
         when(resonanceProcessor.trackResonancePatterns(testUserId)).thenReturn(createMockPatterns());
         when(lingerProcessor.getLingerStatistics(testUserId)).thenReturn(createMockLingerStats());
         when(positiveBalanceCalculator.getBalanceTrends(testUserId)).thenReturn(createMockBalanceTrends());
-        when(interactionWeightService.calculateBeta()).thenReturn(1.1);
+        lenient().when(interactionWeightService.calculateBeta()).thenReturn(1.1);
         
         // Act
         InteractionModulationService.ComprehensiveInteractionAnalysis analysis = 

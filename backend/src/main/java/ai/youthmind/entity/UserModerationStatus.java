@@ -51,7 +51,7 @@ public class UserModerationStatus {
     @Column(name = "manual_review_required", nullable = false)
     private Boolean manualReviewRequired = false;
     
-    @Column(name = "notes", columnDefinition = "TEXT")
+    @Column(name = "notes")
     private String notes;
     
     @Column(name = "created_at", nullable = false)
