@@ -140,8 +140,8 @@ public class PsychologicalVectorGenerator {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
     
-    // @Autowired(required = false)
-    // private DeepSeekVectorScoringService deepSeekScoringService;
+    @Autowired(required = false)
+    private DeepSeekVectorScoringService deepSeekScoringService;
     
     // Configuration flag to enable/disable DeepSeek RAG scoring
     @Value("${youthmind.vector.use-deepseek:true}")
@@ -292,43 +292,43 @@ public class PsychologicalVectorGenerator {
         logger.info("  ┌─────────────────────────────────────────────────");
         logger.info("  │ GENERATING PSYCHOLOGICAL COMPONENTS");
         logger.info("  │ DeepSeek enabled: {}", useDeepSeekScoring);
-        logger.info("  │ DeepSeek service available: false (service removed)");
+        logger.info("  │ DeepSeek service available: {}", deepSeekScoringService != null);
         logger.info("  └─────────────────────────────────────────────────");
         
-        // Try DeepSeek RAG scoring first (if enabled and service is available)
-        if (false) { // DeepSeek service removed
-            logger.info("  → Attempting DeepSeek RAG scoring...");
+        // Try DeepSeek AI scoring first (if enabled and service is available)
+        if (useDeepSeekScoring && deepSeekScoringService != null) {
+            logger.info("  → Attempting DeepSeek AI scoring...");
             try {
-                logger.debug("Attempting DeepSeek RAG scoring for user {}", userId);
-                // List<Double> deepSeekScores = deepSeekScoringService.scoreTextWithDeepSeek(content, userId);
+                logger.debug("Attempting DeepSeek AI scoring for user {}", userId);
+                List<Double> deepSeekScores = deepSeekScoringService.generatePsychologicalScores(content, userId);
                 
-                // Calculate statistics for logging
-                // double mean = deepSeekScores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-                // long nonZeroCount = deepSeekScores.stream().filter(s -> s > 0.0).count();
+                if (deepSeekScores != null && deepSeekScores.size() == 43) {
+                    // Calculate statistics for logging
+                    double mean = deepSeekScores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+                    long nonZeroCount = deepSeekScores.stream().filter(s -> s > 0.0).count();
+                    
+                    logger.info("  ✓ DeepSeek AI scoring SUCCEEDED");
+                    logger.info("    - Mean score: {:.3f}", mean);
+                    logger.info("    - Non-zero scores: {}/43", nonZeroCount);
+                    logger.info("    - Generation method: DEEPSEEK_AI");
+                    
+                    lastGenerationMethod.set("DEEPSEEK_AI");
+                    return deepSeekScores;
+                } else {
+                    logger.warn("  ✗ DeepSeek returned invalid scores, falling back to keywords");
+                }
                 
-                // logger.info("  ✓ DeepSeek RAG scoring SUCCEEDED");
-                // logger.info("    - Mean score: {:.3f}", mean);
-                // logger.info("    - Non-zero scores: {}/43", nonZeroCount);
-                // logger.info("    - Generation method: DEEPSEEK_RAG");
-                
-                // lastGenerationMethod.set("DEEPSEEK_RAG");
-                // return deepSeekScores;
-                
-            } catch (AIServiceException e) {
-                logger.warn("  ✗ DeepSeek scoring FAILED: {}", e.getMessage());
-                logger.info("  → Falling back to keyword-based scoring...");
-                // Fall through to keyword method
             } catch (Exception e) {
-                logger.error("  ✗ Unexpected error in DeepSeek scoring: {}", e.getMessage());
+                logger.warn("  ✗ DeepSeek scoring FAILED: {}", e.getMessage());
                 logger.info("  → Falling back to keyword-based scoring...");
                 // Fall through to keyword method
             }
         } else {
-            // if (!useDeepSeekScoring) {
-            //     logger.info("  → DeepSeek scoring disabled by configuration");
-            // } else {
-            //     logger.info("  → DeepSeek scoring service not available");
-            // }
+            if (!useDeepSeekScoring) {
+                logger.info("  → DeepSeek scoring disabled by configuration");
+            } else {
+                logger.info("  → DeepSeek scoring service not available");
+            }
             logger.info("  → Using keyword-based scoring...");
         }
         

@@ -37,10 +37,11 @@ public class ModelTrainingController {
     
     /**
      * Train a psychological analysis model
+     * Returns a jobId/modelId that can be used to track training progress and access the trained model
      * 
      * @param trainingConfig Training configuration
      * @param userId User ID for personalization
-     * @return Training result
+     * @return Training result with jobId and modelId (both are the same value)
      */
     @PostMapping("/train/{userId}")
     public ResponseEntity<Map<String, Object>> trainModel(
@@ -327,7 +328,7 @@ public class ModelTrainingController {
     /**
      * Get model performance metrics
      * 
-     * @param modelId Model ID
+     * @param modelId Model ID (use the modelId/jobId returned from the /train endpoint)
      * @return Model performance metrics
      */
     @GetMapping("/performance/{modelId}")

@@ -471,10 +471,19 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
   config: classpath:logback-spring.xml
 
-# YouthMind Recommendation Engine Configuration
+# YouthMind Configuration
 youthmind:
+  # Psychological Vector Generation Configuration
+  vector:
+    use-deepseek: ${YOUTHMIND_VECTOR_USE_DEEPSEEK:true}  # Enable DeepSeek for vector generation
+    cache-ttl-minutes: ${YOUTHMIND_VECTOR_CACHE_TTL:60}   # Cache vectors for 60 minutes
+    enable-optimization: ${YOUTHMIND_VECTOR_OPTIMIZE:true} # Enable vector optimization
+  
+  # Recommendation Engine Configuration
   recommendation:
     enabled: false  # Disable recommendation engine for API testing
+  
+  # Logging Configuration
   logging:
     structured: true
     include-correlation-id: true

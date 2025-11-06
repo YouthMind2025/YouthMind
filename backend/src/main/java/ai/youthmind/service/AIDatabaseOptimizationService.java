@@ -1,11 +1,19 @@
 package ai.youthmind.service;
 
-import ai.youthmind.entity.Conversation;
-import ai.youthmind.entity.Message;
-import ai.youthmind.entity.User;
-import ai.youthmind.repository.ConversationRepository;
-import ai.youthmind.repository.MessageRepository;
-import ai.youthmind.repository.UserRepository;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,13 +21,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import ai.youthmind.entity.Conversation;
+import ai.youthmind.entity.Message;
+import ai.youthmind.entity.User;
+import ai.youthmind.repository.ConversationRepository;
+import ai.youthmind.repository.MessageRepository;
+import ai.youthmind.repository.UserRepository;
 
 /**
  * Service for optimizing database queries related to AI features
@@ -392,15 +404,39 @@ public class AIDatabaseOptimizationService {
     
     /**
      * Clear cache for a specific user
+     * Uses SCAN instead of KEYS to avoid blocking Redis in production
      */
     public void clearUserCache(UUID userId) {
         try {
-            // Clear user-specific cache keys
+            // Clear user-specific cache keys using SCAN (non-blocking)
             String pattern = "*:" + userId + "*";
-            Set<String> keys = redisTemplate.keys(pattern);
-            if (keys != null && !keys.isEmpty()) {
+            Set<String> keys = new HashSet<>();
+            
+            // Use SCAN instead of KEYS for production safety
+            ScanOptions options = ScanOptions.scanOptions()
+                .match(pattern)
+                .count(100) // Scan 100 keys per iteration
+                .build();
+            
+            // Execute SCAN operation using RedisTemplate's execute method
+            redisTemplate.execute((org.springframework.data.redis.core.RedisCallback<Object>) connection -> {
+                try (Cursor<byte[]> cursor = connection.scan(options)) {
+                    while (cursor.hasNext()) {
+                        String key = new String(cursor.next(), StandardCharsets.UTF_8);
+                        keys.add(key);
+                    }
+                } catch (Exception e) {
+                    logger.warn("Error during SCAN operation: {}", e.getMessage());
+                }
+                return null;
+            });
+            
+            // Delete found keys
+            if (!keys.isEmpty()) {
                 redisTemplate.delete(keys);
                 logger.info("Cleared cache for user: {} ({} keys)", userId, keys.size());
+            } else {
+                logger.info("No cache keys found for user: {}", userId);
             }
         } catch (Exception e) {
             logger.error("Error clearing user cache: {}", e.getMessage(), e);
@@ -409,15 +445,39 @@ public class AIDatabaseOptimizationService {
     
     /**
      * Clear cache for a specific conversation
+     * Uses SCAN instead of KEYS to avoid blocking Redis in production
      */
     public void clearConversationCache(UUID conversationId) {
         try {
-            // Clear conversation-specific cache keys
+            // Clear conversation-specific cache keys using SCAN (non-blocking)
             String pattern = "*:" + conversationId + "*";
-            Set<String> keys = redisTemplate.keys(pattern);
-            if (keys != null && !keys.isEmpty()) {
+            Set<String> keys = new HashSet<>();
+            
+            // Use SCAN instead of KEYS for production safety
+            ScanOptions options = ScanOptions.scanOptions()
+                .match(pattern)
+                .count(100) // Scan 100 keys per iteration
+                .build();
+            
+            // Execute SCAN operation using RedisTemplate's execute method
+            redisTemplate.execute((org.springframework.data.redis.core.RedisCallback<Object>) connection -> {
+                try (Cursor<byte[]> cursor = connection.scan(options)) {
+                    while (cursor.hasNext()) {
+                        String key = new String(cursor.next(), StandardCharsets.UTF_8);
+                        keys.add(key);
+                    }
+                } catch (Exception e) {
+                    logger.warn("Error during SCAN operation: {}", e.getMessage());
+                }
+                return null;
+            });
+            
+            // Delete found keys
+            if (!keys.isEmpty()) {
                 redisTemplate.delete(keys);
                 logger.info("Cleared cache for conversation: {} ({} keys)", conversationId, keys.size());
+            } else {
+                logger.info("No cache keys found for conversation: {}", conversationId);
             }
         } catch (Exception e) {
             logger.error("Error clearing conversation cache: {}", e.getMessage(), e);

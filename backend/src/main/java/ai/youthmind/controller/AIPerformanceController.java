@@ -3,6 +3,7 @@ package ai.youthmind.controller;
 import ai.youthmind.dto.AIChatRequest;
 import ai.youthmind.dto.AIChatResponse;
 import ai.youthmind.dto.ApiResponse;
+import ai.youthmind.dto.AsyncTaskResponse;
 import ai.youthmind.service.AIChatService;
 import ai.youthmind.service.AIAsyncProcessingService;
 import ai.youthmind.service.AIDatabaseOptimizationService;
@@ -40,44 +41,48 @@ public class AIPerformanceController {
     private AIRequestBatchingService requestBatchingService;
     
     /**
-     * Process AI chat request asynchronously
+     * Process AI chat request asynchronously and return taskId immediately
      */
     @PostMapping("/chat/async")
-    public CompletableFuture<ResponseEntity<ApiResponse<AIChatResponse>>> processChatAsync(
+    public ResponseEntity<ApiResponse<AsyncTaskResponse<AIChatResponse>>> processChatAsync(
             @RequestBody AIChatRequest request,
             @RequestHeader("X-User-ID") UUID userId) {
         
         try {
-            logger.info("Processing async AI chat request for user: {}", userId);
+            logger.info("Starting async AI chat request for user: {}", userId);
             
-            return aiChatService.processChatRequestAsync(request, userId)
-                .thenApply(response -> {
-                    ApiResponse<AIChatResponse> apiResponse = ApiResponse.<AIChatResponse>builder()
-                        .success(true)
-                        .data(response)
-                        .message("AI chat processed successfully")
-                        .build();
-                    
-                    return ResponseEntity.ok(apiResponse);
-                })
-                .exceptionally(throwable -> {
-                    logger.error("Error processing async AI chat request: {}", throwable.getMessage());
-                    ApiResponse<AIChatResponse> errorResponse = ApiResponse.<AIChatResponse>builder()
-                        .success(false)
-                        .message("Error processing AI chat request: " + throwable.getMessage())
-                        .build();
-                    
-                    return ResponseEntity.internalServerError().body(errorResponse);
-                });
+            // Start async processing and get taskId immediately
+            String taskId = asyncProcessingService.startChatRequestAsync(request, userId);
+            
+            // Return taskId immediately so client can track progress
+            AsyncTaskResponse<AIChatResponse> taskResponse = AsyncTaskResponse.processing(
+                taskId,
+                "AI chat request is being processed. Use the taskId to check status."
+            );
+            
+            ApiResponse<AsyncTaskResponse<AIChatResponse>> apiResponse = ApiResponse.<AsyncTaskResponse<AIChatResponse>>builder()
+                .success(true)
+                .data(taskResponse)
+                .message("Async task started successfully")
+                .build();
+            
+            return ResponseEntity.ok(apiResponse);
                 
         } catch (Exception e) {
             logger.error("Error initiating async AI chat request: {}", e.getMessage(), e);
-            ApiResponse<AIChatResponse> errorResponse = ApiResponse.<AIChatResponse>builder()
+            
+            AsyncTaskResponse<AIChatResponse> errorTask = AsyncTaskResponse.failed(
+                null,
+                "Error initiating AI chat request: " + e.getMessage()
+            );
+            
+            ApiResponse<AsyncTaskResponse<AIChatResponse>> errorResponse = ApiResponse.<AsyncTaskResponse<AIChatResponse>>builder()
                 .success(false)
+                .data(errorTask)
                 .message("Error initiating AI chat request: " + e.getMessage())
                 .build();
             
-            return CompletableFuture.completedFuture(ResponseEntity.internalServerError().body(errorResponse));
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
     

@@ -1,8 +1,10 @@
 package ai.youthmind.service;
 
-import ai.youthmind.config.QdrantConfig;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -11,9 +13,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import ai.youthmind.config.QdrantConfig;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * REST-based Qdrant client for vector database operations.
@@ -39,19 +42,18 @@ public class QdrantRestClient {
             try {
                 String url = qdrantConfig.getConnectionUrl() + "/collections/" + collectionName;
                 
-                Map<String, Object> requestBody = Map.of(
-                    "vectors", Map.of(
-                        "size", vectorSize,
-                        "distance", distanceMetric.toUpperCase()
-                    ),
-                    "optimizers_config", Map.of(
-                        "default_segment_number", qdrantConfig.getHnswM()
-                    ),
-                    "hnsw_config", Map.of(
-                        "m", qdrantConfig.getHnswM(),
-                        "ef_construct", qdrantConfig.getHnswEfConstruct()
-                    )
-                );
+                // Correct Qdrant API format for collection creation
+                // Qdrant expects "Cosine", "Euclidean", or "Dot" - not uppercase
+                String formattedDistance = distanceMetric.substring(0, 1).toUpperCase() + distanceMetric.substring(1).toLowerCase();
+                
+                Map<String, Object> requestBody = new HashMap<>();
+                requestBody.put("vectors", Map.of(
+                    "size", vectorSize,
+                    "distance", formattedDistance
+                ));
+                
+                // Log the request body for debugging
+                log.info("Creating collection '{}' with size={}, distance={}", collectionName, vectorSize, formattedDistance);
 
                 HttpHeaders headers = createHeaders();
                 HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
@@ -62,6 +64,9 @@ public class QdrantRestClient {
 
                 boolean success = response.getStatusCode().is2xxSuccessful();
                 log.info("Collection {} creation: {}", collectionName, success ? "SUCCESS" : "FAILED");
+                if (!success) {
+                    log.error("Collection creation failed. Response: {}", response.getBody());
+                }
                 return success;
 
             } catch (Exception e) {

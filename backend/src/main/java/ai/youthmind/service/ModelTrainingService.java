@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -17,7 +16,6 @@ import java.util.concurrent.TimeUnit;
  * Implements sophisticated model training and optimization algorithms
  */
 @Service
-@Transactional
 public class ModelTrainingService {
     
     private static final Logger logger = LoggerFactory.getLogger(ModelTrainingService.class);
@@ -85,11 +83,14 @@ public class ModelTrainingService {
             CompletableFuture<Map<String, Object>> trainingFuture = startAsyncTraining(trainingJob);
             
             logger.info("Model training initiated for user {}", userId);
+            String jobId = (String) trainingJob.get("jobId");
             return Map.of(
                 "status", "TRAINING_STARTED",
-                "jobId", trainingJob.get("jobId"),
+                "jobId", jobId,
+                "modelId", jobId, // modelId is the same as jobId
                 "userId", userId.toString(),
-                "timestamp", LocalDateTime.now()
+                "timestamp", LocalDateTime.now(),
+                "message", "Use the modelId to check performance, validate, or deploy this model"
             );
             
         } catch (Exception e) {
@@ -531,7 +532,7 @@ public class ModelTrainingService {
         config.putIfAbsent("batchSize", DEFAULT_BATCH_SIZE);
         config.putIfAbsent("epochs", DEFAULT_EPOCHS);
         config.putIfAbsent("learningRate", DEFAULT_LEARNING_RATE);
-        config.putIfAbsent("validationSplit", DEFAULT_VALIDATION_SPLIT);
+        // Note: validationSplit is handled by TrainingDataProcessor, not here
     }
     
     private Map<String, Object> createTrainingJob(Map<String, Object> config, Map<String, Object> trainingData, UUID userId) {

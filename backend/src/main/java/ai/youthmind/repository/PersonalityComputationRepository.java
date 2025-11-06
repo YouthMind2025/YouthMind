@@ -178,7 +178,7 @@ public interface PersonalityComputationRepository extends JpaRepository<Personal
     @Query("SELECT pc.computationPeriod, COUNT(pc), AVG(pc.finalConfidence) FROM PersonalityComputation pc WHERE pc.userId = :userId GROUP BY pc.computationPeriod ORDER BY COUNT(pc) DESC")
     List<Object[]> getComputationStatsByPeriod(@Param("userId") UUID userId);
     
-    @Query("SELECT DATE(pc.computationDate), COUNT(pc), AVG(pc.finalConfidence) FROM PersonalityComputation pc WHERE pc.userId = :userId AND pc.computationDate >= :since GROUP BY DATE(pc.computationDate) ORDER BY DATE(pc.computationDate)")
+    @Query("SELECT CAST(pc.computationDate AS date), COUNT(pc), AVG(pc.finalConfidence) FROM PersonalityComputation pc WHERE pc.userId = :userId AND pc.computationDate >= :since GROUP BY CAST(pc.computationDate AS date) ORDER BY CAST(pc.computationDate AS date)")
     List<Object[]> getComputationTimeline(@Param("userId") UUID userId, @Param("since") LocalDateTime since);
     
     // Batch operations

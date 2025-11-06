@@ -86,9 +86,9 @@ public interface UserInteractionModulationRepository extends JpaRepository<UserI
            "FROM UserInteractionModulation uim WHERE uim.userId = :userId GROUP BY uim.interactionType ORDER BY COUNT(uim) DESC")
     List<Object[]> getInteractionStatsByType(@Param("userId") UUID userId);
     
-    @Query("SELECT DATE(uim.createdAt), COUNT(uim), AVG(uim.betaFactor), AVG(uim.muFactor), AVG(uim.wsWeight) " +
+    @Query("SELECT CAST(uim.createdAt AS date), COUNT(uim), AVG(uim.betaFactor), AVG(uim.muFactor), AVG(uim.wsWeight) " +
            "FROM UserInteractionModulation uim WHERE uim.userId = :userId AND uim.createdAt >= :since " +
-           "GROUP BY DATE(uim.createdAt) ORDER BY DATE(uim.createdAt)")
+           "GROUP BY CAST(uim.createdAt AS date) ORDER BY CAST(uim.createdAt AS date)")
     List<Object[]> getInteractionTimeline(@Param("userId") UUID userId, @Param("since") LocalDateTime since);
     
     // Parameter evolution queries

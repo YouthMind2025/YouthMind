@@ -71,13 +71,11 @@ public class AIAsyncProcessingService {
     private static final long TASK_TIMEOUT_MINUTES = 30;
     
     /**
-     * Process AI chat request asynchronously
+     * Start async AI chat processing and return taskId immediately
      */
-    @Async
-    public CompletableFuture<AIChatResponse> processChatRequestAsync(AIChatRequest request, UUID userId) {
+    public String startChatRequestAsync(AIChatRequest request, UUID userId) {
         String taskId = UUID.randomUUID().toString();
         
-        try {
             logger.info("Starting async AI chat processing for task: {}", taskId);
             
             // Track user task
@@ -85,6 +83,20 @@ public class AIAsyncProcessingService {
             
             // Update task status
             updateTaskStatus(taskId, "PROCESSING", "Processing AI chat request");
+        
+        // Start async processing (fire and forget)
+        processChatRequestAsyncInternal(taskId, request, userId);
+        
+        return taskId;
+    }
+    
+    /**
+     * Process AI chat request asynchronously (internal method)
+     */
+    @Async
+    public CompletableFuture<AIChatResponse> processChatRequestAsyncInternal(String taskId, AIChatRequest request, UUID userId) {
+        try {
+            logger.info("Processing async AI chat for task: {}", taskId);
             
             // Process the request using the synchronous method
             // Note: This creates a direct call instead of going through the service
@@ -117,6 +129,24 @@ public class AIAsyncProcessingService {
             
             return CompletableFuture.completedFuture(errorResponse);
         }
+    }
+    
+    /**
+     * Process AI chat request asynchronously (legacy method - kept for compatibility)
+     */
+    @Async
+    public CompletableFuture<AIChatResponse> processChatRequestAsync(AIChatRequest request, UUID userId) {
+        String taskId = UUID.randomUUID().toString();
+        
+        logger.info("Starting async AI chat processing for task: {}", taskId);
+        
+        // Track user task
+        trackUserTask(userId, taskId, "CHAT_REQUEST", "Processing AI chat request");
+        
+        // Update task status
+        updateTaskStatus(taskId, "PROCESSING", "Processing AI chat request");
+        
+        return processChatRequestAsyncInternal(taskId, request, userId);
     }
     
     /**

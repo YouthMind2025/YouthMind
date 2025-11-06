@@ -199,16 +199,18 @@ public interface AiApiUsageRepository extends JpaRepository<AiApiUsage, UUID> {
 
     /**
      * Get daily usage statistics.
+     * Using CAST AS DATE for H2/PostgreSQL compatibility
      */
-    @Query("SELECT DATE(a.createdAt) as date, COUNT(a) as requestCount, SUM(a.totalCost) as totalCost, SUM(a.totalTokens) as totalTokens FROM AiApiUsage a WHERE a.createdAt BETWEEN :startDate AND :endDate GROUP BY DATE(a.createdAt) ORDER BY date")
+    @Query("SELECT CAST(a.createdAt AS date) as date, COUNT(a) as requestCount, SUM(a.totalCost) as totalCost, SUM(a.totalTokens) as totalTokens FROM AiApiUsage a WHERE a.createdAt BETWEEN :startDate AND :endDate GROUP BY CAST(a.createdAt AS date) ORDER BY date")
     List<Object[]> getDailyUsageStatistics(
             @Param("startDate") LocalDateTime startDate, 
             @Param("endDate") LocalDateTime endDate);
 
     /**
      * Get hourly usage statistics for a specific day.
+     * Using CAST AS DATE for H2/PostgreSQL compatibility
      */
-    @Query("SELECT HOUR(a.createdAt) as hour, COUNT(a) as requestCount, SUM(a.totalCost) as totalCost FROM AiApiUsage a WHERE DATE(a.createdAt) = DATE(:date) GROUP BY HOUR(a.createdAt) ORDER BY hour")
+    @Query("SELECT HOUR(a.createdAt) as hour, COUNT(a) as requestCount, SUM(a.totalCost) as totalCost FROM AiApiUsage a WHERE CAST(a.createdAt AS date) = CAST(:date AS date) GROUP BY HOUR(a.createdAt) ORDER BY hour")
     List<Object[]> getHourlyUsageStatistics(@Param("date") LocalDateTime date);
 
     // Health monitoring methods
