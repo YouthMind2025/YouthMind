@@ -975,9 +975,32 @@ public class AIServiceClient {
             @SuppressWarnings("unchecked")
             List<Double> vector = (List<Double>) vectorResult.get("psychologicalVector");
             result.setVector(vector);
-            result.setConfidenceScore((Double) vectorResult.get("confidenceScore"));
+            
+            // Safely extract confidence score with null handling
+            Object confidenceObj = vectorResult.get("confidenceScore");
+            if (confidenceObj instanceof Number) {
+                result.setConfidenceScore(((Number) confidenceObj).doubleValue());
+            } else {
+                // Default confidence if not provided
+                result.setConfidenceScore(0.7);
+            }
+            
             result.setValid((Boolean) vectorResult.get("isValid"));
-            result.setOptimizationDetails((Map<String, Object>) vectorResult.get("optimizedVector"));
+            
+            // Safely extract optimization details
+            Object optimizationObj = vectorResult.get("optimizedVector");
+            if (optimizationObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> optimizationDetails = (Map<String, Object>) optimizationObj;
+                result.setOptimizationDetails(optimizationDetails);
+            } else {
+                // Default optimization details if not provided
+                Map<String, Object> defaultOptimization = new HashMap<>();
+                defaultOptimization.put("optimizationApplied", false);
+                defaultOptimization.put("reason", "Optimization details not available");
+                result.setOptimizationDetails(defaultOptimization);
+            }
+            
             result.setAnalysisMethod("PSYCHOLOGICAL_VECTOR_GENERATION");
             result.setGeneratedAt(LocalDateTime.now());
             
@@ -1560,6 +1583,9 @@ public class AIServiceClient {
         }
         if (request.getUserId() == null) {
             throw new IllegalArgumentException("User ID cannot be null");
+        }
+        if (request.getAnalysisConfig() == null) {
+            throw new IllegalArgumentException("AnalysisConfig cannot be null");
         }
     }
     

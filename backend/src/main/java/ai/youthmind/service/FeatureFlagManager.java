@@ -588,7 +588,9 @@ public class FeatureFlagManager {
     private void persistFeatureFlagToRedis(String flagName, FeatureFlag flag) {
         try {
             String key = FEATURE_FLAG_PREFIX + flagName;
+            log.info("Attempting to persist feature flag to Redis: {}", flagName);
             redisTemplate.opsForValue().set(key, flag);
+            log.info("Successfully persisted feature flag to Redis: {}", flagName);
         } catch (Exception e) {
             log.error("Error persisting feature flag to Redis: {}", flagName, e);
         }

@@ -1,6 +1,7 @@
 package ai.youthmind.controller;
 
 import ai.youthmind.service.*;
+import ai.youthmind.util.AuthenticationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -65,7 +66,9 @@ public class MultiLevelCacheController {
     @GetMapping("/data/{key}")
     public ResponseEntity<Object> getCachedData(@PathVariable String key, @RequestParam String type) {
         try {
-            Optional<Object> data = cacheManager.get(key, Object.class, IntelligentCacheManager.CacheLevel.ANY).join();
+            // Get current user ID from security context
+            String userId = AuthenticationUtils.getCurrentUserId().toString();
+            Optional<Object> data = cacheManager.get(key, Object.class, IntelligentCacheManager.CacheLevel.ANY, userId).join();
             return data.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
             log.error("Error getting cached data for key: {}", key, e);
@@ -83,10 +86,12 @@ public class MultiLevelCacheController {
             @RequestParam(defaultValue = "AUTO") String level,
             @RequestParam(defaultValue = "300") long ttlSeconds) {
         try {
+            // Get current user ID from security context
+            String userId = AuthenticationUtils.getCurrentUserId().toString();
             IntelligentCacheManager.CacheLevel cacheLevel = IntelligentCacheManager.CacheLevel.valueOf(level);
             Duration ttl = Duration.ofSeconds(ttlSeconds);
             
-            cacheManager.put(key, data, cacheLevel, ttl).join();
+            cacheManager.put(key, data, cacheLevel, ttl, userId).join();
             return ResponseEntity.ok("Data cached successfully");
         } catch (Exception e) {
             log.error("Error putting cached data for key: {}", key, e);
@@ -323,8 +328,23 @@ public class MultiLevelCacheController {
             @RequestBody Map<String, Object> contextData) {
         try {
             // Extract roles and attributes from context data
-            @SuppressWarnings("unchecked")
-            java.util.Set<String> roles = (java.util.Set<String>) contextData.getOrDefault("roles", java.util.Set.of("USER"));
+            // Handle both single role and multiple roles
+            java.util.Set<String> roles;
+            Object rolesData = contextData.getOrDefault("roles", java.util.List.of("USER"));
+            
+            if (rolesData instanceof String) {
+                // Single role as string
+                roles = java.util.Set.of((String) rolesData);
+            } else if (rolesData instanceof java.util.List) {
+                // Multiple roles as list - convert to Set
+                @SuppressWarnings("unchecked")
+                java.util.List<String> rolesList = (java.util.List<String>) rolesData;
+                roles = new java.util.HashSet<>(rolesList);
+            } else {
+                // Default fallback
+                roles = java.util.Set.of("USER");
+            }
+            
             @SuppressWarnings("unchecked")
             Map<String, Object> attributes = (Map<String, Object>) contextData.getOrDefault("attributes", Map.of());
             

@@ -207,19 +207,59 @@ public class PsychologicalVectorGenerator {
                 generationMethod = "DEFAULT";
             }
             
+            // Store original vector before optimization
+            List<Double> originalVector = new ArrayList<>(psychologicalVector);
+            
+            // Calculate original vector statistics for confidence score
+            long nonZeroCount = originalVector.stream().filter(s -> s > 0.0).count();
+            double meanScore = originalVector.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+            double maxScore = originalVector.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+            double variance = calculateVariance(originalVector, meanScore);
+            
             // Optimize vector (only for keyword-based, DeepSeek returns optimized scores)
+            List<Double> optimizedVector = psychologicalVector;
+            Map<String, Object> optimizationDetails = new HashMap<>();
             if ("KEYWORD_FALLBACK".equals(generationMethod) || "DEFAULT".equals(generationMethod)) {
-                psychologicalVector = optimizeVector(psychologicalVector);
+                optimizedVector = optimizeVector(psychologicalVector);
+                
+                // Capture optimization details (without storing full original vector to save memory)
+                double optimizedMean = optimizedVector.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+                long optimizedNonZeroCount = optimizedVector.stream().filter(s -> s > 0.0).count();
+                
+                optimizationDetails.put("optimizationApplied", true);
+                optimizationDetails.put("originalMean", meanScore);
+                optimizationDetails.put("optimizedMean", optimizedMean);
+                optimizationDetails.put("originalNonZeroCount", nonZeroCount);
+                optimizationDetails.put("optimizedNonZeroCount", optimizedNonZeroCount);
+                optimizationDetails.put("optimizationMethod", "thresholding");
+                optimizationDetails.put("meanChange", optimizedMean - meanScore);
+                optimizationDetails.put("nonZeroCountChange", optimizedNonZeroCount - nonZeroCount);
+            } else {
+                optimizationDetails.put("optimizationApplied", false);
+                optimizationDetails.put("reason", "Vector already optimized from " + generationMethod);
             }
+            
+            // Calculate confidence score based on vector quality
+            double confidenceScore = calculateConfidenceScore(
+                isValid, 
+                nonZeroCount, 
+                meanScore, 
+                variance, 
+                maxScore, 
+                generationMethod,
+                optimizedVector.size()
+            );
             
             // Create result
             Map<String, Object> result = new HashMap<>();
             result.put("userId", userId.toString());
-            result.put("psychologicalVector", psychologicalVector);
+            result.put("psychologicalVector", optimizedVector);
             result.put("dimensions", PSYCHOLOGICAL_VECTOR_DIMENSIONS);
             result.put("isValid", isValid);
             result.put("generationMethod", generationMethod);
             result.put("timestamp", LocalDateTime.now());
+            result.put("confidenceScore", confidenceScore);
+            result.put("optimizedVector", optimizationDetails);
             
             // Store vector
             storeVector(userId, result);
@@ -489,6 +529,95 @@ public class PsychologicalVectorGenerator {
     }
     
     // ==================== PRIVATE HELPER METHODS ====================
+    
+    /**
+     * Calculate variance of vector values
+     * @param vector Vector to calculate variance for
+     * @param mean Mean value of the vector
+     * @return Variance value
+     */
+    private double calculateVariance(List<Double> vector, double mean) {
+        if (vector == null || vector.isEmpty()) {
+            return 0.0;
+        }
+        
+        double sumSquaredDiff = vector.stream()
+            .mapToDouble(value -> Math.pow(value - mean, 2))
+            .sum();
+        
+        return sumSquaredDiff / vector.size();
+    }
+    
+    /**
+     * Calculate confidence score based on vector quality metrics
+     * @param isValid Whether vector passed validation
+     * @param nonZeroCount Number of non-zero dimensions
+     * @param meanScore Mean value across all dimensions
+     * @param variance Variance of values
+     * @param maxScore Maximum value in vector
+     * @param generationMethod Method used to generate vector
+     * @param dimensions Number of dimensions
+     * @return Confidence score between 0.0 and 1.0
+     */
+    private double calculateConfidenceScore(
+        boolean isValid,
+        long nonZeroCount,
+        double meanScore,
+        double variance,
+        double maxScore,
+        String generationMethod,
+        int dimensions
+    ) {
+        if (!isValid || dimensions != PSYCHOLOGICAL_VECTOR_DIMENSIONS) {
+            return 0.3; // Low confidence for invalid vectors
+        }
+        
+        double confidence = 0.5; // Base confidence
+        
+        // Higher confidence for vectors with more signal (non-zero values)
+        // Ideal: 5-15 non-zero factors for emotional text
+        double nonZeroRatio = (double) nonZeroCount / dimensions;
+        if (nonZeroRatio >= 0.1 && nonZeroRatio <= 0.35) {
+            confidence += 0.2; // Good signal density
+        } else if (nonZeroRatio > 0.35) {
+            confidence += 0.1; // Too many signals (might be noise)
+        } else {
+            confidence -= 0.1; // Too sparse (might be low quality content match)
+        }
+        
+        // Higher confidence for reasonable mean scores
+        // Good emotional text produces mean 0.01-0.15
+        if (meanScore >= 0.01 && meanScore <= 0.15) {
+            confidence += 0.15;
+        } else if (meanScore > 0.15 && meanScore <= 0.3) {
+            confidence += 0.1; // Higher emotion density, still valid
+        } else if (meanScore < 0.01) {
+            confidence -= 0.1; // Too low, might be poor match
+        }
+        
+        // Higher confidence for reasonable max scores
+        // Strong emotional factors should be 0.3-0.8
+        if (maxScore >= 0.3 && maxScore <= 0.8) {
+            confidence += 0.1;
+        } else if (maxScore > 0.8) {
+            confidence += 0.05; // Very high, might be extreme emotion
+        } else {
+            confidence -= 0.05; // Too low, weak signal
+        }
+        
+        // Method-based confidence adjustment
+        if ("DEEPSEEK_RAG".equals(generationMethod)) {
+            confidence += 0.05; // AI-based analysis slightly more reliable
+        } else if ("KEYWORD_FALLBACK".equals(generationMethod)) {
+            // Keyword matching is reliable for clear emotional language
+            confidence += 0.0; // Base level is fine
+        } else if ("DEFAULT".equals(generationMethod)) {
+            confidence -= 0.1; // Default vectors have lower confidence
+        }
+        
+        // Ensure confidence stays in [0.0, 1.0] range
+        return Math.max(0.0, Math.min(1.0, confidence));
+    }
     
     private List<Double> analyzeBuddhistMentalFactors(String content) {
         List<Double> factors = new ArrayList<>();
@@ -939,9 +1068,34 @@ public class PsychologicalVectorGenerator {
     }
     
     private Map<String, Object> createDefaultVectorResult(UUID userId) {
+        List<Double> defaultVector = createDefaultVector();
         Map<String, Object> defaultResult = new HashMap<>();
         defaultResult.put("userId", userId.toString());
-        defaultResult.put("psychologicalVector", createDefaultVector());
+        defaultResult.put("psychologicalVector", defaultVector);
+        
+        // Calculate default confidence score
+        long nonZeroCount = defaultVector.stream().filter(s -> s > 0.0).count();
+        double meanScore = defaultVector.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        double variance = calculateVariance(defaultVector, meanScore);
+        double maxScore = defaultVector.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+        
+        double confidenceScore = calculateConfidenceScore(
+            true, // Default vector is technically valid
+            nonZeroCount,
+            meanScore,
+            variance,
+            maxScore,
+            "DEFAULT",
+            defaultVector.size()
+        );
+        
+        // Create default optimization details
+        Map<String, Object> optimizationDetails = new HashMap<>();
+        optimizationDetails.put("optimizationApplied", false);
+        optimizationDetails.put("reason", "Default vector - no optimization needed");
+        
+        defaultResult.put("confidenceScore", confidenceScore);
+        defaultResult.put("optimizedVector", optimizationDetails);
         defaultResult.put("dimensions", PSYCHOLOGICAL_VECTOR_DIMENSIONS);
         defaultResult.put("isValid", false);
         defaultResult.put("generationMethod", "DEFAULT");

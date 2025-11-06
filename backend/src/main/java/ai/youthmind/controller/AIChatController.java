@@ -9,6 +9,10 @@ import ai.youthmind.dto.PsychologicalAnalysisResponse;
 import ai.youthmind.service.AIChatService;
 import ai.youthmind.service.PsychologicalStateCacheService;
 import ai.youthmind.service.AIServiceClient;
+import ai.youthmind.service.PsychologicalVectorGenerator;
+import ai.youthmind.service.BuddhistFactorAnalyzer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -23,11 +27,15 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
 
 @RestController
 @RequestMapping("/v1/ai-chat")
 @Tag(name = "AI Chat", description = "AI-powered chat and conversation management")
 public class AIChatController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(AIChatController.class);
     
     @Autowired
     private AIChatService aiChatService;
@@ -37,6 +45,12 @@ public class AIChatController {
     
     @Autowired
     private AIServiceClient aiServiceClient;
+    
+    @Autowired
+    private PsychologicalVectorGenerator psychologicalVectorGenerator;
+    
+    @Autowired
+    private BuddhistFactorAnalyzer buddhistFactorAnalyzer;
     
     @PostMapping("/send-message")
     @Operation(
@@ -264,9 +278,50 @@ public class AIChatController {
             }
             UUID currentUserId = (UUID) authentication.getPrincipal();
             
-            // Update psychological state based on content (simplified)
-            psychologicalStateCacheService.warmUpCache(userId);
+            // Validate content
+            if (content == null || content.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(null, 400));
+            }
+            
+            // Generate psychological vector from content
+            Map<String, Object> vectorResult = psychologicalVectorGenerator.generateVector(content, userId);
+            @SuppressWarnings("unchecked")
+            List<Double> psychologicalVector = (List<Double>) vectorResult.get("psychologicalVector");
+            
+            // Validate vector was generated
+            if (psychologicalVector == null) {
+                logger.error("Failed to generate psychological vector for user {}", userId);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(null, 500));
+            }
+            
+            // Analyze Buddhist factors from content
+            Map<String, Object> factorsResult = buddhistFactorAnalyzer.analyzeFactors(content, userId);
+            @SuppressWarnings("unchecked")
+            Map<String, Double> buddhistFactors = (Map<String, Double>) factorsResult.get("factorScores");
+            
+            // Validate factors were analyzed
+            if (buddhistFactors == null) {
+                logger.error("Failed to analyze Buddhist factors for user {}", userId);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(null, 500));
+            }
+            
+            // Cache the generated psychological state
+            psychologicalStateCacheService.cachePsychologicalState(userId, psychologicalVector, buddhistFactors);
+            
+            // Get the cached state to return
             Map<String, Object> updatedState = psychologicalStateCacheService.getPsychologicalState(userId);
+            
+            // If still null (shouldn't happen, but handle it), create a response with the generated data
+            if (updatedState == null) {
+                updatedState = new HashMap<>();
+                updatedState.put("vector", psychologicalVector);
+                updatedState.put("buddhistFactors", buddhistFactors);
+                updatedState.put("timestamp", java.time.LocalDateTime.now());
+                updatedState.put("vectorDimensions", psychologicalVector != null ? psychologicalVector.size() : 0);
+            }
             
             return ResponseEntity.ok(ApiResponse.success(updatedState));
             

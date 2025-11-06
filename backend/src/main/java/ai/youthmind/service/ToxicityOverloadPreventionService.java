@@ -1,7 +1,9 @@
 package ai.youthmind.service;
 
+import ai.youthmind.entity.User;
 import ai.youthmind.entity.UserModerationStatus;
 import ai.youthmind.repository.UserModerationStatusRepository;
+import ai.youthmind.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +25,9 @@ public class ToxicityOverloadPreventionService {
     
     @Autowired
     private UserModerationStatusRepository moderationStatusRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
     
     // Toxicity thresholds
     private static final int MAX_DAILY_FLAGGED_CONTENT = 5;
@@ -271,9 +276,16 @@ public class ToxicityOverloadPreventionService {
         try {
             UserModerationStatus status = moderationStatusRepository.findByUserId(userId).orElse(null);
             if (status == null) {
+                // Fetch user entity - required for JPA relationship
+                User user = userRepository.findById(userId).orElse(null);
+                if (user == null) {
+                    logger.warn("User not found with ID: {}, cannot update toxicity status", userId);
+                    return; // Exit if user doesn't exist
+                }
+                
                 // Create new status for user
                 status = new UserModerationStatus();
-                status.setUserId(userId);
+                status.setUser(user);  // Set User entity (not userId)
                 status.setStatus(UserModerationStatus.ModerationStatus.CLEAN);
                 status.setWarningLevel(0);
                 status.setTotalWarnings(0);

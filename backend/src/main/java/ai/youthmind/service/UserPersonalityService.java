@@ -22,13 +22,19 @@ public class UserPersonalityService {
     
     private static final Logger logger = LoggerFactory.getLogger(UserPersonalityService.class);
     
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
     
     @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-    
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    public UserPersonalityService(
+            UserRepository userRepository,
+            RedisTemplate<String, Object> redisTemplate,
+            ObjectMapper objectMapper) {
+        this.userRepository = userRepository;
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
+    }
     
     /**
      * Get or create user personality profile

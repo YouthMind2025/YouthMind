@@ -69,7 +69,9 @@ public class ModelTrainingController {
             @RequestBody Map<String, Object> validationData) {
         logger.info("Received request to validate model: {}", modelId);
         try {
-            Map<String, Object> result = modelValidationService.validateAccuracy(modelId, validationData);
+            // Use ModelTrainingService.validateModel() which performs comprehensive validation
+            // (accuracy, test, benchmark) and stores results with overallScore for deployment
+            Map<String, Object> result = modelTrainingService.validateModel(modelId, validationData);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             logger.error("Error validating model {}: {}", modelId, e.getMessage());

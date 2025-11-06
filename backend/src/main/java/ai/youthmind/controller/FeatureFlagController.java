@@ -6,9 +6,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * REST Controller for Feature Flag Management.
@@ -75,37 +78,100 @@ public class FeatureFlagController {
      * Update feature flag configuration
      */
     @PutMapping("/{flagName}/config")
-    public ResponseEntity<String> updateFeatureFlagConfig(
+    public ResponseEntity<Map<String, Object>> updateFeatureFlagConfig(
             @PathVariable String flagName,
-            @RequestBody FeatureFlagManager.FeatureFlagConfig config) {
+            @RequestBody Map<String, Object> requestBody) {
+        log.info("=== FeatureFlagController.updateFeatureFlagConfig called for: {} ===", flagName);
         try {
-            config.setName(flagName);
-            CompletableFuture<Void> updateFuture = featureFlagManager.updateFeatureFlagConfig(flagName, config);
-            updateFuture.get();
+            // Create FeatureFlagConfig from simple request body
+            FeatureFlagManager.FeatureFlagConfig config = FeatureFlagManager.FeatureFlagConfig.builder()
+                .name(flagName)
+                .description((String) requestBody.getOrDefault("description", "Updated feature flag"))
+                .enabled((Boolean) requestBody.getOrDefault("enabled", false))
+                .targetingRules(new ArrayList<>()) // Start with empty rules
+                .gradualRolloutEnabled((Boolean) requestBody.getOrDefault("gradualRolloutEnabled", false))
+                .rolloutPercentage((Double) requestBody.getOrDefault("rolloutPercentage", 0.0))
+                .abTestEnabled((Boolean) requestBody.getOrDefault("abTestEnabled", false))
+                .abTestConfig(null)
+                .createdAt(java.time.LocalDateTime.now())
+                .build();
             
-            return ResponseEntity.ok("Feature flag configuration updated successfully");
+            // Update the feature flag configuration
+            CompletableFuture<Void> updateFuture = featureFlagManager.updateFeatureFlagConfig(flagName, config);
+            updateFuture.get(30, TimeUnit.SECONDS);
+            
+            Map<String, Object> response = Map.of(
+                "flagName", flagName,
+                "status", "updated",
+                "description", config.getDescription(),
+                "enabled", config.isEnabled(),
+                "rolloutPercentage", config.getRolloutPercentage(),
+                "timestamp", java.time.LocalDateTime.now(),
+                "message", "Feature flag configuration updated successfully"
+            );
+            
+            return ResponseEntity.ok(response);
+        } catch (TimeoutException e) {
+            log.error("Timeout updating feature flag configuration: {} - Operation took longer than 30 seconds", flagName, e);
+            return ResponseEntity.internalServerError().body(Map.of("error", "Timeout updating configuration"));
         } catch (Exception e) {
             log.error("Error updating feature flag configuration: {}", flagName, e);
-            return ResponseEntity.internalServerError().body("Error updating configuration: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
 
     /**
-     * Create new feature flag
+     * Test endpoint without request body
+     */
+    @GetMapping("/test/{flagName}")
+    public ResponseEntity<String> testFeatureFlag(@PathVariable String flagName) {
+        log.info("=== FeatureFlagController.testFeatureFlag called for: {} ===", flagName);
+        return ResponseEntity.ok("Test successful for: " + flagName);
+    }
+
+    /**
+     * Create new feature flag with simple body
      */
     @PostMapping("/{flagName}")
-    public ResponseEntity<FeatureFlagManager.FeatureFlag> createFeatureFlag(
+    public ResponseEntity<Map<String, Object>> createFeatureFlag(
             @PathVariable String flagName,
-            @RequestBody FeatureFlagManager.FeatureFlagConfig config) {
+            @RequestBody(required = false) Map<String, Object> requestBody) {
+        log.info("=== FeatureFlagController.createFeatureFlag called for: {} ===", flagName);
         try {
-            config.setName(flagName);
-            CompletableFuture<FeatureFlagManager.FeatureFlag> createFuture = featureFlagManager.createFeatureFlag(flagName, config);
-            FeatureFlagManager.FeatureFlag flag = createFuture.get();
+            // Create FeatureFlagConfig from simple request body
+            FeatureFlagManager.FeatureFlagConfig config = FeatureFlagManager.FeatureFlagConfig.builder()
+                .name(flagName)
+                .description((String) requestBody.getOrDefault("description", "Feature flag created via API"))
+                .enabled((Boolean) requestBody.getOrDefault("enabled", false))
+                .targetingRules(new ArrayList<>()) // Start with empty rules
+                .gradualRolloutEnabled((Boolean) requestBody.getOrDefault("gradualRolloutEnabled", false))
+                .rolloutPercentage((Double) requestBody.getOrDefault("rolloutPercentage", 0.0))
+                .abTestEnabled((Boolean) requestBody.getOrDefault("abTestEnabled", false))
+                .abTestConfig(null)
+                .createdAt(java.time.LocalDateTime.now())
+                .build();
             
-            return ResponseEntity.ok(flag);
+            // Create the feature flag
+            CompletableFuture<FeatureFlagManager.FeatureFlag> createFuture = featureFlagManager.createFeatureFlag(flagName, config);
+            FeatureFlagManager.FeatureFlag flag = createFuture.get(30, TimeUnit.SECONDS);
+            
+            // Return the created flag as a simple map
+            Map<String, Object> response = Map.of(
+                "flagName", flag.getName(),
+                "enabled", flag.isEnabled(),
+                "description", config.getDescription(),
+                "rolloutPercentage", config.getRolloutPercentage(),
+                "timestamp", java.time.LocalDateTime.now(),
+                "message", "Feature flag created successfully"
+            );
+            
+            return ResponseEntity.ok(response);
+        } catch (TimeoutException e) {
+            log.error("Timeout creating feature flag: {} - Operation took longer than 30 seconds", flagName, e);
+            return ResponseEntity.internalServerError().body(Map.of("error", "Timeout creating feature flag"));
         } catch (Exception e) {
             log.error("Error creating feature flag: {}", flagName, e);
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -270,3 +336,4 @@ public class FeatureFlagController {
         }
     }
 }
+

@@ -449,7 +449,7 @@ ai:
   deepseek:
     base-url: ${YOUTHMIND_DEEPSEEK_API_URL:https://api.deepseek.com/v1}
     api-key: ${YOUTHMIND_DEEPSEEK_API_KEY:}
-    enabled: false  # Disable AI services for API testing
+    enabled: true  # Enable AI services
 
 # Logging Configuration
 logging:

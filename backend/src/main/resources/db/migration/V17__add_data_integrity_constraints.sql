@@ -38,7 +38,8 @@ ALTER TABLE drafts ADD CONSTRAINT chk_drafts_topics_length CHECK (LENGTH(topics)
 ALTER TABLE conversations ADD CONSTRAINT chk_conversations_title_length CHECK (LENGTH(title) >= 1 AND LENGTH(title) <= 255);
 
 -- Messages table constraints
-ALTER TABLE messages ADD CONSTRAINT chk_messages_text_length CHECK (LENGTH(text) >= 1 AND LENGTH(text) <= 5000);
+-- Note: text column is TEXT type (unlimited length), so only check minimum length
+ALTER TABLE messages ADD CONSTRAINT chk_messages_text_length CHECK (LENGTH(text) >= 1);
 
 -- Articles table constraints
 ALTER TABLE articles ADD CONSTRAINT chk_articles_title_length CHECK (LENGTH(title) >= 1 AND LENGTH(title) <= 255);

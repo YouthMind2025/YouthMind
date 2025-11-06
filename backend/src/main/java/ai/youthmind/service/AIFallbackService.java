@@ -154,6 +154,8 @@ public class AIFallbackService {
             result.setCost(0.0);
             result.setProcessingTimeMs(0);
             result.setTimestamp(LocalDateTime.now());
+            result.setModeratedAt(LocalDateTime.now()); // Fix: Add missing moderatedAt field
+            result.setDetectedCategories(result.getCategories().toArray(new String[0])); // Fix: Add missing detectedCategories field
             result.setFallback(true);
             result.setAiUnavailable(true);
             
@@ -316,6 +318,8 @@ public class AIFallbackService {
         result.setCost(0.0);
         result.setProcessingTimeMs(0);
         result.setTimestamp(LocalDateTime.now());
+        result.setModeratedAt(LocalDateTime.now()); // Fix: Add missing moderatedAt field
+        result.setDetectedCategories(result.getCategories().toArray(new String[0])); // Fix: Add missing detectedCategories field
         result.setFallback(true);
         result.setAiUnavailable(true);
         

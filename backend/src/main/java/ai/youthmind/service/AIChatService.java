@@ -852,10 +852,16 @@ public class AIChatService {
                 updatedProfile.setPreferredPersonalityType((String) analysis.getOrDefault("preferredPersonalityType", currentProfile.getPreferredPersonalityType()));
                 updatedProfile.setCommunicationStyle((String) analysis.getOrDefault("communicationStyle", currentProfile.getCommunicationStyle()));
                 updatedProfile.setEmotionalState((String) analysis.getOrDefault("emotionalState", (String) nlpAnalysis.getOrDefault("emotion", "neutral")));
-                updatedProfile.setInterests((List<String>) analysis.getOrDefault("interests", currentProfile.getInterests()));
-                updatedProfile.setEnableHumor((Boolean) analysis.getOrDefault("enableHumor", currentProfile.isEnableHumor()));
-                updatedProfile.setEnableEmpathy((Boolean) analysis.getOrDefault("enableEmpathy", currentProfile.isEnableEmpathy()));
-                updatedProfile.setPreferredResponseLength((List<String>) analysis.getOrDefault("preferredResponseLength", currentProfile.getPreferredResponseLength()));
+                
+                // Safe conversion for interests (handle both String and List)
+                updatedProfile.setInterests(safeConvertToListString(analysis.get("interests"), currentProfile.getInterests()));
+                
+                updatedProfile.setEnableHumor(safeConvertToBoolean(analysis.get("enableHumor"), currentProfile.isEnableHumor()));
+                updatedProfile.setEnableEmpathy(safeConvertToBoolean(analysis.get("enableEmpathy"), currentProfile.isEnableEmpathy()));
+                
+                // Safe conversion for preferredResponseLength (handle both String and List)
+                updatedProfile.setPreferredResponseLength(safeConvertToListString(analysis.get("preferredResponseLength"), currentProfile.getPreferredResponseLength()));
+                
                 updatedProfile.setCulturalContext((String) analysis.getOrDefault("culturalContext", currentProfile.getCulturalContext()));
                 updatedProfile.setConversationCount(currentProfile.getConversationCount() + 1);
                 updatedProfile.setLastUpdated(LocalDateTime.now());
@@ -879,6 +885,76 @@ public class AIChatService {
             logger.error("Error parsing personality analysis: {}", e.getMessage(), e);
             return performBasicPersonalityUpdate(currentProfile, nlpAnalysis);
         }
+    }
+    
+    /**
+     * Safely convert an object to List<String>, handling String, List, or null values
+     */
+    @SuppressWarnings("unchecked")
+    private List<String> safeConvertToListString(Object value, List<String> defaultValue) {
+        if (value == null) {
+            return defaultValue != null ? defaultValue : new ArrayList<>();
+        }
+        
+        if (value instanceof List) {
+            try {
+                // Check if it's a List<String> or needs conversion
+                List<?> list = (List<?>) value;
+                return list.stream()
+                    .map(item -> item != null ? item.toString() : "")
+                    .filter(str -> !str.isEmpty())
+                    .collect(java.util.stream.Collectors.toList());
+            } catch (Exception e) {
+                logger.warn("Error converting List to List<String>: {}", e.getMessage());
+                return defaultValue != null ? defaultValue : new ArrayList<>();
+            }
+        }
+        
+        if (value instanceof String) {
+            // Handle comma-separated string
+            String strValue = (String) value;
+            if (strValue.trim().isEmpty()) {
+                return defaultValue != null ? defaultValue : new ArrayList<>();
+            }
+            
+            // Try to parse as JSON array first
+            try {
+                List<String> parsed = objectMapper.readValue(strValue, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+                return parsed;
+            } catch (Exception e) {
+                // If not JSON, treat as comma-separated
+                return Arrays.stream(strValue.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(java.util.stream.Collectors.toList());
+            }
+        }
+        
+        // Fallback: convert to string and try comma-separated
+        return Arrays.stream(value.toString().split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .collect(java.util.stream.Collectors.toList());
+    }
+    
+    /**
+     * Safely convert an object to Boolean, handling String, Boolean, or null values
+     */
+    private Boolean safeConvertToBoolean(Object value, Boolean defaultValue) {
+        if (value == null) {
+            return defaultValue != null ? defaultValue : false;
+        }
+        
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        
+        if (value instanceof String) {
+            String strValue = ((String) value).trim().toLowerCase();
+            return "true".equals(strValue) || "yes".equals(strValue) || "1".equals(strValue);
+        }
+        
+        return defaultValue != null ? defaultValue : false;
     }
     
     /**

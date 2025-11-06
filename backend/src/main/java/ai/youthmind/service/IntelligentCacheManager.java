@@ -1,5 +1,6 @@
 package ai.youthmind.service;
 
+import ai.youthmind.util.AuthenticationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -141,9 +142,10 @@ public class IntelligentCacheManager {
     public <T> CompletableFuture<Optional<T>> get(String key, Class<T> type, CacheLevel preferredLevel) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                // Check security access
-                if (!securityManager.hasAccess(key)) {
-                    log.warn("Access denied for cache key: {}", key);
+                // Check security access with authenticated user ID
+                String userId = getCurrentUserIdString();
+                if (!securityManager.hasAccess(key, userId, CacheSecurityManager.AccessPermission.READ)) {
+                    log.warn("Access denied for cache key: {} by user: {}", key, userId);
                     return Optional.<T>empty();
                 }
 
@@ -187,9 +189,10 @@ public class IntelligentCacheManager {
     public <T> CompletableFuture<Void> put(String key, T value, CacheLevel level, Duration ttl) {
         return CompletableFuture.runAsync(() -> {
             try {
-                // Check security access
-                if (!securityManager.hasAccess(key)) {
-                    log.warn("Access denied for cache key: {}", key);
+                // Check security access with authenticated user ID
+                String userId = getCurrentUserIdString();
+                if (!securityManager.hasAccess(key, userId, CacheSecurityManager.AccessPermission.WRITE)) {
+                    log.warn("Access denied for cache key: {} by user: {}", key, userId);
                     return;
                 }
 
@@ -243,6 +246,90 @@ public class IntelligentCacheManager {
 
             } catch (Exception e) {
                 log.error("Error invalidating cache for key: {}", key, e);
+            }
+        });
+    }
+
+    /**
+     * Get cached data with explicit user ID (for controller use)
+     */
+    public <T> CompletableFuture<Optional<T>> get(String key, Class<T> type, CacheLevel preferredLevel, String userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // Check security access with provided user ID
+                if (!securityManager.hasAccess(key, userId, CacheSecurityManager.AccessPermission.READ)) {
+                    log.warn("Access denied for cache key: {} by user: {}", key, userId);
+                    return Optional.<T>empty();
+                }
+
+                // Simple cache retrieval without complex promotion logic
+                // Try L1 cache first
+                if (preferredLevel == CacheLevel.L1 || preferredLevel == CacheLevel.ANY) {
+                    Object l1Data = l1Cache.get(key);
+                    if (l1Data != null) {
+                        l1Hits.incrementAndGet();
+                        return Optional.of((T) l1Data);
+                    }
+                }
+
+                // Try L2 cache (Redis)
+                if (preferredLevel == CacheLevel.L2 || preferredLevel == CacheLevel.ANY) {
+                    Object l2Data = redisTemplate.opsForValue().get(key);
+                    if (l2Data != null) {
+                        l2Hits.incrementAndGet();
+                        return Optional.of((T) l2Data);
+                    }
+                }
+
+                // Cache miss
+                cacheMisses.incrementAndGet();
+                return Optional.<T>empty();
+
+            } catch (Exception e) {
+                log.error("Error getting cached data for key: {}", key, e);
+                return Optional.<T>empty();
+            }
+        });
+    }
+
+    /**
+     * Put data into cache with explicit user ID (for controller use)
+     */
+    public <T> CompletableFuture<Void> put(String key, T value, CacheLevel level, Duration ttl, String userId) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                // Check security access with provided user ID
+                if (!securityManager.hasAccess(key, userId, CacheSecurityManager.AccessPermission.WRITE)) {
+                    log.warn("Access denied for cache key: {} by user: {}", key, userId);
+                    return;
+                }
+
+                // Simple cache storage without complex logic
+                switch (level) {
+                    case L1:
+                        // Create CacheEntry for L1 cache
+                        CacheEntry entry = CacheEntry.builder()
+                            .data(value)
+                            .expiresAt(LocalDateTime.now().plus(ttl))
+                            .createdAt(LocalDateTime.now())
+                            .build();
+                        l1Cache.put(key, entry);
+                        break;
+                    case L2:
+                        redisTemplate.opsForValue().set(key, value, ttl);
+                        break;
+                    case L3:
+                        // For L3, just store in Redis with longer TTL as fallback
+                        redisTemplate.opsForValue().set(key, value, Duration.ofDays(1));
+                        break;
+                    case AUTO:
+                        // Default to L2 for AUTO
+                        redisTemplate.opsForValue().set(key, value, ttl);
+                        break;
+                }
+
+            } catch (Exception e) {
+                log.error("Error putting cached data for key: {}", key, e);
             }
         });
     }
@@ -1195,5 +1282,17 @@ public class IntelligentCacheManager {
         private String reason;
         private int priority;
         private WarmingStrategy suggestedStrategy;
+    }
+    
+    /**
+     * Get current user ID as string for security checks
+     */
+    private String getCurrentUserIdString() {
+        try {
+            return AuthenticationUtils.getCurrentUserId().toString();
+        } catch (Exception e) {
+            log.warn("Could not get current user ID for security check: {}", e.getMessage());
+            return null;
+        }
     }
 }

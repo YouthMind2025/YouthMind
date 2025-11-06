@@ -10,12 +10,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +37,8 @@ import java.util.UUID;
 @Tag(name = "Moderation", description = "Content moderation operations for administrators")
 @SecurityRequirement(name = "bearer-jwt")
 public class ModerationController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(ModerationController.class);
     
     @Autowired
     private ModerationService moderationService;
@@ -179,6 +184,7 @@ public class ModerationController {
      * @return AIModerationResponse with AI analysis results
      */
     @PostMapping("/ai/moderate")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "AI-powered content moderation",
         description = "Moderate content using DeepSeek AI API. Returns detailed analysis with safety recommendations. Admin-only endpoint."
@@ -220,6 +226,7 @@ public class ModerationController {
             return ResponseEntity.ok(ApiResponse.success(response));
             
         } catch (Exception e) {
+            logger.error("Exception in AI moderation: {}", e.getMessage(), e);
             AIModerationResponse errorResponse = new AIModerationResponse();
             errorResponse.setReason("AI moderation failed: " + e.getMessage());
             errorResponse.setServiceStatus("ERROR");
