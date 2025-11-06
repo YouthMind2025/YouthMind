@@ -450,6 +450,13 @@ ai:
     api-key: ${YOUTHMIND_DEEPSEEK_API_KEY:}
     enabled: ${YOUTHMIND_AI_ENABLED:true}
 
+# Psychological Vector Generation Configuration
+youthmind:
+  vector:
+    use-deepseek: ${YOUTHMIND_VECTOR_USE_DEEPSEEK:true}  # Enable DeepSeek for vector generation
+    cache-ttl-minutes: ${YOUTHMIND_VECTOR_CACHE_TTL:60}   # Cache vectors for 60 minutes
+    enable-optimization: ${YOUTHMIND_VECTOR_OPTIMIZE:true} # Enable vector optimization
+
 # Logging
 logging:
   level:

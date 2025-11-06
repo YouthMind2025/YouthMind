@@ -143,6 +143,9 @@ public class PostService {
     @Autowired
     private AIEmotionClassificationService aiEmotionClassificationService;
     
+    @Autowired
+    private VectorSearchService vectorSearchService;
+    
     public Post createPost(UUID userId, PostCreateRequest request) {
         logger.info("========================================");
         logger.info("POST CREATION STARTED");
@@ -348,6 +351,59 @@ public class PostService {
             savedPost.setAiMetadata(aiMetadataJsonFinal);
             postRepository.save(savedPost);
             logger.info("✓ Post updated with psychological metadata");
+            
+            // Automatically index the post for vector search
+            if (psychologicalVector != null && !psychologicalVector.isEmpty()) {
+                try {
+                    logger.info("→ Indexing post for vector search...");
+                    
+                    // Convert Double vector to Float for indexing
+                    List<Float> floatVector = psychologicalVector.stream()
+                        .map(Double::floatValue)
+                        .collect(Collectors.toList());
+                    
+                    // Create final reference for lambda
+                    final UUID finalPostId = savedPost.getId();
+                    final String finalContent = savedPost.getContent();
+                    final String finalTitle = savedPost.getTitle();
+                    final String finalEmotion = savedPost.getEmotion();
+                    final String finalTopics = savedPost.getTopics();
+                    final LocalDateTime finalCreatedAt = savedPost.getCreatedAt();
+                    final UUID finalUserId = userId;
+                    
+                    // Prepare payload for vector search
+                    Map<String, Object> indexPayload = new HashMap<>();
+                    indexPayload.put("content", finalContent);
+                    indexPayload.put("title", finalTitle != null ? finalTitle : "");
+                    indexPayload.put("content_type", "post");
+                    indexPayload.put("content_id", finalPostId.toString());
+                    indexPayload.put("user_id", finalUserId.toString());
+                    indexPayload.put("emotion", finalEmotion != null ? finalEmotion : "");
+                    indexPayload.put("topics", finalTopics != null ? finalTopics : "");
+                    indexPayload.put("created_at", finalCreatedAt.toString());
+                    indexPayload.put("indexed_at", System.currentTimeMillis());
+                    
+                    // Index asynchronously (don't block post creation if indexing fails)
+                    vectorSearchService.indexPostWithVector(finalPostId, floatVector, indexPayload)
+                        .thenAccept(success -> {
+                            if (success) {
+                                logger.info("✓ Post {} successfully indexed for vector search", finalPostId);
+                            } else {
+                                logger.warn("✗ Failed to index post {} for vector search", finalPostId);
+                            }
+                        })
+                        .exceptionally(ex -> {
+                            logger.error("✗ Error indexing post {} for vector search: {}", 
+                                finalPostId, ex.getMessage());
+                            return null;
+                        });
+                    
+                } catch (Exception indexException) {
+                    // Log error but don't fail post creation
+                    logger.error("✗ Failed to index post {} for vector search: {}", 
+                        savedPost.getId(), indexException.getMessage());
+                }
+            }
             
             // Update user's psychological state based on post content
             logger.info("→ Warming up psychological state cache for user: {}", userId);

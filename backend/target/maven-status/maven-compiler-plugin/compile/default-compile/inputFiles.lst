@@ -43,6 +43,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\config\JacksonConfig.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\config\JwtConfig.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\config\MetricsConfig.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\config\MockDataInitializer.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\config\ModerationConfig.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\config\ModerationQueueConfig.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\config\OnnxConfig.java
@@ -128,6 +129,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\ArticleCreateRequest.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\ArticleDto.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\ArticleListResponse.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\AsyncTaskResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\AuthResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\AvatarUploadResponse.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\dto\BatchRequest.java
@@ -402,6 +404,7 @@ C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\a
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\DeepSeekOffPeakRoutingService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\DeepSeekRateLimitService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\DeepSeekUsageMonitoringService.java
+C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\DeepSeekVectorScoringService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\DeploymentConfigurationService.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\DeploymentManager.java
 C:\Users\jumpy\Desktop\Mustafo stuff\Youthmind\YouthMind\backend\src\main\java\ai\youthmind\service\DeploymentMonitoringService.java

@@ -127,10 +127,12 @@ public class SecurityConfig {
                 .requestMatchers("/v1/posts/create").authenticated()
                 .requestMatchers("/v1/posts").permitAll()  // Allow public access to post list
                 .requestMatchers("/v1/posts/*/comments").permitAll()  // Allow public access to comments
+                .requestMatchers("/v1/vector-search/**").permitAll()  // Allow public access to vector search
                 .requestMatchers("/v1/user/**").authenticated()  // User profile and related endpoints
                 .requestMatchers("/v1/notifications/**").authenticated()  // Notification endpoints
                 .requestMatchers("/v1/conversations/**").authenticated()
                 .requestMatchers("/v1/ai-chat/**").authenticated()
+                .requestMatchers("/api/model-training/**").authenticated()  // Model training endpoints
                 .anyRequest().authenticated())
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(rateFilter, UsernamePasswordAuthenticationFilter.class);

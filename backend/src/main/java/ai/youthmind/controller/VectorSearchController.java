@@ -161,4 +161,58 @@ public class VectorSearchController {
             }
         });
     }
+
+    /**
+     * Index existing posts with psychological vectors
+     */
+    @PostMapping("/index-posts")
+    @Operation(
+        summary = "Index existing posts",
+        description = "Index all existing posts with their psychological vectors for vector search"
+    )
+    public CompletableFuture<ResponseEntity<ApiResponse<Integer>>> indexExistingPosts() {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                log.info("Starting to index existing posts...");
+                
+                Integer indexedCount = vectorSearchService
+                    .indexExistingPosts()
+                    .get();
+                
+                return ResponseBuilder.success(indexedCount, 
+                    String.format("Successfully indexed %d posts with psychological vectors", indexedCount));
+                
+            } catch (Exception e) {
+                log.error("Error indexing existing posts: {}", e.getMessage(), e);
+                return ResponseBuilder.error("Failed to index posts: " + e.getMessage(), 500);
+            }
+        });
+    }
+
+    /**
+     * Generate psychological vectors for existing posts
+     */
+    @PostMapping("/generate-vectors")
+    @Operation(
+        summary = "Generate psychological vectors",
+        description = "Generate psychological vectors for all existing posts that don't have them"
+    )
+    public CompletableFuture<ResponseEntity<ApiResponse<Integer>>> generatePsychologicalVectors() {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                log.info("Starting to generate psychological vectors for existing posts...");
+                
+                Integer generatedCount = vectorSearchService
+                    .generatePsychologicalVectorsForExistingPosts()
+                    .get();
+                
+                return ResponseBuilder.success(generatedCount, 
+                    String.format("Successfully generated psychological vectors for %d posts", generatedCount));
+                
+            } catch (Exception e) {
+                log.error("Error generating psychological vectors: {}", e.getMessage(), e);
+                return ResponseBuilder.error("Failed to generate vectors: " + e.getMessage(), 500);
+            }
+        });
+    }
 }

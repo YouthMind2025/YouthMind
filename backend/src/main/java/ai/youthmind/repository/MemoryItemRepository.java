@@ -130,9 +130,9 @@ public interface MemoryItemRepository extends JpaRepository<MemoryItem, UUID> {
            "WHERE m.userId = :userId AND m.archivedAt IS NULL GROUP BY m.memoryType")
     List<Object[]> getMemoryStatsByType(@Param("userId") UUID userId);
     
-    @Query("SELECT DATE(m.createdAt), COUNT(m) FROM MemoryItem m " +
-           "WHERE m.userId = :userId AND m.createdAt >= :since GROUP BY DATE(m.createdAt) " +
-           "ORDER BY DATE(m.createdAt)")
+    @Query("SELECT CAST(m.createdAt AS date), COUNT(m) FROM MemoryItem m " +
+           "WHERE m.userId = :userId AND m.createdAt >= :since GROUP BY CAST(m.createdAt AS date) " +
+           "ORDER BY CAST(m.createdAt AS date)")
     List<Object[]> getMemoryCreationTimeline(@Param("userId") UUID userId, 
                                             @Param("since") LocalDateTime since);
 }

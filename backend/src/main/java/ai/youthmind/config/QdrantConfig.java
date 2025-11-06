@@ -27,7 +27,7 @@ public class QdrantConfig {
 
     // Collection Configuration
     private String defaultCollection = "youthmind_vectors";
-    private int vectorSize = 384; // Default for sentence-transformers
+    private int vectorSize = 43; // Default for psychological vectors
     private String distanceMetric = "Cosine"; // Cosine, Dot, Euclid
     private int replicationFactor = 1;
     private int writeConsistencyFactor = 1;
@@ -79,10 +79,10 @@ public class QdrantConfig {
 
     // Collection-specific configurations
     private Map<String, CollectionConfig> collections = Map.of(
-        "posts", new CollectionConfig("posts", 384, "Cosine", true),
-        "comments", new CollectionConfig("comments", 384, "Cosine", true),
-        "moderation", new CollectionConfig("moderation", 384, "Cosine", true),
-        "embeddings", new CollectionConfig("embeddings", 384, "Cosine", true)
+        "posts", new CollectionConfig("posts", 43, "Cosine", true),
+        "comments", new CollectionConfig("comments", 43, "Cosine", true),
+        "moderation", new CollectionConfig("moderation", 43, "Cosine", true),
+        "embeddings", new CollectionConfig("embeddings", 43, "Cosine", true)
     );
 
     @Data

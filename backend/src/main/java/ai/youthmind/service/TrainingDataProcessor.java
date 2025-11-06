@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -17,7 +16,6 @@ import java.util.stream.Collectors;
  * Implements sophisticated data processing and augmentation algorithms
  */
 @Service
-@Transactional
 public class TrainingDataProcessor {
     
     private static final Logger logger = LoggerFactory.getLogger(TrainingDataProcessor.class);
@@ -174,7 +172,11 @@ public class TrainingDataProcessor {
             List<Map<String, Object>> augmentedData = new ArrayList<>(data);
             
             // Check if augmentation is needed
-            int augmentationFactor = (Integer) config.getOrDefault("augmentationFactor", 1);
+            int augmentationFactor = 1;
+            if (config.containsKey("augmentationFactor")) {
+                Object augObj = config.get("augmentationFactor");
+                augmentationFactor = augObj instanceof Number ? ((Number) augObj).intValue() : 1;
+            }
             if (augmentationFactor <= 1) {
                 return augmentedData;
             }
@@ -216,14 +218,28 @@ public class TrainingDataProcessor {
         try {
             logger.debug("Splitting data into train/validation/test sets");
             
-            // Get split ratios
-            double trainSplit = (Double) config.getOrDefault("trainSplit", DEFAULT_TRAIN_SPLIT);
-            double validationSplit = (Double) config.getOrDefault("validationSplit", DEFAULT_VALIDATION_SPLIT);
-            double testSplit = (Double) config.getOrDefault("testSplit", DEFAULT_TEST_SPLIT);
+            // Get split ratios with proper type handling
+            double trainSplit = DEFAULT_TRAIN_SPLIT;
+            double validationSplit = DEFAULT_VALIDATION_SPLIT;
+            double testSplit = DEFAULT_TEST_SPLIT;
+            
+            if (config.containsKey("trainSplit")) {
+                Object trainObj = config.get("trainSplit");
+                trainSplit = trainObj instanceof Number ? ((Number) trainObj).doubleValue() : DEFAULT_TRAIN_SPLIT;
+            }
+            if (config.containsKey("validationSplit")) {
+                Object valObj = config.get("validationSplit");
+                validationSplit = valObj instanceof Number ? ((Number) valObj).doubleValue() : DEFAULT_VALIDATION_SPLIT;
+            }
+            if (config.containsKey("testSplit")) {
+                Object testObj = config.get("testSplit");
+                testSplit = testObj instanceof Number ? ((Number) testObj).doubleValue() : DEFAULT_TEST_SPLIT;
+            }
             
             // Validate split ratios
             if (Math.abs(trainSplit + validationSplit + testSplit - 1.0) > 0.001) {
-                throw new IllegalArgumentException("Split ratios must sum to 1.0");
+                throw new IllegalArgumentException(String.format("Split ratios must sum to 1.0 (got: train=%.2f, validation=%.2f, test=%.2f, total=%.2f)", 
+                    trainSplit, validationSplit, testSplit, trainSplit + validationSplit + testSplit));
             }
             
             // Shuffle data
