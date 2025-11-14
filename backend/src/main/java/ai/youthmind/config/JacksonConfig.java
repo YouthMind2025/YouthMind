@@ -15,8 +15,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
@@ -119,37 +123,85 @@ public class JacksonConfig implements WebMvcConfigurer {
             }
         }
         
-        // Remove all existing MappingJackson2HttpMessageConverter instances
-        long removed = converters.stream()
-            .filter(c -> c instanceof MappingJackson2HttpMessageConverter)
-            .count();
-        converters.removeIf(converter -> converter instanceof MappingJackson2HttpMessageConverter);
-        logger.info("Removed {} MappingJackson2HttpMessageConverter instances", removed);
+        // CRITICAL FIX: Don't remove existing converters to preserve Springdoc's OpenAPI serialization
+        // Root cause: Removing ALL MappingJackson2HttpMessageConverter instances breaks Springdoc
+        // Springdoc relies on its converter for proper OpenAPI JSON serialization
+        // When removed, Springdoc falls back to incorrect serialization (base64-encoded string)
+        // 
+        // Solution: Add our converter at the beginning for priority, but preserve existing ones
+        // This ensures our strict deserialization is used for API requests while Springdoc
+        // can still use its converter for /api-docs endpoint
+        
+        // CRITICAL FIX: Preserve Springdoc's converter while replacing others
+        // Root cause: Our converter at index 0 handles ALL requests including /api-docs
+        // Springdoc needs its own converter for proper OpenAPI JSON serialization
+        // 
+        // Solution: Find and preserve Springdoc's converter, replace others with our configured one
+        // This ensures Springdoc can use its converter for /api-docs while our strict
+        // deserialization is used for API requests
         
         // Verify our configured ObjectMapper has strict settings
-        if (configuredObjectMapper != null) {
-            logger.info("Configured ObjectMapper - READ_UNKNOWN_ENUM_VALUES_AS_NULL: {}", 
-                configuredObjectMapper.getDeserializationConfig().isEnabled(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL));
-        } else {
-            logger.error("WARNING: configuredObjectMapper is NULL! ObjectMapper bean may not have been created yet.");
-        }
-        
-        // Add our configured converter at the beginning (highest priority)
         if (configuredObjectMapper == null) {
-            logger.error("Cannot add converter - configuredObjectMapper is null!");
+            logger.error("WARNING: configuredObjectMapper is NULL! ObjectMapper bean may not have been created yet.");
             return;
         }
         
+        // Create a custom converter that excludes Springdoc endpoints
+        // This ensures Springdoc can use its own converter for /api-docs
         MappingJackson2HttpMessageConverter jacksonConverter = 
-            new MappingJackson2HttpMessageConverter(configuredObjectMapper);
+            new MappingJackson2HttpMessageConverter(configuredObjectMapper) {
+                @Override
+                public boolean canWrite(Class<?> clazz, MediaType mediaType) {
+                    // Exclude Springdoc endpoints - let Springdoc's converter handle them
+                    // This is checked via the current request context
+                    try {
+                        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+                        if (requestAttributes != null) {
+                            String path = (String) requestAttributes.getAttribute(
+                                HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE,
+                                RequestAttributes.SCOPE_REQUEST);
+                            if (path != null && (path.startsWith("/api-docs") || 
+                                                 path.startsWith("/v3/api-docs") || 
+                                                 path.startsWith("/swagger-ui"))) {
+                                logger.debug("Skipping Springdoc endpoint: " + path);
+                                return false; // Don't handle Springdoc endpoints
+                            }
+                        }
+                    } catch (Exception e) {
+                        // If we can't check, allow it (fallback behavior)
+                        logger.debug("Could not check request path, allowing converter: " + e.getMessage());
+                    }
+                    return super.canWrite(clazz, mediaType);
+                }
+            };
+        
+        // Remove existing non-Springdoc Jackson converters and add ours at the beginning
+        final int[] removedCount = {0};
+        converters.removeIf(converter -> {
+            if (converter instanceof MappingJackson2HttpMessageConverter) {
+                String className = converter.getClass().getName();
+                // Preserve Springdoc converters if they exist
+                boolean isSpringdoc = className.contains("springdoc") || className.contains("org.springdoc");
+                if (!isSpringdoc) {
+                    removedCount[0]++;
+                    logger.info("Removed converter: {}", className);
+                    return true;
+                } else {
+                    logger.info("Preserved Springdoc converter: {}", className);
+                    return false;
+                }
+            }
+            return false;
+        });
+        
+        // Add our converter at the beginning (highest priority)
         converters.add(0, jacksonConverter);
+        logger.info("Added custom MappingJackson2HttpMessageConverter with Springdoc exclusion at index 0");
+        logger.info("Removed {} non-Springdoc Jackson converters", removedCount[0]);
         
-        logger.info("Added MappingJackson2HttpMessageConverter with strict deserialization at index 0");
-        
-        // Verify the converter we added has strict settings
-        ObjectMapper addedOm = jacksonConverter.getObjectMapper();
-        logger.info("Added converter ObjectMapper - READ_UNKNOWN_ENUM_VALUES_AS_NULL: {}", 
-            addedOm.getDeserializationConfig().isEnabled(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL));
+        // Verify the converter we're using has strict settings
+        logger.info("Configured ObjectMapper - READ_UNKNOWN_ENUM_VALUES_AS_NULL: {}", 
+            configuredObjectMapper.getDeserializationConfig().isEnabled(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL));
         
         logger.info("Final converter count: {}", converters.size());
         logger.info("=== EXTEND MESSAGE CONVERTERS COMPLETE ===");

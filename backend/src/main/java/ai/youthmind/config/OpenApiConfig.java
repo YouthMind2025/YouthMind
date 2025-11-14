@@ -8,6 +8,8 @@ import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -16,9 +18,12 @@ import java.util.List;
 @Configuration
 public class OpenApiConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(OpenApiConfig.class);
+
     @Bean
     public OpenAPI customOpenAPI() {
-        return new OpenAPI()
+        log.info("Creating OpenAPI bean...");
+        OpenAPI openAPI = new OpenAPI()
                 .info(new Info()
                         .title("YouthMind Backend API")
                         .description("""
@@ -54,5 +59,9 @@ public class OpenApiConfig {
                                 .bearerFormat("JWT")
                                 .description("JWT token for authentication")))
                 .addSecurityItem(new SecurityRequirement().addList("bearer-jwt"));
+        openAPI.setOpenapi("3.0.1");
+        log.info("OpenAPI version set to: {}", openAPI.getOpenapi());
+        log.info("OpenAPI bean created successfully");
+        return openAPI;
     }
 } 
