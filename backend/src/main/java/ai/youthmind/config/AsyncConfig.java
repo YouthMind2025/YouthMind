@@ -49,4 +49,22 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+    
+    /**
+     * Configure thread pool for feed block pre-computation
+     */
+    @Bean(name = "blockPrecomputationExecutor")
+    public Executor blockPrecomputationExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(5);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("Block-Precompute-");
+        executor.setKeepAliveSeconds(60);
+        executor.setAllowCoreThreadTimeOut(true);
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
+        executor.initialize();
+        return executor;
+    }
 }

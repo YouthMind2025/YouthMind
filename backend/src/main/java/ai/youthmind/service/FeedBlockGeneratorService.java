@@ -7,6 +7,7 @@ import ai.youthmind.entity.UserRecommendationVector;
 import ai.youthmind.repository.FeedBlockCacheRepository;
 import ai.youthmind.repository.PostRepository;
 import ai.youthmind.repository.UserFeedStateRepository;
+import ai.youthmind.repository.UserRecommendationVectorRepository;
 import ai.youthmind.util.StructuredLogger;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -19,11 +20,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static net.logstash.logback.argument.StructuredArguments.*;
@@ -54,6 +57,7 @@ public class FeedBlockGeneratorService {
     private final PostSelectionService postSelectionService;
     private final FeedBlockCacheRepository feedBlockCacheRepository;
     private final UserFeedStateRepository userFeedStateRepository;
+    private final UserRecommendationVectorRepository userRecommendationVectorRepository;
     private final PostRepository postRepository;
     private final RedisService redisService;
     
@@ -63,6 +67,7 @@ public class FeedBlockGeneratorService {
             PostSelectionService postSelectionService,
             FeedBlockCacheRepository feedBlockCacheRepository,
             UserFeedStateRepository userFeedStateRepository,
+            UserRecommendationVectorRepository userRecommendationVectorRepository,
             PostRepository postRepository,
             @Autowired(required = false) RedisService redisService,
             MeterRegistry meterRegistry
@@ -71,6 +76,7 @@ public class FeedBlockGeneratorService {
         this.postSelectionService = postSelectionService;
         this.feedBlockCacheRepository = feedBlockCacheRepository;
         this.userFeedStateRepository = userFeedStateRepository;
+        this.userRecommendationVectorRepository = userRecommendationVectorRepository;
         this.postRepository = postRepository;
         this.redisService = redisService;
         this.meterRegistry = meterRegistry;
@@ -100,11 +106,53 @@ public class FeedBlockGeneratorService {
     }
     
     /**
+     * Get the R vector for a specific block using R(N-2) lag mechanism
+     * Block N uses R vector version (N-2)
+     * Blocks 1-2 use default distribution (returns null)
+     * 
+     * @param userId The user ID
+     * @param blockNumber The block number
+     * @return UserRecommendationVector for block (N-2), or null if blockNumber <= 2 or R vector not found
+     */
+    private UserRecommendationVector getRVectorForBlock(UUID userId, Integer blockNumber) {
+        // Blocks 1-2 use default distribution
+        if (blockNumber <= 2) {
+            logger.debug("Block {} <= 2, using default distribution (no R vector)", blockNumber);
+            return null;
+        }
+        
+        // Calculate target R version: blockNumber - 2
+        Integer targetRVersion = blockNumber - 2;
+        logger.debug("Block {} requires R vector version {} (N-2)", blockNumber, targetRVersion);
+        
+        try {
+            // Look up R vector version (blockNumber - 2) from repository
+            Optional<UserRecommendationVector> rVectorOpt = userRecommendationVectorRepository
+                .findByUserIdAndVersion(userId, targetRVersion);
+            
+            if (rVectorOpt.isPresent()) {
+                UserRecommendationVector rVector = rVectorOpt.get();
+                logger.info("Found R vector version {} for user {} block {} (N-2)", 
+                           targetRVersion, userId, blockNumber);
+                return rVector;
+            } else {
+                logger.warn("R vector version {} not found for user {} block {} (N-2), falling back to default", 
+                           targetRVersion, userId, blockNumber);
+                return null; // Fallback to default distribution
+            }
+        } catch (Exception e) {
+            logger.error("Error looking up R vector version {} for user {} block {} (N-2), falling back to default", 
+                        targetRVersion, userId, blockNumber, e);
+            return null; // Fallback to default distribution
+        }
+    }
+    
+    /**
      * Generate a personalized feed block for a user based on their recommendation vector
      * 
      * @param userId The user ID
      * @param blockNumber The block number to generate
-     * @param rVector The user's recommendation vector
+     * @param rVector The user's recommendation vector (can be null for default distribution)
      * @return Generated FeedBlockCache with posts and metadata
      * @throws IllegalArgumentException if parameters are invalid
      * @throws RuntimeException if generation fails
@@ -113,9 +161,6 @@ public class FeedBlockGeneratorService {
         long startTime = System.currentTimeMillis();
         Timer.Sample sample = Timer.start(meterRegistry);
         String correlationId = MDC.get("correlationId");
-        
-        // Log block generation start
-        logBlockGenerationStart(logger, userId, blockNumber, rVector.getVersion());
         
         // Validate parameters
         if (userId == null) {
@@ -126,16 +171,20 @@ public class FeedBlockGeneratorService {
             logger.error("Cannot generate feed block: invalid blockNumber: {}", blockNumber);
             throw new IllegalArgumentException("Block number must be at least 1");
         }
+        
+        // Handle null R vector (default distribution for blocks 1-2 or when R vector not found)
         if (rVector == null) {
-            logger.error("Cannot generate feed block: rVector is null for userId: {}", userId);
-            throw new IllegalArgumentException("Recommendation vector cannot be null");
+            logger.info("R vector is null for user {} block {}, using default distribution", userId, blockNumber);
+            return generateDefaultBlockForBlockNumber(userId, blockNumber);
         }
+        
+        // Log block generation start
+        logBlockGenerationStart(logger, userId, blockNumber, rVector.getVersion());
         
         try {
             // Step 1: Get top 3 emotions from recommendation vector
             logger.debug("Step 1: Extracting top 3 emotions from R vector");
-            // List<String> topThreeEmotions = rVectorService.getTopThreeEmotions(rVector);
-            List<String> topThreeEmotions = List.of("happy", "sad", "angry"); // Service removed
+            List<String> topThreeEmotions = rVector.getTopThreeEmotions();
             logger.info("Top 3 emotions for user {}: {}", userId, topThreeEmotions);
             
             // Step 2: Get emotion distribution percentages
@@ -175,7 +224,7 @@ public class FeedBlockGeneratorService {
             
             // Step 8: Update UserFeedState
             logger.debug("Step 8: Updating UserFeedState");
-            updateUserFeedState(userState, assembledPosts, blockNumber);
+            updateUserFeedState(userState, assembledPosts, blockNumber, rVector.getVersion());
             userFeedStateRepository.save(userState);
             logger.info("Updated UserFeedState for user {}: currentBlock={}, totalBlocks={}", 
                        userId, userState.getCurrentBlockNumber(), userState.getTotalBlocksGenerated());
@@ -382,8 +431,9 @@ public class FeedBlockGeneratorService {
      * @param userState The user's feed state
      * @param posts The posts to add to shown set
      * @param blockNumber The current block number
+     * @param rVectorVersion The R vector version used for this block (null for default)
      */
-    private void updateUserFeedState(UserFeedState userState, List<Post> posts, Integer blockNumber) {
+    private void updateUserFeedState(UserFeedState userState, List<Post> posts, Integer blockNumber, Integer rVectorVersion) {
         // Add posts to shown set
         List<UUID> postIds = posts.stream().map(Post::getId).collect(Collectors.toList());
         userState.addShownPosts(postIds);
@@ -396,12 +446,111 @@ public class FeedBlockGeneratorService {
         // Increment total blocks generated
         userState.incrementTotalBlocksGenerated();
         
-        // Update R vector version if needed
-        // Note: This would need to be passed from the calling method in a real implementation
+        // Track which R vector version was used for this block
+        if (rVectorVersion != null) {
+            userState.setRVectorVersionForBlock(blockNumber, rVectorVersion);
+            logger.debug("Tracked R vector version {} for block {}", rVectorVersion, blockNumber);
+        } else {
+            // Default distribution used (blocks 1-2 or when R vector not found)
+            userState.setRVectorVersionForBlock(blockNumber, 0); // 0 indicates default was used
+            logger.debug("Tracked default distribution (version 0) for block {}", blockNumber);
+        }
         
         logger.debug("Updated UserFeedState: currentBlock={}, totalBlocks={}, shownPosts={}", 
                     userState.getCurrentBlockNumber(), userState.getTotalBlocksGenerated(), 
                     userState.getShownPostCount());
+    }
+    
+    /**
+     * Generate a default feed block for a specific block number without an R vector
+     * Uses default emotion distribution percentages
+     * 
+     * @param userId The user ID
+     * @param blockNumber The block number to generate
+     * @return Generated FeedBlockCache with default distribution
+     * @throws IllegalArgumentException if userId is null or blockNumber is invalid
+     * @throws RuntimeException if generation fails
+     */
+    private FeedBlockCache generateDefaultBlockForBlockNumber(UUID userId, Integer blockNumber) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        logger.info("Starting default feed block generation for user: {} block: {}", userId, blockNumber);
+        
+        if (userId == null) {
+            logger.error("Cannot generate default block: userId is null");
+            throw new IllegalArgumentException("User ID cannot be null");
+        }
+        if (blockNumber == null || blockNumber < 1) {
+            logger.error("Cannot generate default block: invalid blockNumber: {}", blockNumber);
+            throw new IllegalArgumentException("Block number must be at least 1");
+        }
+        
+        try {
+            // Step 1: Define default emotion distribution
+            Map<String, Integer> defaultDistribution = Map.of(
+                "sad", 20,
+                "fear", 5,
+                "angry", 20,
+                "happy", 20,
+                "conflicted", 20,
+                "surprised", 15
+            );
+            logger.info("Using default emotion distribution for user {} block {}: {}", userId, blockNumber, defaultDistribution);
+            
+            // Step 2: Calculate post counts from default percentages
+            Map<String, Integer> postCounts = calculatePostCounts(defaultDistribution, DEFAULT_POSTS_PER_BLOCK);
+            logger.info("Default post counts for user {} block {}: {}", userId, blockNumber, postCounts);
+            
+            // Step 3: Get or create UserFeedState
+            UserFeedState userState = getUserFeedState(userId);
+            logger.info("UserFeedState for user {} block {}: currentBlock={}, totalBlocks={}", 
+                       userId, blockNumber, userState.getCurrentBlockNumber(), userState.getTotalBlocksGenerated());
+            
+            // Step 4: Assemble the feed block
+            List<Post> assembledPosts = assembleBlock(userId, postCounts, userState);
+            logger.info("Assembled {} default posts for user {} block {}", assembledPosts.size(), userId, blockNumber);
+            
+            // Step 5: Create FeedBlockCache with default settings
+            FeedBlockCache feedBlockCache = new FeedBlockCache();
+            feedBlockCache.setUserId(userId);
+            feedBlockCache.setBlockNumber(blockNumber);
+            feedBlockCache.setPostIds(assembledPosts.stream().map(Post::getId).collect(Collectors.toList()));
+            feedBlockCache.setEmotionDistribution(defaultDistribution);
+            feedBlockCache.setRVectorVersion(0); // 0 indicates default was used
+            feedBlockCache.setGeneratedAt(LocalDateTime.now());
+            feedBlockCache.setExpiresAt(LocalDateTime.now().plusHours(CACHE_EXPIRATION_HOURS));
+            
+            logger.info("Created default FeedBlockCache for user {} block {} with {} posts", 
+                       userId, blockNumber, assembledPosts.size());
+            
+            // Step 6: Save to repository
+            FeedBlockCache savedCache = feedBlockCacheRepository.save(feedBlockCache);
+            logger.info("Saved default FeedBlockCache with ID: {} for user {} block {}", 
+                       savedCache.getId(), userId, blockNumber);
+            
+            // Step 7: Update UserFeedState
+            updateUserFeedState(userState, assembledPosts, blockNumber, 0); // 0 indicates default distribution
+            userFeedStateRepository.save(userState);
+            logger.info("Updated UserFeedState for user {} block {}: currentBlock={}, totalBlocks={}", 
+                       userId, blockNumber, userState.getCurrentBlockNumber(), userState.getTotalBlocksGenerated());
+            
+            // Step 8: Cache in Redis if available
+            cacheBlock(savedCache);
+            
+            logger.info("Default feed block generation completed successfully - userId: {}, blockNumber: {}, " +
+                       "postsGenerated: {}, cacheExpiresAt: {}", 
+                       userId, blockNumber, assembledPosts.size(), savedCache.getExpiresAt());
+            
+            return savedCache;
+            
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid parameters for default block generation - userId: {}, blockNumber: {}", userId, blockNumber, e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Failed to generate default block for user: {} block: {}", userId, blockNumber, e);
+            throw new RuntimeException("Failed to generate default block for user: " + userId + " block: " + blockNumber, e);
+        } finally {
+            sample.stop(blockGenerationDuration);
+        }
     }
     
     /**
@@ -466,7 +615,7 @@ public class FeedBlockGeneratorService {
                        savedCache.getId(), userId);
             
             // Step 7: Update UserFeedState
-            updateUserFeedState(userState, assembledPosts, 1);
+            updateUserFeedState(userState, assembledPosts, 1, 0); // 0 indicates default distribution
             userFeedStateRepository.save(userState);
             logger.info("Updated UserFeedState for first-time user {}: currentBlock={}, totalBlocks={}", 
                        userId, userState.getCurrentBlockNumber(), userState.getTotalBlocksGenerated());
@@ -493,10 +642,11 @@ public class FeedBlockGeneratorService {
     
     /**
      * Get existing cached block or generate a new one if needed
+     * Also triggers pre-computation of Block N+1 in the background
      * 
      * @param userId The user ID
      * @param blockNumber The block number to get or generate
-     * @return FeedBlockCache (cached or newly generated)
+     * @return FeedBlockCache (cached, pre-computed, or newly generated)
      * @throws IllegalArgumentException if parameters are invalid
      * @throws RuntimeException if generation fails
      */
@@ -513,7 +663,29 @@ public class FeedBlockGeneratorService {
         }
         
         try {
-            // Step 1: Check if cached block exists
+            // Step 1: Check for pre-computed block first (non-consumed, non-expired)
+            LocalDateTime now = LocalDateTime.now();
+            Optional<FeedBlockCache> preComputedBlock = feedBlockCacheRepository
+                .findPreComputedBlock(userId, blockNumber, now);
+            
+            if (preComputedBlock.isPresent()) {
+                FeedBlockCache block = preComputedBlock.get();
+                // Mark as consumed when returned
+                block.markAsConsumed();
+                feedBlockCacheRepository.save(block);
+                cacheHits.increment();
+                logger.info("Returning pre-computed block for user {} block {} (marked as consumed)", 
+                           userId, blockNumber);
+                logCacheOperation(logger, "feed_block_cache", 
+                                "user:" + userId + ":block:" + blockNumber, true);
+                
+                // Trigger pre-computation of next block (N+1) asynchronously
+                triggerPrecomputation(userId, blockNumber);
+                
+                return block;
+            }
+            
+            // Step 2: Check if any cached block exists (including consumed ones)
             Optional<FeedBlockCache> cachedBlock = feedBlockCacheRepository
                 .findByUserIdAndBlockNumber(userId, blockNumber);
             
@@ -522,9 +694,18 @@ public class FeedBlockGeneratorService {
                 
                 // Check if block is expired
                 if (!block.isExpired()) {
+                    // Mark as consumed if not already consumed
+                    if (!block.wasConsumed()) {
+                        block.markAsConsumed();
+                        feedBlockCacheRepository.save(block);
+                    }
                     cacheHits.increment();
                     logCacheOperation(logger, "feed_block_cache", 
                                     "user:" + userId + ":block:" + blockNumber, true);
+                    
+                    // Trigger pre-computation of next block (N+1) asynchronously
+                    triggerPrecomputation(userId, blockNumber);
+                    
                     return block;
                 } else {
                     cacheMisses.increment();
@@ -537,21 +718,30 @@ public class FeedBlockGeneratorService {
                                 "user:" + userId + ":block:" + blockNumber, false);
             }
             
-            // Step 2: Get user's current R vector
-            UserRecommendationVector rVector;
-            try {
-                // rVector = rVectorService.getCurrentVector(userId);
-                rVector = null; // Service removed
-                logger.debug("Found R vector for user {} with version: {}", userId, rVector.getVersion());
-            } catch (Exception e) {
-                logger.warn("No R vector found for user {}, using default block generation", userId, e);
-                return generateDefaultBlock(userId);
+            // Step 3: Get R vector for block using R(N-2) lag mechanism
+            // Block N uses R vector version (N-2)
+            // Blocks 1-2 use default distribution
+            UserRecommendationVector rVector = getRVectorForBlock(userId, blockNumber);
+            
+            if (rVector == null) {
+                logger.info("Using default distribution for user {} block {} (R(N-2) not available)", userId, blockNumber);
+            } else {
+                logger.info("Using R vector version {} for user {} block {} (N-2)", 
+                           rVector.getVersion(), userId, blockNumber);
             }
             
-            // Step 3: Generate new block using R vector
+            // Step 4: Generate new block using R vector (or default if null)
             FeedBlockCache newBlock = generateBlockForUser(userId, blockNumber, rVector);
-            logger.info("Generated new block for user {} block {} with {} posts", 
+            
+            // Mark as consumed since it's being returned immediately
+            newBlock.markAsConsumed();
+            feedBlockCacheRepository.save(newBlock);
+            
+            logger.info("Generated new block for user {} block {} with {} posts (marked as consumed)", 
                        userId, blockNumber, newBlock.getPostCount());
+            
+            // Step 5: Trigger pre-computation of next block (N+1) asynchronously
+            triggerPrecomputation(userId, blockNumber);
             
             return newBlock;
             
@@ -562,6 +752,98 @@ public class FeedBlockGeneratorService {
         } catch (Exception e) {
             logger.error("Failed to get or generate block for user: {}, block: {}", userId, blockNumber, e);
             throw new RuntimeException("Failed to get or generate block for user: " + userId, e);
+        }
+    }
+    
+    /**
+     * Trigger pre-computation of the next block (N+1) asynchronously
+     * This method is non-blocking and fires off the async task
+     * 
+     * @param userId The user ID
+     * @param currentBlockNumber The current block number (N)
+     */
+    private void triggerPrecomputation(UUID userId, Integer currentBlockNumber) {
+        try {
+            Integer nextBlockNumber = currentBlockNumber + 1;
+            logger.debug("Triggering pre-computation of block {} for user {} (current block: {})", 
+                        nextBlockNumber, userId, currentBlockNumber);
+            
+            // Fire and forget - don't wait for completion
+            precomputeNextBlock(userId, nextBlockNumber);
+            
+        } catch (Exception e) {
+            // Log but don't fail - pre-computation is best effort
+            logger.warn("Failed to trigger pre-computation for user {} next block: {}", 
+                       userId, currentBlockNumber + 1, e);
+        }
+    }
+    
+    /**
+     * Pre-compute Block N+1 in the background while user is viewing Block N
+     * This method runs asynchronously and does not block the current request
+     * 
+     * @param userId The user ID
+     * @param nextBlockNumber The next block number to pre-compute (N+1)
+     * @return CompletableFuture that completes when pre-computation finishes
+     */
+    @Async("blockPrecomputationExecutor")
+    public CompletableFuture<Void> precomputeNextBlock(UUID userId, Integer nextBlockNumber) {
+        logger.info("Starting pre-computation of block {} for user {}", nextBlockNumber, userId);
+        
+        try {
+            // Step 1: Check if Block N+1 already exists (don't recompute)
+            LocalDateTime now = LocalDateTime.now();
+            Optional<FeedBlockCache> existingBlock = feedBlockCacheRepository
+                .findByUserIdAndBlockNumber(userId, nextBlockNumber);
+            
+            if (existingBlock.isPresent()) {
+                FeedBlockCache block = existingBlock.get();
+                // Only skip if block is valid (not expired, not consumed, or consumed but not expired)
+                if (!block.isExpired()) {
+                    logger.info("Block {} for user {} already exists and is valid, skipping pre-computation", 
+                               nextBlockNumber, userId);
+                    return CompletableFuture.completedFuture(null);
+                } else {
+                    logger.info("Block {} for user {} exists but is expired, will regenerate", 
+                               nextBlockNumber, userId);
+                }
+            }
+            
+            // Step 2: Get R vector for Block N+1 using R(N-1) logic
+            // Block N+1 uses R vector version ((N+1)-2) = (N-1)
+            UserRecommendationVector rVector = getRVectorForBlock(userId, nextBlockNumber);
+            
+            if (rVector == null) {
+                logger.info("Pre-computing block {} for user {} with default distribution (R(N-1) not available)", 
+                           nextBlockNumber, userId);
+            } else {
+                logger.info("Pre-computing block {} for user {} with R vector version {} (N-1)", 
+                           nextBlockNumber, userId, rVector.getVersion());
+            }
+            
+            // Step 3: Generate Block N+1 asynchronously
+            FeedBlockCache preComputedBlock = generateBlockForUser(userId, nextBlockNumber, rVector);
+            
+            // Step 4: Save to cache with isConsumed = false (pre-computed, not yet consumed)
+            // The block is already saved in generateBlockForUser, but ensure isConsumed is false
+            if (preComputedBlock.wasConsumed()) {
+                // Reset consumed status if it was set during generation
+                preComputedBlock.setIsConsumed(false);
+                preComputedBlock.setConsumedAt(null);
+                feedBlockCacheRepository.save(preComputedBlock);
+            }
+            
+            logger.info("Successfully pre-computed block {} for user {} with {} posts (isConsumed=false)", 
+                       nextBlockNumber, userId, preComputedBlock.getPostCount());
+            
+            return CompletableFuture.completedFuture(null);
+            
+        } catch (Exception e) {
+            // Handle errors gracefully - log but don't fail
+            // Pre-computation is best effort and should not affect user experience
+            logger.error("Error pre-computing block {} for user {}: {}", 
+                       nextBlockNumber, userId, e.getMessage(), e);
+            return CompletableFuture.completedFuture(null);
         }
     }
     

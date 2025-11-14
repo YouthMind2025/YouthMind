@@ -309,7 +309,7 @@ public class PostSelectionService {
 
     /**
      * Applies waterfall time priority to select posts for a specific emotion.
-     * Tries time windows in order: 12h → 24h → 48h → 7d until enough posts are found.
+     * Tries time windows in order: 0-12h (primary) → 12-24h → 24-48h → 2-7d until enough posts are found.
      * 
      * @param emotion The emotion to filter posts by (case-insensitive).
      * @param count The total number of posts to retrieve.
@@ -336,12 +336,12 @@ public class PostSelectionService {
         LocalDateTime now = LocalDateTime.now();
         Set<UUID> collectedPostIds = new HashSet<>(excludeIds);
 
-        // Define time windows in waterfall order: 12h → 24h → 48h → 7d
+        // Define time windows in waterfall order: 0-12h (primary) → 12-24h → 24-48h → 2-7d
         List<TimeWindow> timeWindows = Arrays.asList(
-            new TimeWindow("12 hours", now.minusHours(12)),
-            new TimeWindow("24 hours", now.minusHours(24)),
-            new TimeWindow("48 hours", now.minusHours(48)),
-            new TimeWindow("7 days", now.minusDays(7))
+            new TimeWindow("0-12 hours", now.minusHours(12)),
+            new TimeWindow("12-24 hours", now.minusHours(24)),
+            new TimeWindow("24-48 hours", now.minusHours(48)),
+            new TimeWindow("2-7 days", now.minusDays(7))
         );
 
         for (TimeWindow window : timeWindows) {
@@ -449,12 +449,12 @@ public class PostSelectionService {
         Set<UUID> collectedPostIds = new HashSet<>(excludePostIds);
 
         try {
-            // Step 1: Try popularity distribution with 24-hour cutoff
-            LocalDateTime twentyFourHoursAgo = LocalDateTime.now().minusHours(24);
-            logger.info("Step 1: Attempting popularity distribution with 24-hour cutoff");
+            // Step 1: Try popularity distribution with 12-hour cutoff (0-12h primary window)
+            LocalDateTime twelveHoursAgo = LocalDateTime.now().minusHours(12);
+            logger.info("Step 1: Attempting popularity distribution with 12-hour cutoff (0-12h primary window)");
             
             List<Post> popularityPosts = selectWithPopularityDistribution(
-                emotion, count, twentyFourHoursAgo, collectedPostIds);
+                emotion, count, twelveHoursAgo, collectedPostIds);
             
             selectedPosts.addAll(popularityPosts);
             popularityPosts.forEach(post -> collectedPostIds.add(post.getId()));
@@ -576,12 +576,12 @@ public class PostSelectionService {
         LocalDateTime now = LocalDateTime.now();
         Set<UUID> collectedPostIds = new HashSet<>(excludePostIds != null ? excludePostIds : Collections.emptySet());
         
-        // Define time windows in waterfall order
+        // Define time windows in waterfall order: 0-12h (primary) → 12-24h → 24-48h → 2-7d
         List<TimeWindow> timeWindows = Arrays.asList(
-            new TimeWindow("12 hours", now.minusHours(12)),
-            new TimeWindow("24 hours", now.minusHours(24)),
-            new TimeWindow("48 hours", now.minusHours(48)),
-            new TimeWindow("7 days", now.minusDays(7)),
+            new TimeWindow("0-12 hours", now.minusHours(12)),
+            new TimeWindow("12-24 hours", now.minusHours(24)),
+            new TimeWindow("24-48 hours", now.minusHours(48)),
+            new TimeWindow("2-7 days", now.minusDays(7)),
             new TimeWindow("30 days", now.minusDays(30))
         );
         

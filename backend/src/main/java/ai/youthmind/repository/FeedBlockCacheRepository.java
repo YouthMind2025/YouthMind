@@ -120,6 +120,18 @@ public interface FeedBlockCacheRepository extends JpaRepository<FeedBlockCache, 
     @Modifying
     @Transactional
     int deleteByUserId(UUID userId);
+    
+    /**
+     * Find a pre-computed (non-consumed, non-expired) feed block by user ID and block number
+     * Used to retrieve blocks that were pre-computed in the background
+     * 
+     * @param userId The user ID
+     * @param blockNumber The block number
+     * @param currentTime Current time for expiration check
+     * @return Optional containing the pre-computed feed block if found
+     */
+    @Query("SELECT fbc FROM FeedBlockCache fbc WHERE fbc.userId = :userId AND fbc.blockNumber = :blockNumber AND fbc.isConsumed = false AND fbc.expiresAt > :currentTime")
+    Optional<FeedBlockCache> findPreComputedBlock(@Param("userId") UUID userId, @Param("blockNumber") Integer blockNumber, @Param("currentTime") LocalDateTime currentTime);
 }
 
 
