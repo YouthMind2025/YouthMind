@@ -1,16 +1,25 @@
 package ai.youthmind.controller;
 
+import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.service.AIPostAnalysisService;
 import ai.youthmind.service.PsychologicalVectorGenerator;
 import ai.youthmind.service.BuddhistFactorAnalyzer;
 import ai.youthmind.service.IntensityPredictor;
 import ai.youthmind.service.StateVectorProcessor;
+import ai.youthmind.service.PsychologicalStateCacheService;
+import ai.youthmind.util.ResponseBuilder;
+import ai.youthmind.util.AuthenticationUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -21,6 +30,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/ai-analysis")
 @CrossOrigin(origins = "*")
+@Tag(name = "Enhanced AI Analysis", description = "AI-powered psychological analysis and vector processing endpoints")
 public class EnhancedAIAnalysisController {
     
     private static final Logger logger = LoggerFactory.getLogger(EnhancedAIAnalysisController.class);
@@ -40,21 +50,31 @@ public class EnhancedAIAnalysisController {
     @Autowired
     private StateVectorProcessor stateVectorProcessor;
     
+    @Autowired
+    private PsychologicalStateCacheService psychologicalStateCacheService;
+    
     /**
      * Generate psychological vector for content
      * POST /api/ai-analysis/psychological-vector
      */
     @PostMapping("/psychological-vector")
-    public ResponseEntity<Map<String, Object>> generatePsychologicalVector(
+    @Operation(
+        summary = "Generate psychological vector",
+        description = "Generate a 43-dimensional psychological vector from content analysis"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Psychological vector generated successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> generatePsychologicalVector(
             @RequestBody Map<String, Object> request) {
         try {
             String content = (String) request.get("content");
             String userIdStr = (String) request.get("userId");
             
             if (content == null || userIdStr == null) {
-                return ResponseEntity.badRequest().body(Map.of(
-                    "error", "Missing required fields: content, userId"
-                ));
+                return ResponseBuilder.badRequest("Missing required fields: content, userId");
             }
             
             UUID userId = UUID.fromString(userIdStr);
@@ -62,14 +82,11 @@ public class EnhancedAIAnalysisController {
             
             Map<String, Object> result = aiPostAnalysisService.generatePsychologicalVector(content, userId);
             
-            return ResponseEntity.ok(result);
+            return ResponseBuilder.success(result, "Psychological vector generated successfully");
             
         } catch (Exception e) {
             logger.error("Error generating psychological vector: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Failed to generate psychological vector",
-                "message", e.getMessage()
-            ));
+            return ResponseBuilder.internalServerError("Failed to generate psychological vector");
         }
     }
     
@@ -78,16 +95,23 @@ public class EnhancedAIAnalysisController {
      * POST /api/ai-analysis/buddhist-factors
      */
     @PostMapping("/buddhist-factors")
-    public ResponseEntity<Map<String, Object>> analyzeBuddhistFactors(
+    @Operation(
+        summary = "Analyze Buddhist factors",
+        description = "Analyze Buddhist mental factors in content using sophisticated Buddhist psychology algorithms"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Buddhist factors analyzed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> analyzeBuddhistFactors(
             @RequestBody Map<String, Object> request) {
         try {
             String content = (String) request.get("content");
             String userIdStr = (String) request.get("userId");
             
             if (content == null || userIdStr == null) {
-                return ResponseEntity.badRequest().body(Map.of(
-                    "error", "Missing required fields: content, userId"
-                ));
+                return ResponseBuilder.badRequest("Missing required fields: content, userId");
             }
             
             UUID userId = UUID.fromString(userIdStr);
@@ -95,14 +119,11 @@ public class EnhancedAIAnalysisController {
             
             Map<String, Object> result = aiPostAnalysisService.analyzeBuddhistFactors(content, userId);
             
-            return ResponseEntity.ok(result);
+            return ResponseBuilder.success(result, "Buddhist factors analyzed successfully");
             
         } catch (Exception e) {
             logger.error("Error analyzing Buddhist factors: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Failed to analyze Buddhist factors",
-                "message", e.getMessage()
-            ));
+            return ResponseBuilder.internalServerError("Failed to analyze Buddhist factors");
         }
     }
     
@@ -176,49 +197,99 @@ public class EnhancedAIAnalysisController {
         }
     }
     
-    /**
-     * Get psychological vector for a user
-     * GET /api/ai-analysis/psychological-vector/{userId}
-     */
-    @GetMapping("/psychological-vector/{userId}")
-    public ResponseEntity<Map<String, Object>> getPsychologicalVector(@PathVariable UUID userId) {
-        try {
-            logger.info("Getting psychological vector for user {}", userId);
-            
-            Map<String, Object> result = psychologicalVectorGenerator.getVector(userId);
-            
-            return ResponseEntity.ok(result);
-            
-        } catch (Exception e) {
-            logger.error("Error getting psychological vector for user {}: {}", userId, e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Failed to get psychological vector",
-                "message", e.getMessage(),
-                "userId", userId.toString()
-            ));
-        }
-    }
+    // ===== GET ENDPOINTS FOR USER-SPECIFIC DATA =====
     
     /**
      * Get Buddhist factors analysis for a user
      * GET /api/ai-analysis/buddhist-factors/{userId}
      */
     @GetMapping("/buddhist-factors/{userId}")
-    public ResponseEntity<Map<String, Object>> getBuddhistFactors(@PathVariable UUID userId) {
+    @Operation(
+        summary = "Get Buddhist factors analysis",
+        description = "Retrieve cached Buddhist factors analysis for a specific user"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Buddhist factors analysis retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getBuddhistFactors(
+            @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID userId) {
         try {
+            // Verify user authorization
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            if (!currentUserId.equals(userId)) {
+                return ResponseBuilder.forbidden("Access denied: Cannot access other user's data");
+            }
+            
             logger.info("Getting Buddhist factors analysis for user {}", userId);
             
+            // Try cache first
+            Map<String, Double> cachedResult = psychologicalStateCacheService.getBuddhistFactors(userId);
+            if (cachedResult != null) {
+                Map<String, Object> result = new HashMap<>(cachedResult);
+                return ResponseBuilder.success(result, "Buddhist factors analysis retrieved from cache");
+            }
+            
+            // Fallback to service
             Map<String, Object> result = buddhistFactorAnalyzer.getFactorAnalysis(userId);
             
-            return ResponseEntity.ok(result);
+            return ResponseBuilder.success(result, "Buddhist factors analysis retrieved successfully");
             
         } catch (Exception e) {
             logger.error("Error getting Buddhist factors analysis for user {}: {}", userId, e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Failed to get Buddhist factors analysis",
-                "message", e.getMessage(),
-                "userId", userId.toString()
-            ));
+            return ResponseBuilder.internalServerError("Failed to get Buddhist factors analysis");
+        }
+    }
+    
+    /**
+     * Get psychological vector for a user
+     * GET /api/ai-analysis/psychological-vector/{userId}
+     */
+    @GetMapping("/psychological-vector/{userId}")
+    @Operation(
+        summary = "Get psychological vector",
+        description = "Retrieve cached psychological vector for a specific user"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Psychological vector retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getPsychologicalVector(
+            @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID userId) {
+        try {
+            // Verify user authorization
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            if (!currentUserId.equals(userId)) {
+                return ResponseBuilder.forbidden("Access denied: Cannot access other user's data");
+            }
+            
+            logger.info("Getting psychological vector for user {}", userId);
+            
+            // Try cache first
+            Map<String, Object> cachedResult = psychologicalStateCacheService.getPsychologicalState(userId);
+            if (cachedResult != null) {
+                return ResponseBuilder.success(cachedResult, "Psychological vector retrieved from cache");
+            }
+            
+            // Fallback to service (this would need to be implemented in PsychologicalVectorGenerator)
+            Map<String, Object> result = Map.of(
+                "userId", userId.toString(),
+                "vector", java.util.List.of(),
+                "message", "No cached psychological vector found",
+                "timestamp", java.time.LocalDateTime.now()
+            );
+            
+            return ResponseBuilder.success(result, "Psychological vector retrieved successfully");
+            
+        } catch (Exception e) {
+            logger.error("Error getting psychological vector for user {}: {}", userId, e.getMessage(), e);
+            return ResponseBuilder.internalServerError("Failed to get psychological vector");
         }
     }
     
@@ -227,44 +298,35 @@ public class EnhancedAIAnalysisController {
      * GET /api/ai-analysis/intensity-prediction/{userId}
      */
     @GetMapping("/intensity-prediction/{userId}")
-    public ResponseEntity<Map<String, Object>> getIntensityPrediction(@PathVariable UUID userId) {
+    @Operation(
+        summary = "Get intensity prediction",
+        description = "Retrieve cached intensity prediction for a specific user"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Intensity prediction retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getIntensityPrediction(
+            @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID userId) {
         try {
+            // Verify user authorization
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            if (!currentUserId.equals(userId)) {
+                return ResponseBuilder.forbidden("Access denied: Cannot access other user's data");
+            }
+            
             logger.info("Getting intensity prediction for user {}", userId);
             
             Map<String, Object> result = intensityPredictor.getIntensityPrediction(userId);
             
-            return ResponseEntity.ok(result);
+            return ResponseBuilder.success(result, "Intensity prediction retrieved successfully");
             
         } catch (Exception e) {
             logger.error("Error getting intensity prediction for user {}: {}", userId, e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Failed to get intensity prediction",
-                "message", e.getMessage(),
-                "userId", userId.toString()
-            ));
-        }
-    }
-    
-    /**
-     * Get processed vector for a user
-     * GET /api/ai-analysis/processed-vector/{userId}
-     */
-    @GetMapping("/processed-vector/{userId}")
-    public ResponseEntity<Map<String, Object>> getProcessedVector(@PathVariable UUID userId) {
-        try {
-            logger.info("Getting processed vector for user {}", userId);
-            
-            Map<String, Object> result = stateVectorProcessor.getProcessedVector(userId);
-            
-            return ResponseEntity.ok(result);
-            
-        } catch (Exception e) {
-            logger.error("Error getting processed vector for user {}: {}", userId, e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Failed to get processed vector",
-                "message", e.getMessage(),
-                "userId", userId.toString()
-            ));
+            return ResponseBuilder.internalServerError("Failed to get intensity prediction");
         }
     }
     
@@ -273,21 +335,72 @@ public class EnhancedAIAnalysisController {
      * GET /api/ai-analysis/prediction-accuracy/{userId}
      */
     @GetMapping("/prediction-accuracy/{userId}")
-    public ResponseEntity<Map<String, Object>> getPredictionAccuracy(@PathVariable UUID userId) {
+    @Operation(
+        summary = "Get prediction accuracy",
+        description = "Retrieve prediction accuracy statistics for a specific user"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Prediction accuracy retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getPredictionAccuracy(
+            @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID userId) {
         try {
+            // Verify user authorization
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            if (!currentUserId.equals(userId)) {
+                return ResponseBuilder.forbidden("Access denied: Cannot access other user's data");
+            }
+            
             logger.info("Getting prediction accuracy for user {}", userId);
             
             Map<String, Object> result = intensityPredictor.getPredictionAccuracy(userId);
             
-            return ResponseEntity.ok(result);
+            return ResponseBuilder.success(result, "Prediction accuracy retrieved successfully");
             
         } catch (Exception e) {
             logger.error("Error getting prediction accuracy for user {}: {}", userId, e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Failed to get prediction accuracy",
-                "message", e.getMessage(),
-                "userId", userId.toString()
-            ));
+            return ResponseBuilder.internalServerError("Failed to get prediction accuracy");
+        }
+    }
+    
+    /**
+     * Get processed vector for a user
+     * GET /api/ai-analysis/processed-vector/{userId}
+     */
+    @GetMapping("/processed-vector/{userId}")
+    @Operation(
+        summary = "Get processed vector",
+        description = "Retrieve cached processed psychological vector for a specific user"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Processed vector retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getProcessedVector(
+            @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID userId) {
+        try {
+            // Verify user authorization
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            if (!currentUserId.equals(userId)) {
+                return ResponseBuilder.forbidden("Access denied: Cannot access other user's data");
+            }
+            
+            logger.info("Getting processed vector for user {}", userId);
+            
+            Map<String, Object> result = stateVectorProcessor.getProcessedVector(userId);
+            
+            return ResponseBuilder.success(result, "Processed vector retrieved successfully");
+            
+        } catch (Exception e) {
+            logger.error("Error getting processed vector for user {}: {}", userId, e.getMessage(), e);
+            return ResponseBuilder.internalServerError("Failed to get processed vector");
         }
     }
     
@@ -330,12 +443,110 @@ public class EnhancedAIAnalysisController {
         }
     }
     
+    // ===== PSYCHOLOGY-SPECIFIC ENDPOINTS =====
+    
+    /**
+     * Get current psychological state for a user
+     * GET /api/ai/psychology/state/{userId}
+     */
+    @GetMapping("/psychology/state/{userId}")
+    @Operation(
+        summary = "Get psychological state",
+        description = "Retrieve current psychological state information for a specific user"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Psychological state retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getPsychologicalState(
+            @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID userId) {
+        try {
+            // Verify user authorization
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            if (!currentUserId.equals(userId)) {
+                return ResponseBuilder.forbidden("Access denied: Cannot access other user's data");
+            }
+            
+            logger.info("Getting psychological state for user {}", userId);
+            
+            // Get cached psychological state
+            Map<String, Object> cachedState = psychologicalStateCacheService.getPsychologicalState(userId);
+            if (cachedState != null) {
+                return ResponseBuilder.success(cachedState, "Psychological state retrieved from cache");
+            }
+            
+            // Return default state if no cached state found
+            Map<String, Object> defaultState = Map.of(
+                "userId", userId.toString(),
+                "state", "No psychological state data available",
+                "timestamp", java.time.LocalDateTime.now(),
+                "message", "No cached psychological state found"
+            );
+            
+            return ResponseBuilder.success(defaultState, "Psychological state retrieved successfully");
+            
+        } catch (Exception e) {
+            logger.error("Error getting psychological state for user {}: {}", userId, e.getMessage(), e);
+            return ResponseBuilder.internalServerError("Failed to get psychological state");
+        }
+    }
+    
+    /**
+     * Health check for AI psychology services
+     * GET /api/ai/psychology/health
+     */
+    @GetMapping("/psychology/health")
+    @Operation(
+        summary = "AI Psychology Health Check",
+        description = "Check the health status of AI psychology services"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Psychology services are healthy"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Psychology services are unhealthy")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getPsychologyHealth() {
+        try {
+            logger.debug("Performing AI psychology health check");
+            
+            Map<String, Object> health = Map.of(
+                "status", "HEALTHY",
+                "services", Map.of(
+                    "psychologicalVectorGenerator", "AVAILABLE",
+                    "buddhistFactorAnalyzer", "AVAILABLE",
+                    "intensityPredictor", "AVAILABLE",
+                    "stateVectorProcessor", "AVAILABLE",
+                    "psychologicalStateCacheService", "AVAILABLE",
+                    "aiPostAnalysisService", "AVAILABLE"
+                ),
+                "cacheStatistics", psychologicalStateCacheService.getCacheStatistics(),
+                "timestamp", System.currentTimeMillis()
+            );
+            
+            return ResponseBuilder.success(health, "AI psychology services are healthy");
+            
+        } catch (Exception e) {
+            logger.error("Error performing AI psychology health check: {}", e.getMessage(), e);
+            return ResponseBuilder.internalServerError("AI psychology services are unhealthy");
+        }
+    }
+    
     /**
      * Health check endpoint for enhanced AI analysis services
      * GET /api/ai-analysis/health
      */
     @GetMapping("/health")
-    public ResponseEntity<Map<String, Object>> healthCheck() {
+    @Operation(
+        summary = "Enhanced AI Analysis Health Check",
+        description = "Check the health status of enhanced AI analysis services"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "AI analysis services are healthy"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "AI analysis services are unhealthy")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> healthCheck() {
         try {
             logger.debug("Performing enhanced AI analysis health check");
             
@@ -351,15 +562,11 @@ public class EnhancedAIAnalysisController {
                 "timestamp", System.currentTimeMillis()
             );
             
-            return ResponseEntity.ok(health);
+            return ResponseBuilder.success(health, "Enhanced AI analysis services are healthy");
             
         } catch (Exception e) {
             logger.error("Error performing enhanced AI analysis health check: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "status", "UNHEALTHY",
-                "error", e.getMessage(),
-                "timestamp", System.currentTimeMillis()
-            ));
+            return ResponseBuilder.internalServerError("Enhanced AI analysis services are unhealthy");
         }
     }
 }

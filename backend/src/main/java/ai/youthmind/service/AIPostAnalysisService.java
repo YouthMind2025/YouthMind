@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -516,5 +517,90 @@ public class AIPostAnalysisService {
         } catch (Exception e) {
             logger.error("Error publishing AI processed event for post {}: {}", postId, e.getMessage(), e);
         }
+    }
+
+    /**
+     * Get emotion insights for a specific user
+     */
+    public Map<String, Object> getEmotionInsights(UUID userId) {
+        Map<String, Object> insights = new HashMap<>();
+        
+        try {
+            logger.info("Generating emotion insights for user: {}", userId);
+            
+            // Get user's posts for emotion analysis
+            List<Post> userPosts = postRepository.findByUserId(userId);
+            
+            if (userPosts.isEmpty()) {
+                insights.put("message", "No posts found for emotion analysis");
+                insights.put("emotionDistribution", new HashMap<>());
+                insights.put("emotionalTrends", new HashMap<>());
+                return insights;
+            }
+            
+            // Calculate emotion distribution
+            Map<String, Integer> emotionDistribution = new HashMap<>();
+            Map<String, List<String>> emotionalTrends = new HashMap<>();
+            
+            for (Post post : userPosts) {
+                String emotion = post.getEmotion();
+                if (emotion != null && !emotion.isEmpty()) {
+                    emotionDistribution.put(emotion, emotionDistribution.getOrDefault(emotion, 0) + 1);
+                    
+                    // Group by emotion for trend analysis
+                    emotionalTrends.computeIfAbsent(emotion, k -> new ArrayList<>())
+                        .add(post.getTitle() != null ? post.getTitle() : "Untitled");
+                }
+            }
+            
+            // Calculate dominant emotion
+            String dominantEmotion = emotionDistribution.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("unknown");
+            
+            // Calculate emotion diversity score
+            double diversityScore = calculateEmotionDiversity(emotionDistribution);
+            
+            insights.put("emotionDistribution", emotionDistribution);
+            insights.put("emotionalTrends", emotionalTrends);
+            insights.put("dominantEmotion", dominantEmotion);
+            insights.put("diversityScore", diversityScore);
+            insights.put("totalPosts", userPosts.size());
+            insights.put("analyzedPosts", emotionDistribution.values().stream().mapToInt(Integer::intValue).sum());
+            
+            logger.info("Successfully generated emotion insights for user: {} - Dominant emotion: {}", userId, dominantEmotion);
+            
+        } catch (Exception e) {
+            logger.error("Error generating emotion insights for user {}: {}", userId, e.getMessage(), e);
+            insights.put("error", "Failed to generate emotion insights: " + e.getMessage());
+        }
+        
+        return insights;
+    }
+
+    /**
+     * Calculate emotion diversity score
+     */
+    private double calculateEmotionDiversity(Map<String, Integer> emotionDistribution) {
+        if (emotionDistribution.isEmpty()) {
+            return 0.0;
+        }
+        
+        int totalEmotions = emotionDistribution.values().stream().mapToInt(Integer::intValue).sum();
+        if (totalEmotions == 0) {
+            return 0.0;
+        }
+        
+        // Calculate Shannon diversity index
+        double diversity = 0.0;
+        for (int count : emotionDistribution.values()) {
+            if (count > 0) {
+                double proportion = (double) count / totalEmotions;
+                diversity -= proportion * Math.log(proportion);
+            }
+        }
+        
+        return diversity;
     }
 }

@@ -2,6 +2,8 @@ package ai.youthmind.controller;
 
 import ai.youthmind.dto.*;
 import ai.youthmind.entity.User;
+import ai.youthmind.service.AIPostAnalysisService;
+import ai.youthmind.service.PersonalityComputationService;
 import ai.youthmind.service.InsightsService;
 import ai.youthmind.service.RedisService;
 import ai.youthmind.service.UserService;
@@ -22,9 +24,10 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @RestController
-@RequestMapping
+@RequestMapping("/api/insights")
 @Tag(name = "User Insights")
 @SecurityRequirement(name = "bearer-jwt")
+@CrossOrigin(origins = "*")
 public class InsightsController {
 
     private static final String INSIGHTS_KEY_PREFIX = "youthmind:insights:";
@@ -32,6 +35,12 @@ public class InsightsController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private AIPostAnalysisService aiPostAnalysisService;
+
+    @Autowired
+    private PersonalityComputationService personalityComputationService;
 
     @Autowired
     private InsightsService insightsService;
@@ -165,105 +174,99 @@ public class InsightsController {
         }
     }
 
-    @GetMapping("/api/insights/emotions/{userId}")
+    @GetMapping("/emotions/{userId}")
     @Operation(
-            summary = "Emotional analysis over time",
-            description = "Get user emotional analysis between requested time range"
+            summary = "Get User Emotion Insights",
+            description = "Get emotional analysis insights for a specific user"
     )
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Emotional analysis get successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Emotion insights retrieved successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - users can only access their own data"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
     })
-    public ResponseEntity<ApiResponse<EmotionalAnalysisResponse>> getEmotionalAnalysis(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getEmotionInsights(
             @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000", required = true)
-            @PathVariable UUID userId,
-            @Valid @RequestBody InsightsRequest request
+            @PathVariable UUID userId
     ) {
         try {
-            EmotionalAnalysisResponse response = new EmotionalAnalysisResponse();
-            response.setStart(request.getStart());
-            response.setEnd(request.getEnd());
-
-            Optional<User> userOpt = userService.getUserById(userId);
-
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(response, 400));
+            // Verify user authorization - users can only access their own data
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            if (!currentUserId.equals(userId)) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Forbidden: Users can only access their own data");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error(errorResponse, HttpStatus.FORBIDDEN.value()));
             }
 
-            Pair<LocalDateTime, LocalDateTime> timeRange = Pair.of(request.getStart(), request.getEnd());
-            List<String> emotionalTrends = insightsService.calculateEmotionalTrends(userId, timeRange);
-            Map<String, Integer> postEmotionDistribution = insightsService.calculatePostEmotionDistribution(userId, timeRange);
+            // Verify user exists
+            Optional<User> userOpt = userService.getUserById(userId);
+            if (userOpt.isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("message", "User not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error(errorResponse, HttpStatus.NOT_FOUND.value()));
+            }
 
-            response.setEmotionalTrends(emotionalTrends);
-            response.setPostEmotionDistribution(postEmotionDistribution);
+            // Get emotion insights from AI Post Analysis Service
+            Map<String, Object> emotionInsights = aiPostAnalysisService.getEmotionInsights(userId);
 
-            return ResponseEntity.ok(ApiResponse.success(response));
+            return ResponseEntity.ok(ApiResponse.success(emotionInsights));
 
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(new EmotionalAnalysisResponse(), 400));
         } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Failed to retrieve emotion insights: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error(new EmotionalAnalysisResponse(), 500));
+                    .body(ApiResponse.error(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR.value()));
         }
     }
 
-    @GetMapping("/api/insights/personality/{userId}")
+    @GetMapping("/personality/{userId}")
     @Operation(
-            summary = "Personality traits",
-            description = "Get user personality traits between requested time range"
+            summary = "Get User Personality Insights",
+            description = "Get personality analysis insights for a specific user"
     )
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Personality traits get successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Personality insights retrieved successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - users can only access their own data"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
     })
-    public ResponseEntity<ApiResponse<PersonalityTraitsResponse>> getPersonalityTraits(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getPersonalityInsights(
             @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000", required = true)
-            @PathVariable UUID userId,
-            @Valid @RequestBody InsightsRequest request
+            @PathVariable UUID userId
     ) {
         try {
-            PersonalityTraitsResponse response = new PersonalityTraitsResponse();
-            response.setStart(request.getStart());
-            response.setEnd(request.getEnd());
+            // Verify user authorization - users can only access their own data
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            if (!currentUserId.equals(userId)) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Forbidden: Users can only access their own data");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error(errorResponse, HttpStatus.FORBIDDEN.value()));
+            }
 
+            // Verify user exists
             Optional<User> userOpt = userService.getUserById(userId);
-
             if (userOpt.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error(response, 400));
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("message", "User not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error(errorResponse, HttpStatus.NOT_FOUND.value()));
             }
 
-            Pair<LocalDateTime, LocalDateTime> timeRange = Pair.of(request.getStart(), request.getEnd());
-            List<String> mostUsedWords = insightsService.calculateMostUsedWords(userId, timeRange);
-            List<String> topicPreferences = insightsService.calculateTopicPreferences(userId, timeRange);
-            List<String> coveredTopics = insightsService.calculateCoveredTopics(userId, timeRange);
-            List<String> mostEngagedTopic = insightsService.calculateMostEngagedTopics(userId, timeRange);
+            // Get personality insights from Personality Computation Service
+            Map<String, Object> personalityInsights = personalityComputationService.getPersonalityInsights(userId);
 
-            response.setPostMostUsedWords(mostUsedWords);
-            response.setTopicPreferences(topicPreferences);
-            response.setCoveredTopics(coveredTopics);
-            response.setMostEngagedTopic(mostEngagedTopic);
+            return ResponseEntity.ok(ApiResponse.success(personalityInsights));
 
-            List<PersonalityTraitsResponse> traits = new ArrayList<>();
-            String cacheKey = TRAITS_KEY_PREFIX + userId;
-            if (redisService.hasKey(cacheKey)) {
-                traits = (List<PersonalityTraitsResponse>) redisService.getValue(cacheKey);
-            }
-            traits.add(response);
-            redisService.setValue(cacheKey, traits);
-
-            return ResponseEntity.ok(ApiResponse.success(response));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(new PersonalityTraitsResponse(), 400));
         } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Failed to retrieve personality insights: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error(new PersonalityTraitsResponse(), 500));
+                    .body(ApiResponse.error(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR.value()));
         }
     }
 

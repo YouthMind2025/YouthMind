@@ -318,6 +318,44 @@ public class PersonalityComputationService {
         }
     }
     
+    /**
+     * Get personality insights for a specific user
+     */
+    public Map<String, Object> getPersonalityInsights(UUID userId) {
+        Map<String, Object> insights = new HashMap<>();
+        
+        try {
+            logger.info("Generating personality insights for user: {}", userId);
+            
+            // Get user's personality data
+            Map<String, Object> activePersonality = computeActivePersonality(userId);
+            Map<String, Object> subconsciousPersonality = computeSubconsciousPersonality(userId);
+            Map<String, Object> fusedPersonality = fusePersonalities(userId);
+            
+            // Generate insights from personality data
+            Map<String, Object> personalityInsights = generatePersonalityInsights(
+                activePersonality, subconsciousPersonality, fusedPersonality);
+            
+            // Add personality data to insights
+            insights.put("activePersonality", activePersonality);
+            insights.put("subconsciousPersonality", subconsciousPersonality);
+            insights.put("fusedPersonality", fusedPersonality);
+            insights.put("insights", personalityInsights);
+            insights.put("userId", userId.toString());
+            insights.put("timestamp", LocalDateTime.now());
+            
+            logger.info("Successfully generated personality insights for user: {}", userId);
+            
+        } catch (Exception e) {
+            logger.error("Error generating personality insights for user {}: {}", userId, e.getMessage(), e);
+            insights.put("error", "Failed to generate personality insights: " + e.getMessage());
+            insights.put("userId", userId.toString());
+            insights.put("timestamp", LocalDateTime.now());
+        }
+        
+        return insights;
+    }
+    
     // ==================== PRIVATE HELPER METHODS ====================
     
     private Map<String, Object> createDefaultActivePersonality(UUID userId) {

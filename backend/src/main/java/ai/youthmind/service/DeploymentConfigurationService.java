@@ -1,5 +1,8 @@
 package ai.youthmind.service;
 
+import ai.youthmind.dto.DeploymentValidationResult;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -105,7 +108,7 @@ public class DeploymentConfigurationService {
     /**
      * Validate deployment configuration
      */
-    public ValidationResult validateDeploymentConfiguration(DeploymentConfiguration config) {
+    public DeploymentValidationResult validateDeploymentConfiguration(DeploymentConfiguration config) {
         List<String> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         
@@ -133,26 +136,26 @@ public class DeploymentConfigurationService {
             // Validate service configuration
             if (config.getServiceConfig() == null) {
                 errors.add("Service configuration is required");
-            }
-            
-            // Validate resource requirements
-            if (config.getServiceConfig().getResourceRequirements() != null) {
-                ResourceRequirements resources = config.getServiceConfig().getResourceRequirements();
-                
-                // Note: Resource validation would need proper parsing of CPU/memory strings
-                // For now, we'll skip this validation
-            }
-            
-            // Validate health check configuration
-            if (config.getServiceConfig().getHealthCheckConfig() != null) {
-                HealthCheckConfig healthCheck = config.getServiceConfig().getHealthCheckConfig();
-                
-                if (healthCheck.getInitialDelaySeconds() < 0) {
-                    warnings.add("Health check initial delay should be non-negative");
+            } else {
+                // Validate resource requirements
+                if (config.getServiceConfig().getResourceRequirements() != null) {
+                    ResourceRequirements resources = config.getServiceConfig().getResourceRequirements();
+                    
+                    // Note: Resource validation would need proper parsing of CPU/memory strings
+                    // For now, we'll skip this validation
                 }
                 
-                if (healthCheck.getPeriodSeconds() < 1) {
-                    errors.add("Health check period must be at least 1 second");
+                // Validate health check configuration
+                if (config.getServiceConfig().getHealthCheckConfig() != null) {
+                    HealthCheckConfig healthCheck = config.getServiceConfig().getHealthCheckConfig();
+                    
+                    if (healthCheck.getInitialDelaySeconds() < 0) {
+                        warnings.add("Health check initial delay should be non-negative");
+                    }
+                    
+                    if (healthCheck.getPeriodSeconds() < 1) {
+                        errors.add("Health check period must be at least 1 second");
+                    }
                 }
             }
             
@@ -160,12 +163,18 @@ public class DeploymentConfigurationService {
             errors.add("Error validating configuration: " + e.getMessage());
         }
         
-        return ValidationResult.builder()
-            .isValid(errors.isEmpty())
-            .errors(errors)
-            .warnings(warnings)
-            .timestamp(LocalDateTime.now())
-            .build();
+        DeploymentValidationResult result = new DeploymentValidationResult();
+        result.setValid(errors.isEmpty());
+        result.setErrors(errors != null ? errors : new ArrayList<>());
+        result.setWarnings(warnings != null ? warnings : new ArrayList<>());
+        result.setTimestamp(LocalDateTime.now());
+        
+        log.debug("Created DeploymentValidationResult - isValid: {}, errors count: {}, warnings count: {}", 
+            result.isValid(), 
+            result.getErrors() != null ? result.getErrors().size() : "null",
+            result.getWarnings() != null ? result.getWarnings().size() : "null");
+        
+        return result;
     }
 
     /**
@@ -174,6 +183,41 @@ public class DeploymentConfigurationService {
     public void updateEnvironmentConfiguration(String environment, EnvironmentConfiguration config) {
         environmentConfigs.put(environment, config);
         log.info("Updated environment configuration for: {}", environment);
+    }
+
+    /**
+     * Create service deployment configuration from simplified format
+     */
+    public ServiceDeploymentConfig createServiceDeploymentConfig(String serviceName, String version, 
+            int replicas, String cpu, String memory) {
+        ServiceDeploymentConfig config = ServiceDeploymentConfig.builder()
+            .serviceName(serviceName)
+            .serviceType(ServiceType.AI_SERVICE)
+            .port(8080)
+            .replicas(replicas)
+            .resourceRequirements(ResourceRequirements.builder()
+                .cpuRequest(cpu)
+                .cpuLimit(cpu)
+                .memoryRequest(memory)
+                .memoryLimit(memory)
+                .build())
+            .healthCheckConfig(HealthCheckConfig.builder()
+                .path("/actuator/health")
+                .initialDelaySeconds(60)
+                .periodSeconds(30)
+                .timeoutSeconds(10)
+                .failureThreshold(3)
+                .build())
+            .deploymentStrategy(DeploymentStrategy.ROLLING_UPDATE)
+            .autoScalingEnabled(false)
+            .minReplicas(replicas)
+            .maxReplicas(replicas * 2)
+            .createdAt(LocalDateTime.now())
+            .build();
+        
+        serviceConfigs.put(serviceName, config);
+        log.info("Created service deployment configuration for: {}", serviceName);
+        return config;
     }
 
     /**
@@ -416,12 +460,21 @@ public class DeploymentConfigurationService {
     }
 
     @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
     @lombok.Builder
     public static class ServiceDeploymentConfig {
         private String serviceName;
+        
+        @NotNull(message = "Service type is required and must be a valid enum value")
         private ServiceType serviceType;
+        
+        @Min(value = 1, message = "Port must be at least 1")
         private int port;
+        
+        @Min(value = 1, message = "Replicas must be at least 1")
         private int replicas;
+        
         private ResourceRequirements resourceRequirements;
         private HealthCheckConfig healthCheckConfig;
         private DeploymentStrategy deploymentStrategy;
@@ -432,6 +485,8 @@ public class DeploymentConfigurationService {
     }
 
     @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
     @lombok.Builder
     public static class ResourceRequirements {
         private String cpuRequest;
@@ -441,6 +496,8 @@ public class DeploymentConfigurationService {
     }
 
     @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
     @lombok.Builder
     public static class HealthCheckConfig {
         private String path;
@@ -451,6 +508,8 @@ public class DeploymentConfigurationService {
     }
 
     @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
     @lombok.Builder
     public static class DeploymentConfiguration {
         private String serviceName;
@@ -472,14 +531,6 @@ public class DeploymentConfigurationService {
         private LocalDateTime createdAt;
     }
 
-    @lombok.Data
-    @lombok.Builder
-    public static class ValidationResult {
-        private boolean isValid;
-        private List<String> errors;
-        private List<String> warnings;
-        private LocalDateTime timestamp;
-    }
 
     public enum ServiceType {
         AI_SERVICE, WEB_SERVICE, DATABASE_SERVICE, CACHE_SERVICE, MESSAGE_SERVICE

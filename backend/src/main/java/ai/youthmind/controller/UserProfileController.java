@@ -8,6 +8,7 @@ import ai.youthmind.dto.UserStatisticsDto;
 import ai.youthmind.dto.AvatarUploadResponse;
 import ai.youthmind.dto.PostDto;
 import ai.youthmind.dto.PaginationDto;
+import ai.youthmind.dto.AccountDeletionResponseDto;
 import ai.youthmind.entity.User;
 import ai.youthmind.service.UserService;
 import ai.youthmind.service.PostService;
@@ -354,7 +355,7 @@ public class UserProfileController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error during account deletion")
     })
-    public ResponseEntity<ApiResponse<Map<String, Object>>> deleteAccount() {
+    public ResponseEntity<ApiResponse<AccountDeletionResponseDto>> deleteAccount() {
         try {
             // Extract user from authentication
             UUID currentUserId = AuthenticationUtils.getCurrentUserId();
@@ -362,19 +363,17 @@ public class UserProfileController {
             // Verify user exists before deletion
             Optional<User> userOpt = userService.getUserById(currentUserId);
             if (userOpt.isEmpty()) {
-                Map<String, Object> errorData = new HashMap<>();
-                errorData.put("error", "User not found");
+                AccountDeletionResponseDto error = new AccountDeletionResponseDto();
+                error.setMessage("User not found");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error(errorData, HttpStatus.NOT_FOUND.value()));
+                    .body(ApiResponse.error(error, HttpStatus.NOT_FOUND.value()));
             }
 
             // Perform comprehensive account deletion
             userService.deleteAccount(currentUserId);
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Account and all associated data deleted successfully");
-            response.put("deletedAt", java.time.LocalDateTime.now());
+            AccountDeletionResponseDto response = new AccountDeletionResponseDto();
+            response.setMessage("Account and all associated data deleted successfully");
 
             return ResponseEntity.ok(ApiResponse.success(response));
             
@@ -383,11 +382,11 @@ public class UserProfileController {
             System.err.println("Error deleting user account: " + e.getMessage());
             e.printStackTrace();
             
-            Map<String, Object> errorData = new HashMap<>();
-            errorData.put("error", "Failed to delete account. Please try again later.");
+            AccountDeletionResponseDto error = new AccountDeletionResponseDto();
+            error.setMessage("Failed to delete account. Please try again later.");
             
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(errorData, HttpStatus.INTERNAL_SERVER_ERROR.value()));
+                .body(ApiResponse.error(error, HttpStatus.INTERNAL_SERVER_ERROR.value()));
         }
     }
 

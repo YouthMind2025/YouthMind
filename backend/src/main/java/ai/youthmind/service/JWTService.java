@@ -134,10 +134,44 @@ public class JWTService {
 
     public void blacklistUserTokens(String email) {
         String key = USER_TOKENS_PREFIX + email;
-        if (redisService.hasKey(key)) {
-            List<String> tokens = (List<String>) redisService.getValue(key);
-            tokens.forEach(this::blacklistUserTokens);
-            redisService.setValue(key, new ArrayList<>());
+        
+        try {
+            // Check if the user tokens key exists in Redis
+            if (redisService.hasKey(key)) {
+                System.out.println("🔍 DEBUG: Blacklisting tokens for user: " + email);
+                
+                // Get the list of tokens for this user
+                Object tokensObj = redisService.getValue(key);
+                if (tokensObj instanceof List) {
+                    @SuppressWarnings("unchecked")
+                    List<String> tokens = (List<String>) tokensObj;
+                    
+                    System.out.println("🔍 DEBUG: Found " + tokens.size() + " tokens to blacklist for user: " + email);
+                    
+                    // Blacklist each individual token
+                    for (String token : tokens) {
+                        if (token != null && !token.trim().isEmpty()) {
+                            try {
+                                blacklistToken(token);
+                                System.out.println("🔍 DEBUG: Successfully blacklisted token: " + token.substring(0, Math.min(20, token.length())) + "...");
+                            } catch (Exception e) {
+                                System.err.println("⚠️ Warning: Failed to blacklist token for user " + email + ": " + e.getMessage());
+                            }
+                        }
+                    }
+                    
+                    // Clear the user's token list after blacklisting all tokens
+                    redisService.setValue(key, new ArrayList<>());
+                    System.out.println("🔍 DEBUG: Cleared token list for user: " + email);
+                } else {
+                    System.err.println("⚠️ Warning: Invalid token list format for user: " + email);
+                }
+            } else {
+                System.out.println("🔍 DEBUG: No tokens found for user: " + email);
+            }
+        } catch (Exception e) {
+            // Log error but don't fail the operation if Redis is unavailable
+            System.err.println("⚠️ Warning: Unable to blacklist tokens for user " + email + ": " + e.getMessage());
         }
     }
 

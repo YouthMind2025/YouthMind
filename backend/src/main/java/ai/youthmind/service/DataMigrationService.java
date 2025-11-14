@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -31,7 +30,7 @@ public class DataMigrationService {
     
     /**
      * Create default R vectors for all users who don't have one
-     * Default vector: all emotions = 0.1, version = 1
+     * Default vector: all emotions = 10, version = 1
      * 
      * @return MigrationResult with counts
      */
@@ -63,16 +62,16 @@ public class DataMigrationService {
                             continue;
                         }
                         
-                        // Create default R vector (all emotions = 0.1)
+                        // Create default R vector (all emotions = 10)
                         UserRecommendationVector defaultVector = new UserRecommendationVector();
                         defaultVector.setUserId(user.getId());
                         defaultVector.setVersion(1);
-                        defaultVector.setSadWeight(BigDecimal.valueOf(0.1));
-                        defaultVector.setFearWeight(BigDecimal.valueOf(0.1));
-                        defaultVector.setAngryWeight(BigDecimal.valueOf(0.1));
-                        defaultVector.setHappyWeight(BigDecimal.valueOf(0.1));
-                        defaultVector.setConflictedWeight(BigDecimal.valueOf(0.1));
-                        defaultVector.setSurprisedWeight(BigDecimal.valueOf(0.1));
+                        defaultVector.setSadWeight(10);
+                        defaultVector.setFearWeight(10);
+                        defaultVector.setAngryWeight(10);
+                        defaultVector.setHappyWeight(10);
+                        defaultVector.setConflictedWeight(10);
+                        defaultVector.setSurprisedWeight(10);
                         
                         vectorRepository.save(defaultVector);
                         created++;

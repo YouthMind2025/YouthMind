@@ -443,11 +443,11 @@ public class RecommendationEventPublisher {
             }
             
             // Get all emotion weights from the vector
-            Map<String, java.math.BigDecimal> allWeights = vector.getAllEmotionWeights();
+            Map<String, Integer> allWeights = vector.getAllEmotionWeights();
             
-            // Convert BigDecimal to Double and sort by weight (descending)
+            // Convert Integer to Double and sort by weight (descending)
             allWeights.entrySet().stream()
-                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
+                .sorted((e1, e2) -> Integer.compare(e2.getValue(), e1.getValue()))
                 .limit(5) // Top 5 emotions for logging
                 .forEach(entry -> {
                     String emotion = entry.getKey();

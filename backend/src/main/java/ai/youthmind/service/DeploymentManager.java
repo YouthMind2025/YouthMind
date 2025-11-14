@@ -5,6 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import ai.youthmind.util.CircuitBreaker;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -251,6 +254,13 @@ public class DeploymentManager {
     public void updateServiceConfiguration(String serviceName, ServiceConfiguration config) {
         serviceConfigurations.put(serviceName, config);
         log.info("Updated configuration for service: {}", serviceName);
+    }
+
+    /**
+     * Get all service configurations
+     */
+    public Map<String, ServiceConfiguration> getAllServiceConfigurations() {
+        return new HashMap<>(serviceConfigurations);
     }
 
     // Private helper methods
@@ -684,14 +694,32 @@ public class DeploymentManager {
     @lombok.Builder
     public static class ServiceConfiguration {
         private String serviceName;
+        
+        @NotNull(message = "Version is required")
+        @NotBlank(message = "Version cannot be blank")
         private String version;
+        
+        @NotNull(message = "Deployment strategy is required and must be a valid enum value")
         private DeploymentStrategy deploymentStrategy;
+        
+        @NotBlank(message = "Health check endpoint is required")
         private String healthCheckEndpoint;
+        
+        @Min(value = 1, message = "Health check timeout must be at least 1")
         private int healthCheckTimeout;
+        
+        @Min(value = 1, message = "Deployment timeout must be at least 1")
         private int deploymentTimeout;
+        
+        @Min(value = 1, message = "Rollback timeout must be at least 1")
         private int rollbackTimeout;
+        
+        @Min(value = 1, message = "Max instances must be at least 1")
         private int maxInstances;
+        
+        @Min(value = 1, message = "Min instances must be at least 1")
         private int minInstances;
+        
         private boolean autoScalingEnabled;
         private LocalDateTime createdAt;
     }

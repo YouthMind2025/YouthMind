@@ -222,14 +222,13 @@ public class AuthController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid credentials - wrong email or password")
     })
-    public ResponseEntity<ApiResponse<Map<String, Object>>> login(@Valid @RequestBody @Parameter(description = "User login credentials", required = true) LoginRequest request) {
+    public ResponseEntity<ApiResponse<LoginResponseDto>> login(@Valid @RequestBody @Parameter(description = "User login credentials", required = true) LoginRequest request) {
         
         try {
             // Find user by email
             Optional<User> userOpt = userService.getUserByEmail(request.getEmail());
             if (userOpt.isEmpty()) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("error", "Invalid credentials");
+                LoginResponseDto error = new LoginResponseDto();
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(error, 401));
             }
 
@@ -237,8 +236,7 @@ public class AuthController {
             
             // Verify password
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("error", "Invalid credentials");
+                LoginResponseDto error = new LoginResponseDto();
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(error, 401));
             }
 
@@ -246,17 +244,17 @@ public class AuthController {
             Pair<String, Timestamp> tokenPair = jwtService.generateToken(user.getEmail(), user.getRole().toString());
             
             // Build response according to API specification
-            Map<String, Object> response = new HashMap<>();
-            response.put("token", tokenPair.getFirst());
-            response.put("userId", user.getId());
-            response.put("expiresAt", tokenPair.getSecond().toLocalDateTime());
-            response.put("role", user.getRole().toString());
+            LoginResponseDto response = new LoginResponseDto(
+                tokenPair.getFirst(),
+                user.getId(),
+                tokenPair.getSecond().toLocalDateTime(),
+                user.getRole().toString()
+            );
             
             return ResponseEntity.ok(ApiResponse.success(response));
             
         } catch (Exception e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Login failed: " + e.getMessage());
+            LoginResponseDto error = new LoginResponseDto();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(error, 500));
         }
     }
@@ -266,38 +264,55 @@ public class AuthController {
         summary = "Refresh JWT token",
         description = "Refresh the current JWT token to extend its validity"
     )
-    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+    @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Token refreshed successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid or expired token")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Invalid or expired token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
     })
-    public ResponseEntity<ApiResponse<RefreshTokenResponse>> refreshToken(@RequestHeader(value = "Authorization") String authHeader) {
+    public ResponseEntity<ApiResponse<RefreshTokenResponseDto>> refreshToken(@Valid @RequestBody RefreshTokenRequestDto request) {
         try {
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            String refreshToken = request.getRefreshToken();
+            
+            // Validate refresh token
+            if (!jwtService.validateToken(refreshToken)) {
+                RefreshTokenResponseDto error = new RefreshTokenResponseDto();
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ApiResponse.error(null, HttpStatus.UNAUTHORIZED.value()));
+                        .body(ApiResponse.error(error, HttpStatus.UNAUTHORIZED.value()));
             }
 
-            String token = authHeader.substring(7);
-            if (!jwtService.validateToken(token)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ApiResponse.error(null, HttpStatus.UNAUTHORIZED.value()));
+            // Extract email from token
+            String email = jwtService.extractEmail(refreshToken);
+            
+            // Get user from database
+            Optional<User> userOpt = userService.getUserByEmail(email);
+            if (userOpt.isEmpty()) {
+                RefreshTokenResponseDto error = new RefreshTokenResponseDto();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error(error, HttpStatus.NOT_FOUND.value()));
             }
-
-            String email = jwtService.extractEmail(token);
-            jwtService.blacklistToken(token);
             
-            // Generate new token
-            Pair<String, Timestamp> tokenPair = jwtService.generateToken(email);
+            User user = userOpt.get();
             
-            RefreshTokenResponse response = new RefreshTokenResponse(
+            // Blacklist the old token
+            jwtService.blacklistToken(refreshToken);
+            
+            // Generate new token with role
+            Pair<String, Timestamp> tokenPair = jwtService.generateToken(user.getEmail(), user.getRole().toString());
+            
+            // Build response with complete user information
+            RefreshTokenResponseDto response = new RefreshTokenResponseDto(
                 tokenPair.getFirst(),
-                tokenPair.getSecond().toLocalDateTime()
+                user.getId(),
+                tokenPair.getSecond().toLocalDateTime(),
+                user.getRole().toString()
             );
             
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
+            RefreshTokenResponseDto error = new RefreshTokenResponseDto();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(null, HttpStatus.INTERNAL_SERVER_ERROR.value()));
+                .body(ApiResponse.error(error, HttpStatus.INTERNAL_SERVER_ERROR.value()));
         }
     }
 

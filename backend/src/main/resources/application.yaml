@@ -7,6 +7,15 @@ spring:
   profiles:
     active: dev  # Use H2 configuration for development (tests will override this)
   
+  # Jackson Configuration for strict deserialization
+  jackson:
+    deserialization:
+      read-unknown-enum-values-as-null: false
+      fail-on-invalid-subtype: true
+      fail-on-null-for-primitives: true
+      fail-on-numbers-for-enums: true
+      fail-on-unknown-properties: false  # Keep false to allow optional fields
+  
   datasource:
     url: jdbc:postgresql://localhost:5432/youthmind_db
     username: ${DB_USERNAME:youthmind_user}

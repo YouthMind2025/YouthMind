@@ -6,9 +6,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * REST Controller for Deployment Monitoring.
@@ -30,13 +33,27 @@ public class DeploymentMonitoringController {
      * Start monitoring deployment
      */
     @PostMapping("/services/{serviceName}/start")
-    public ResponseEntity<DeploymentMonitoringService.DeploymentMonitor> startMonitoring(
+    public ResponseEntity<?> startMonitoring(
             @PathVariable String serviceName,
-            @RequestParam String version) {
+            @RequestParam(required = true) String version) {
         try {
             CompletableFuture<DeploymentMonitoringService.DeploymentMonitor> monitorFuture = 
                 monitoringService.startMonitoring(serviceName, version);
-            DeploymentMonitoringService.DeploymentMonitor monitor = monitorFuture.get();
+            
+            // Add timeout to prevent indefinite blocking (safety measure)
+            DeploymentMonitoringService.DeploymentMonitor monitor;
+            try {
+                monitor = monitorFuture.get(10, TimeUnit.SECONDS);  // 10 second timeout
+            } catch (TimeoutException e) {
+                log.error("Monitoring operation timed out after 10 seconds for service: {}, version: {}", 
+                    serviceName, version);
+                Map<String, Object> error = new HashMap<>();
+                error.put("message", "Monitoring operation timed out. Please check system status.");
+                error.put("serviceName", serviceName);
+                error.put("version", version);
+                error.put("timeout", 10);
+                return ResponseEntity.status(org.springframework.http.HttpStatus.REQUEST_TIMEOUT).body(error);
+            }
             
             return ResponseEntity.ok(monitor);
         } catch (Exception e) {

@@ -3,6 +3,7 @@ package ai.youthmind.controller;
 import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.dto.UserDto;
 import ai.youthmind.dto.UserPersonalityProfile;
+import ai.youthmind.dto.UserDeletionResponseDto;
 import ai.youthmind.entity.User;
 import ai.youthmind.service.UserService;
 import ai.youthmind.service.UserPersonalityService;
@@ -14,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -160,16 +162,38 @@ public class UserController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - admin access required"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
     })
-    public ResponseEntity<Void> deleteUser(
+    public ResponseEntity<ApiResponse<UserDeletionResponseDto>> deleteUser(
         @Parameter(description = "User ID to delete", example = "123e4567-e89b-12d3-a456-426614174000", required = true)
         @PathVariable UUID id
     ) {
-        if (!userService.getUserById(id).isPresent()) {
-            return ResponseEntity.notFound().build();
+        try {
+            // Check if user exists
+            Optional<User> userOpt = userService.getUserById(id);
+            if (userOpt.isEmpty()) {
+                UserDeletionResponseDto error = new UserDeletionResponseDto();
+                error.setUserId(id);
+                error.setMessage("User not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(error, HttpStatus.NOT_FOUND.value()));
+            }
+            
+            // Delete the user
+            userService.deleteUser(id);
+            
+            UserDeletionResponseDto response = new UserDeletionResponseDto();
+            response.setUserId(id);
+            response.setMessage("User deleted successfully");
+            
+            return ResponseEntity.ok(ApiResponse.success(response));
+            
+        } catch (Exception e) {
+            UserDeletionResponseDto error = new UserDeletionResponseDto();
+            error.setUserId(id);
+            error.setMessage("Failed to delete user. Please try again later.");
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(error, HttpStatus.INTERNAL_SERVER_ERROR.value()));
         }
-        
-        userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
     }
     
     // ===== PERSONALITY ANALYSIS ENDPOINTS =====

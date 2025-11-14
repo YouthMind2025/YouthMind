@@ -1,6 +1,7 @@
 package ai.youthmind.controller;
 
 import ai.youthmind.service.*;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -62,8 +63,17 @@ public class AIServiceConnectionPoolController {
     public ResponseEntity<Map<String, AIServiceConnectionHealthMonitor.ServiceHealthStatus>> getServiceHealth(
             @PathVariable String serviceType) {
         try {
-            Map<String, AIServiceConnectionHealthMonitor.ServiceHealthStatus> health = healthMonitor.getAllServiceHealthStatus();
-            return ResponseEntity.ok(health);
+            Map<String, AIServiceConnectionHealthMonitor.ServiceHealthStatus> allHealth = healthMonitor.getAllServiceHealthStatus();
+            // Filter by serviceType
+            AIServiceConnectionHealthMonitor.ServiceHealthStatus serviceHealth = allHealth.get(serviceType);
+            
+            if (serviceHealth == null) {
+                // Return empty map if service not found (consistent with other endpoints)
+                return ResponseEntity.ok(Map.of());
+            }
+            
+            // Return map with only the requested service
+            return ResponseEntity.ok(Map.of(serviceType, serviceHealth));
         } catch (Exception e) {
             log.error("Error getting service health status for: {}", serviceType, e);
             return ResponseEntity.internalServerError().build();
@@ -150,8 +160,14 @@ public class AIServiceConnectionPoolController {
     @PostMapping("/scale/{serviceType}")
     public ResponseEntity<String> scaleConnectionPool(
             @PathVariable String serviceType,
-            @RequestParam int targetConnections) {
+            @RequestParam(required = true) int targetConnections) {
+        
         try {
+            // Min validation (reject zero/negative values)
+            if (targetConnections < 1) {
+                return ResponseEntity.badRequest().body("targetConnections must be at least 1");
+            }
+            
             connectionPoolManager.scalePool(serviceType, targetConnections);
             return ResponseEntity.ok("Connection pool scaled successfully for service: " + serviceType + " to " + targetConnections + " connections");
         } catch (Exception e) {
@@ -167,7 +183,8 @@ public class AIServiceConnectionPoolController {
     public ResponseEntity<String> updateEndpointHealth(
             @PathVariable String serviceType,
             @PathVariable String endpointId,
-            @RequestParam boolean isHealthy) {
+            @RequestParam(required = true) boolean isHealthy) {
+        
         try {
             loadBalancer.updateEndpointHealth(serviceType, endpointId, isHealthy);
             return ResponseEntity.ok("Endpoint health updated successfully");
@@ -183,7 +200,7 @@ public class AIServiceConnectionPoolController {
     @PostMapping("/load-balancer/{serviceType}/endpoint")
     public ResponseEntity<String> registerEndpoint(
             @PathVariable String serviceType,
-            @RequestBody AIServiceLoadBalancer.ServiceEndpoint endpoint) {
+            @Valid @RequestBody AIServiceLoadBalancer.ServiceEndpoint endpoint) {
         try {
             loadBalancer.registerEndpoint(serviceType, endpoint);
             return ResponseEntity.ok("Endpoint registered successfully");

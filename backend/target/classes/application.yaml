@@ -7,6 +7,15 @@ spring:
   profiles:
     active: dev  # Use H2 configuration for development (tests will override this)
   
+  # Jackson Configuration for strict deserialization
+  jackson:
+    deserialization:
+      read-unknown-enum-values-as-null: false
+      fail-on-invalid-subtype: true
+      fail-on-null-for-primitives: true
+      fail-on-numbers-for-enums: true
+      fail-on-unknown-properties: false  # Keep false to allow optional fields
+  
   datasource:
     url: jdbc:postgresql://localhost:5432/youthmind_db
     username: ${DB_USERNAME:youthmind_user}
@@ -449,7 +458,7 @@ ai:
   deepseek:
     base-url: ${YOUTHMIND_DEEPSEEK_API_URL:https://api.deepseek.com/v1}
     api-key: ${YOUTHMIND_DEEPSEEK_API_KEY:}
-    enabled: true  # Enable AI services
+    enabled: false  # Disable AI services for API testing
 
 # Logging Configuration
 logging:
@@ -471,19 +480,10 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
   config: classpath:logback-spring.xml
 
-# YouthMind Configuration
+# YouthMind Recommendation Engine Configuration
 youthmind:
-  # Psychological Vector Generation Configuration
-  vector:
-    use-deepseek: ${YOUTHMIND_VECTOR_USE_DEEPSEEK:true}  # Enable DeepSeek for vector generation
-    cache-ttl-minutes: ${YOUTHMIND_VECTOR_CACHE_TTL:60}   # Cache vectors for 60 minutes
-    enable-optimization: ${YOUTHMIND_VECTOR_OPTIMIZE:true} # Enable vector optimization
-  
-  # Recommendation Engine Configuration
   recommendation:
     enabled: false  # Disable recommendation engine for API testing
-  
-  # Logging Configuration
   logging:
     structured: true
     include-correlation-id: true

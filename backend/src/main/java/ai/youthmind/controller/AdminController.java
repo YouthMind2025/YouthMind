@@ -62,6 +62,9 @@ public class AdminController {
     
     @Autowired
     private RecommendationMappingService recommendationMappingService;
+    
+    @Autowired
+    private ai.youthmind.service.AIPostAnalysisService aiPostAnalysisService;
 
     /**
      * Update user's recommendation engine toggle
@@ -181,10 +184,10 @@ public class AdminController {
             return ResponseBuilder.internalServerError("Failed to get recommendation status");
         }
     }
-
+    
     /**
      * Batch classify emotions for posts without user-provided emotions
-     * POST /admin/v1/posts/classify-emotions
+     * POST /admin/v1/posts/batch-classify-emotions
      */
     @PostMapping("/posts/classify-emotions")
     @PreAuthorize("hasRole('ADMIN')")
@@ -330,6 +333,55 @@ public class AdminController {
     }
 
     /**
+     * Classify emotion for a single post content
+     * POST /admin/v1/posts/classify-emotion
+     */
+    @PostMapping("/posts/classify-emotion")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Classify emotion for post content",
+        description = "Classify emotion for a single post content using AI analysis. Requires ADMIN role."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Emotion classification completed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - ADMIN role required"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error during classification")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> classifyEmotions(
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Post content for emotion classification")
+        @RequestBody EmotionClassificationRequest request
+    ) {
+        try {
+            // Validate request
+            if (request == null || request.getContent() == null || request.getContent().trim().isEmpty()) {
+                return ResponseBuilder.badRequest("Content is required for emotion classification");
+            }
+            
+            log.info("Classifying emotion for post content: {} characters", request.getContent().length());
+            
+            // Use AIEmotionClassificationService for single post classification
+            ai.youthmind.dto.EmotionClassificationResult result = aiEmotionClassificationService.classifyEmotion(request.getContent());
+            
+            // Build response
+            Map<String, Object> response = new HashMap<>();
+            response.put("content", request.getContent());
+            response.put("emotion", result.getEmotion());
+            response.put("confidence", result.getConfidence());
+            response.put("source", result.getSource());
+            response.put("isValid", result.isValid());
+            response.put("timestamp", java.time.LocalDateTime.now());
+            
+            return ResponseBuilder.success(response, "Emotion classification completed successfully");
+            
+        } catch (Exception e) {
+            log.error("Error during emotion classification: {}", e.getMessage(), e);
+            return ResponseBuilder.internalServerError("Failed to classify emotions");
+        }
+    }
+
+    /**
      * Request DTO for recommendation toggle
      */
     public static class RecommendationToggleRequest {
@@ -425,6 +477,21 @@ public class AdminController {
         } catch (Exception e) {
             log.error("Migration failed: {}", e.getMessage(), e);
             return ResponseBuilder.internalServerError("Migration failed: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Request DTO for emotion classification
+     */
+    public static class EmotionClassificationRequest {
+        private String content;
+
+        public String getContent() {
+            return content;
+        }
+
+        public void setContent(String content) {
+            this.content = content;
         }
     }
     

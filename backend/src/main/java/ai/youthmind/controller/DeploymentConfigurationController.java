@@ -1,6 +1,9 @@
 package ai.youthmind.controller;
 
+import ai.youthmind.dto.DeploymentValidationResult;
+import ai.youthmind.dto.ServiceDeploymentConfigCreateRequest;
 import ai.youthmind.service.DeploymentConfigurationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -65,6 +68,30 @@ public class DeploymentConfigurationController {
     }
 
     /**
+     * Create service deployment configuration
+     */
+    @PostMapping("/services/{serviceName}")
+    public ResponseEntity<DeploymentConfigurationService.ServiceDeploymentConfig> createServiceDeploymentConfig(
+            @PathVariable String serviceName,
+            @Valid @RequestBody ServiceDeploymentConfigCreateRequest request) {
+        try {
+            DeploymentConfigurationService.ServiceDeploymentConfig config = 
+                configService.createServiceDeploymentConfig(
+                    serviceName, 
+                    request.getVersion(), 
+                    request.getReplicas(), 
+                    request.getCpu(), 
+                    request.getMemory()
+                );
+            
+            return ResponseEntity.status(201).body(config);
+        } catch (Exception e) {
+            log.error("Error creating service deployment configuration for: {}", serviceName, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
      * Get service deployment configuration
      */
     @GetMapping("/services/{serviceName}")
@@ -91,16 +118,60 @@ public class DeploymentConfigurationController {
     @PutMapping("/services/{serviceName}")
     public ResponseEntity<String> updateServiceDeploymentConfig(
             @PathVariable String serviceName,
-            @RequestBody DeploymentConfigurationService.ServiceDeploymentConfig config) {
-        try {
-            config.setServiceName(serviceName);
-            configService.updateServiceDeploymentConfig(serviceName, config);
-            
-            return ResponseEntity.ok("Service deployment configuration updated successfully");
-        } catch (Exception e) {
-            log.error("Error updating service deployment configuration for: {}", serviceName, e);
-            return ResponseEntity.internalServerError().body("Error updating configuration: " + e.getMessage());
+            @Valid @RequestBody DeploymentConfigurationService.ServiceDeploymentConfig config) {
+        
+        log.error("=== DIAGNOSTIC: updateServiceDeploymentConfig ENTRY ===");
+        log.error("Service name: {}", serviceName);
+        log.error("Config is null: {}", config == null);
+        if (config != null) {
+            log.error("Config serviceType: {}", config.getServiceType());
+            log.error("Config port: {}", config.getPort());
+            log.error("Config replicas: {}", config.getReplicas());
+            log.error("Config serviceName: {}", config.getServiceName());
         }
+        
+        if (config == null) {
+            log.error("=== DIAGNOSTIC: Config is null, throwing exception ===");
+            throw new IllegalArgumentException("Request body is required");
+        }
+        
+        // Explicit null check for enum (fallback if validation doesn't work)
+        if (config.getServiceType() == null) {
+            log.error("=== DIAGNOSTIC: ServiceType is null, throwing exception ===");
+            throw new IllegalArgumentException("Service type is required and must be a valid enum value. " +
+                "Valid values: " + java.util.Arrays.toString(
+                    DeploymentConfigurationService.ServiceType.values()));
+        }
+        
+        log.error("=== DIAGNOSTIC: Setting service name and calling service ===");
+        config.setServiceName(serviceName);
+        configService.updateServiceDeploymentConfig(serviceName, config);
+        
+        log.error("=== DIAGNOSTIC: Returning success response ===");
+        return ResponseEntity.ok("Service deployment configuration updated successfully");
+    }
+    
+    /**
+     * TEST ENDPOINT: Minimal endpoint to test Jackson deserialization in isolation
+     */
+    @PostMapping("/test-deserialization")
+    public ResponseEntity<Map<String, Object>> testDeserialization(
+            @RequestBody DeploymentConfigurationService.ServiceDeploymentConfig config) {
+        
+        log.error("=== TEST ENDPOINT CALLED ===");
+        log.error("Config received: {}", config);
+        log.error("ServiceType: {}", config != null ? config.getServiceType() : "null");
+        
+        if (config == null) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "Config is null"));
+        }
+        
+        return ResponseEntity.ok(Map.of(
+            "serviceType", config.getServiceType() != null ? config.getServiceType().name() : "null",
+            "port", config.getPort(),
+            "replicas", config.getReplicas()
+        ));
     }
 
     /**
@@ -127,11 +198,32 @@ public class DeploymentConfigurationController {
      * Validate deployment configuration
      */
     @PostMapping("/validate")
-    public ResponseEntity<DeploymentConfigurationService.ValidationResult> validateDeploymentConfiguration(
-            @RequestBody DeploymentConfigurationService.DeploymentConfiguration config) {
+    public ResponseEntity<DeploymentValidationResult> validateDeploymentConfiguration(
+            @Valid @RequestBody DeploymentConfigurationService.DeploymentConfiguration config) {
         try {
-            DeploymentConfigurationService.ValidationResult result = 
+            log.info("Received validation request for service: {}", config != null ? config.getServiceName() : "null");
+            
+            DeploymentValidationResult result = 
                 configService.validateDeploymentConfiguration(config);
+            
+            log.info("Validation result created - isValid: {}, errors: {}, warnings: {}, timestamp: {}", 
+                result != null ? result.isValid() : "null",
+                result != null && result.getErrors() != null ? result.getErrors().size() : "null",
+                result != null && result.getWarnings() != null ? result.getWarnings().size() : "null",
+                result != null && result.getTimestamp() != null ? result.getTimestamp() : "null");
+            
+            log.info("Result object toString: {}", result);
+            
+            // Manual JSON serialization test
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+                mapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+                String json = mapper.writeValueAsString(result);
+                log.info("Manual JSON serialization result (length: {}): {}", json.length(), json);
+            } catch (Exception e) {
+                log.error("Failed to manually serialize: {}", e.getMessage(), e);
+            }
             
             return ResponseEntity.ok(result);
         } catch (Exception e) {

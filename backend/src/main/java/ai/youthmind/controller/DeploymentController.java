@@ -6,9 +6,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * REST Controller for Deployment Management.
@@ -54,12 +58,27 @@ public class DeploymentController {
      * Rollback service to previous version
      */
     @PostMapping("/services/{serviceName}/rollback")
-    public ResponseEntity<DeploymentManager.RollbackResult> rollbackService(
+    public ResponseEntity<?> rollbackService(
             @PathVariable String serviceName,
-            @RequestParam String targetVersion) {
+            @RequestParam(required = true) String targetVersion) {
         try {
-            CompletableFuture<DeploymentManager.RollbackResult> rollbackFuture = deploymentManager.rollbackService(serviceName, targetVersion);
-            DeploymentManager.RollbackResult result = rollbackFuture.get();
+            CompletableFuture<DeploymentManager.RollbackResult> rollbackFuture = 
+                deploymentManager.rollbackService(serviceName, targetVersion);
+            
+            // Add timeout to prevent indefinite blocking (safety measure)
+            DeploymentManager.RollbackResult result;
+            try {
+                result = rollbackFuture.get(10, TimeUnit.SECONDS);  // 10 second timeout
+            } catch (TimeoutException e) {
+                log.error("Rollback operation timed out after 10 seconds for service: {}, targetVersion: {}", 
+                    serviceName, targetVersion);
+                Map<String, Object> error = new HashMap<>();
+                error.put("message", "Rollback operation timed out. Please check system status.");
+                error.put("serviceName", serviceName);
+                error.put("targetVersion", targetVersion);
+                error.put("timeout", 10);
+                return ResponseEntity.status(org.springframework.http.HttpStatus.REQUEST_TIMEOUT).body(error);
+            }
             
             if (result.isSuccess()) {
                 return ResponseEntity.ok(result);
@@ -97,10 +116,23 @@ public class DeploymentController {
      * Validate service health
      */
     @PostMapping("/services/{serviceName}/validate")
-    public ResponseEntity<DeploymentManager.HealthValidationResult> validateServiceHealth(@PathVariable String serviceName) {
+    public ResponseEntity<?> validateServiceHealth(@PathVariable String serviceName) {
         try {
-            CompletableFuture<DeploymentManager.HealthValidationResult> validationFuture = deploymentManager.validateServiceHealth(serviceName);
-            DeploymentManager.HealthValidationResult result = validationFuture.get();
+            CompletableFuture<DeploymentManager.HealthValidationResult> validationFuture = 
+                deploymentManager.validateServiceHealth(serviceName);
+            
+            // Add timeout to prevent indefinite blocking (safety measure)
+            DeploymentManager.HealthValidationResult result;
+            try {
+                result = validationFuture.get(10, TimeUnit.SECONDS);  // 10 second timeout
+            } catch (TimeoutException e) {
+                log.error("Health validation operation timed out after 10 seconds for service: {}", serviceName);
+                Map<String, Object> error = new HashMap<>();
+                error.put("message", "Health validation operation timed out. Please check system status.");
+                error.put("serviceName", serviceName);
+                error.put("timeout", 10);
+                return ResponseEntity.status(org.springframework.http.HttpStatus.REQUEST_TIMEOUT).body(error);
+            }
             
             return ResponseEntity.ok(result);
         } catch (Exception e) {
@@ -147,7 +179,7 @@ public class DeploymentController {
     @PutMapping("/services/{serviceName}/config")
     public ResponseEntity<String> updateServiceConfiguration(
             @PathVariable String serviceName,
-            @RequestBody DeploymentManager.ServiceConfiguration config) {
+            @Valid @RequestBody DeploymentManager.ServiceConfiguration config) {
         try {
             config.setServiceName(serviceName);
             deploymentManager.updateServiceConfiguration(serviceName, config);
@@ -184,8 +216,9 @@ public class DeploymentController {
     @GetMapping("/configurations")
     public ResponseEntity<Map<String, DeploymentManager.ServiceConfiguration>> getAllServiceConfigurations() {
         try {
-            // This would need to be implemented in DeploymentManager
-            return ResponseEntity.ok(Map.of());
+            Map<String, DeploymentManager.ServiceConfiguration> configs = 
+                deploymentManager.getAllServiceConfigurations();
+            return ResponseEntity.ok(configs);
         } catch (Exception e) {
             log.error("Error getting all service configurations", e);
             return ResponseEntity.internalServerError().build();

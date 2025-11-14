@@ -1,7 +1,14 @@
 package ai.youthmind.controller;
 
+import ai.youthmind.dto.ApiResponse;
 import ai.youthmind.service.PersonalityComputationService;
 import ai.youthmind.service.PersonalityScheduler;
+import ai.youthmind.util.ResponseBuilder;
+import ai.youthmind.util.AuthenticationUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +25,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/personality")
 @CrossOrigin(origins = "*")
+@Tag(name = "Personality Computation", description = "AI-powered personality analysis and computation endpoints")
 public class PersonalityComputationController {
     
     private static final Logger logger = LoggerFactory.getLogger(PersonalityComputationController.class);
@@ -33,21 +41,35 @@ public class PersonalityComputationController {
      * GET /api/personality/analysis/{userId}
      */
     @GetMapping("/analysis/{userId}")
-    public ResponseEntity<Map<String, Object>> getComprehensivePersonalityAnalysis(@PathVariable UUID userId) {
+    @Operation(
+        summary = "Get comprehensive personality analysis",
+        description = "Retrieve comprehensive personality analysis for a specific user"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Personality analysis retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getComprehensivePersonalityAnalysis(
+            @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID userId) {
         try {
+            // Verify user authorization
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            if (!currentUserId.equals(userId)) {
+                return ResponseBuilder.forbidden("Access denied: Cannot access other user's data");
+            }
+            
             logger.info("Getting comprehensive personality analysis for user {}", userId);
             
             Map<String, Object> analysis = personalityComputationService.getComprehensivePersonalityAnalysis(userId);
             
-            return ResponseEntity.ok(analysis);
+            return ResponseBuilder.success(analysis, "Personality analysis retrieved successfully");
             
         } catch (Exception e) {
             logger.error("Error getting comprehensive personality analysis for user {}: {}", userId, e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Failed to get personality analysis",
-                "message", e.getMessage(),
-                "userId", userId.toString()
-            ));
+            return ResponseBuilder.internalServerError("Failed to get personality analysis");
         }
     }
     
@@ -56,21 +78,35 @@ public class PersonalityComputationController {
      * GET /api/personality/active/{userId}
      */
     @GetMapping("/active/{userId}")
-    public ResponseEntity<Map<String, Object>> computeActivePersonality(@PathVariable UUID userId) {
+    @Operation(
+        summary = "Get active personality",
+        description = "Retrieve active personality computation for a specific user"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Active personality retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> computeActivePersonality(
+            @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID userId) {
         try {
+            // Verify user authorization
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            if (!currentUserId.equals(userId)) {
+                return ResponseBuilder.forbidden("Access denied: Cannot access other user's data");
+            }
+            
             logger.info("Computing active personality for user {}", userId);
             
             Map<String, Object> activePersonality = personalityComputationService.computeActivePersonality(userId);
             
-            return ResponseEntity.ok(activePersonality);
+            return ResponseBuilder.success(activePersonality, "Active personality retrieved successfully");
             
         } catch (Exception e) {
             logger.error("Error computing active personality for user {}: {}", userId, e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Failed to compute active personality",
-                "message", e.getMessage(),
-                "userId", userId.toString()
-            ));
+            return ResponseBuilder.internalServerError("Failed to compute active personality");
         }
     }
     
@@ -102,21 +138,35 @@ public class PersonalityComputationController {
      * GET /api/personality/fused/{userId}
      */
     @GetMapping("/fused/{userId}")
-    public ResponseEntity<Map<String, Object>> fusePersonalities(@PathVariable UUID userId) {
+    @Operation(
+        summary = "Get fused personality",
+        description = "Retrieve fused personality computation combining active and subconscious personalities for a specific user"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Fused personality retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> fusePersonalities(
+            @Parameter(description = "User ID", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID userId) {
         try {
+            // Verify user authorization
+            UUID currentUserId = AuthenticationUtils.getCurrentUserId();
+            if (!currentUserId.equals(userId)) {
+                return ResponseBuilder.forbidden("Access denied: Cannot access other user's data");
+            }
+            
             logger.info("Fusing personalities for user {}", userId);
             
             Map<String, Object> fusedPersonality = personalityComputationService.fusePersonalities(userId);
             
-            return ResponseEntity.ok(fusedPersonality);
+            return ResponseBuilder.success(fusedPersonality, "Fused personality retrieved successfully");
             
         } catch (Exception e) {
             logger.error("Error fusing personalities for user {}: {}", userId, e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Failed to fuse personalities",
-                "message", e.getMessage(),
-                "userId", userId.toString()
-            ));
+            return ResponseBuilder.internalServerError("Failed to fuse personalities");
         }
     }
     
@@ -232,7 +282,15 @@ public class PersonalityComputationController {
      * GET /api/personality/health
      */
     @GetMapping("/health")
-    public ResponseEntity<Map<String, Object>> healthCheck() {
+    @Operation(
+        summary = "Personality Computation Health Check",
+        description = "Check the health status of personality computation services"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Personality computation services are healthy"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Personality computation services are unhealthy")
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> healthCheck() {
         try {
             logger.debug("Performing personality computation health check");
             
@@ -245,15 +303,11 @@ public class PersonalityComputationController {
                 "timestamp", System.currentTimeMillis()
             );
             
-            return ResponseEntity.ok(health);
+            return ResponseBuilder.success(health, "Personality computation services are healthy");
             
         } catch (Exception e) {
             logger.error("Error performing personality computation health check: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "status", "UNHEALTHY",
-                "error", e.getMessage(),
-                "timestamp", System.currentTimeMillis()
-            ));
+            return ResponseBuilder.internalServerError("Personality computation services are unhealthy");
         }
     }
 }

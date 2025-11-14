@@ -1,21 +1,22 @@
 package ai.youthmind.entity;
 
+import ai.youthmind.enums.Emotion;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Entity representing a user's recommendation vector
  * Stores emotion-based recommendation weights for personalized content delivery
+ * Uses integer scale [2, 40] matching the specification
  */
 @Entity
 @Table(name = "user_recommendation_vectors")
@@ -37,42 +38,42 @@ public class UserRecommendationVector {
     @Min(value = 1, message = "Version must be at least 1")
     private Integer version;
     
-    // Emotion weights (0.0 to 1.0)
-    @Column(name = "sad_weight", nullable = false, precision = 5, scale = 4)
+    // Emotion weights (2 to 40) - integer scale matching specification
+    @Column(name = "sad_weight", nullable = false)
     @NotNull
-    @DecimalMin(value = "0.0000", message = "Sad weight must be at least 0.0000")
-    @DecimalMax(value = "1.0000", message = "Sad weight must be at most 1.0000")
-    private BigDecimal sadWeight;
+    @Min(value = 2, message = "Sad weight must be at least 2")
+    @Max(value = 40, message = "Sad weight must be at most 40")
+    private Integer sadWeight = 10;
     
-    @Column(name = "fear_weight", nullable = false, precision = 5, scale = 4)
+    @Column(name = "fear_weight", nullable = false)
     @NotNull
-    @DecimalMin(value = "0.0000", message = "Fear weight must be at least 0.0000")
-    @DecimalMax(value = "1.0000", message = "Fear weight must be at most 1.0000")
-    private BigDecimal fearWeight;
+    @Min(value = 2, message = "Fear weight must be at least 2")
+    @Max(value = 40, message = "Fear weight must be at most 40")
+    private Integer fearWeight = 10;
     
-    @Column(name = "angry_weight", nullable = false, precision = 5, scale = 4)
+    @Column(name = "angry_weight", nullable = false)
     @NotNull
-    @DecimalMin(value = "0.0000", message = "Angry weight must be at least 0.0000")
-    @DecimalMax(value = "1.0000", message = "Angry weight must be at most 1.0000")
-    private BigDecimal angryWeight;
+    @Min(value = 2, message = "Angry weight must be at least 2")
+    @Max(value = 40, message = "Angry weight must be at most 40")
+    private Integer angryWeight = 10;
     
-    @Column(name = "happy_weight", nullable = false, precision = 5, scale = 4)
+    @Column(name = "happy_weight", nullable = false)
     @NotNull
-    @DecimalMin(value = "0.0000", message = "Happy weight must be at least 0.0000")
-    @DecimalMax(value = "1.0000", message = "Happy weight must be at most 1.0000")
-    private BigDecimal happyWeight;
+    @Min(value = 2, message = "Happy weight must be at least 2")
+    @Max(value = 40, message = "Happy weight must be at most 40")
+    private Integer happyWeight = 10;
     
-    @Column(name = "conflicted_weight", nullable = false, precision = 5, scale = 4)
+    @Column(name = "conflicted_weight", nullable = false)
     @NotNull
-    @DecimalMin(value = "0.0000", message = "Conflicted weight must be at least 0.0000")
-    @DecimalMax(value = "1.0000", message = "Conflicted weight must be at most 1.0000")
-    private BigDecimal conflictedWeight;
+    @Min(value = 2, message = "Conflicted weight must be at least 2")
+    @Max(value = 40, message = "Conflicted weight must be at most 40")
+    private Integer conflictedWeight = 10;
     
-    @Column(name = "surprised_weight", nullable = false, precision = 5, scale = 4)
+    @Column(name = "surprised_weight", nullable = false)
     @NotNull
-    @DecimalMin(value = "0.0000", message = "Surprised weight must be at least 0.0000")
-    @DecimalMax(value = "1.0000", message = "Surprised weight must be at most 1.0000")
-    private BigDecimal surprisedWeight;
+    @Min(value = 2, message = "Surprised weight must be at least 2")
+    @Max(value = 40, message = "Surprised weight must be at most 40")
+    private Integer surprisedWeight = 10;
     
     @Column(name = "created_at", nullable = false)
     @NotNull
@@ -96,8 +97,8 @@ public class UserRecommendationVector {
     /**
      * Get emotion weight by emotion name
      */
-    public BigDecimal getEmotionWeight(String emotion) {
-        if (emotion == null) return BigDecimal.ZERO;
+    public Integer getEmotionWeight(String emotion) {
+        if (emotion == null) return 0;
         
         return switch (emotion.toLowerCase()) {
             case "sad" -> sadWeight;
@@ -106,23 +107,26 @@ public class UserRecommendationVector {
             case "happy" -> happyWeight;
             case "conflicted" -> conflictedWeight;
             case "surprised" -> surprisedWeight;
-            default -> BigDecimal.ZERO;
+            default -> 0;
         };
     }
     
     /**
      * Set emotion weight by emotion name
      */
-    public void setEmotionWeight(String emotion, BigDecimal weight) {
+    public void setEmotionWeight(String emotion, Integer weight) {
         if (emotion == null || weight == null) return;
         
+        // Clamp value to [2, 40] range
+        int clampedWeight = Math.max(2, Math.min(40, weight));
+        
         switch (emotion.toLowerCase()) {
-            case "sad" -> sadWeight = weight;
-            case "fear" -> fearWeight = weight;
-            case "angry" -> angryWeight = weight;
-            case "happy" -> happyWeight = weight;
-            case "conflicted" -> conflictedWeight = weight;
-            case "surprised" -> surprisedWeight = weight;
+            case "sad" -> sadWeight = clampedWeight;
+            case "fear" -> fearWeight = clampedWeight;
+            case "angry" -> angryWeight = clampedWeight;
+            case "happy" -> happyWeight = clampedWeight;
+            case "conflicted" -> conflictedWeight = clampedWeight;
+            case "surprised" -> surprisedWeight = clampedWeight;
             default -> {
                 // Do nothing for unknown emotions
             }
@@ -134,41 +138,41 @@ public class UserRecommendationVector {
      * Alias for setEmotionWeight for backward compatibility
      */
     public void setEmotionValue(String emotion, int value) {
-        setEmotionWeight(emotion, BigDecimal.valueOf(value));
+        setEmotionWeight(emotion, value);
     }
     
     /**
      * Convenience setter methods for individual emotions (accepting int values)
      */
     public void setSad(int value) {
-        this.sadWeight = BigDecimal.valueOf(value);
+        this.sadWeight = Math.max(2, Math.min(40, value));
     }
     
     public void setFear(int value) {
-        this.fearWeight = BigDecimal.valueOf(value);
+        this.fearWeight = Math.max(2, Math.min(40, value));
     }
     
     public void setAngry(int value) {
-        this.angryWeight = BigDecimal.valueOf(value);
+        this.angryWeight = Math.max(2, Math.min(40, value));
     }
     
     public void setHappy(int value) {
-        this.happyWeight = BigDecimal.valueOf(value);
+        this.happyWeight = Math.max(2, Math.min(40, value));
     }
     
     public void setConflicted(int value) {
-        this.conflictedWeight = BigDecimal.valueOf(value);
+        this.conflictedWeight = Math.max(2, Math.min(40, value));
     }
     
     public void setSurprised(int value) {
-        this.surprisedWeight = BigDecimal.valueOf(value);
+        this.surprisedWeight = Math.max(2, Math.min(40, value));
     }
     
     /**
      * Get all emotion weights as a map
      */
-    public java.util.Map<String, BigDecimal> getAllEmotionWeights() {
-        java.util.Map<String, BigDecimal> weights = new java.util.HashMap<>();
+    public Map<String, Integer> getAllEmotionWeights() {
+        Map<String, Integer> weights = new HashMap<>();
         weights.put("sad", sadWeight);
         weights.put("fear", fearWeight);
         weights.put("angry", angryWeight);
@@ -182,58 +186,20 @@ public class UserRecommendationVector {
      * Check if this vector has any non-zero weights
      */
     public boolean hasNonZeroWeights() {
-        return sadWeight.compareTo(BigDecimal.ZERO) > 0 ||
-               fearWeight.compareTo(BigDecimal.ZERO) > 0 ||
-               angryWeight.compareTo(BigDecimal.ZERO) > 0 ||
-               happyWeight.compareTo(BigDecimal.ZERO) > 0 ||
-               conflictedWeight.compareTo(BigDecimal.ZERO) > 0 ||
-               surprisedWeight.compareTo(BigDecimal.ZERO) > 0;
+        return sadWeight > 0 ||
+               fearWeight > 0 ||
+               angryWeight > 0 ||
+               happyWeight > 0 ||
+               conflictedWeight > 0 ||
+               surprisedWeight > 0;
     }
     
     /**
      * Get the total sum of all emotion weights
      */
-    public BigDecimal getTotalWeight() {
-        return sadWeight.add(fearWeight).add(angryWeight)
-               .add(happyWeight).add(conflictedWeight).add(surprisedWeight);
-    }
-    
-    /**
-     * Normalize all weights to sum to 1.0
-     */
-    public void normalize() {
-        BigDecimal total = getTotalWeight();
-        if (total.compareTo(BigDecimal.ZERO) > 0) {
-            sadWeight = sadWeight.divide(total, 4, BigDecimal.ROUND_HALF_UP);
-            fearWeight = fearWeight.divide(total, 4, BigDecimal.ROUND_HALF_UP);
-            angryWeight = angryWeight.divide(total, 4, BigDecimal.ROUND_HALF_UP);
-            happyWeight = happyWeight.divide(total, 4, BigDecimal.ROUND_HALF_UP);
-            conflictedWeight = conflictedWeight.divide(total, 4, BigDecimal.ROUND_HALF_UP);
-            surprisedWeight = surprisedWeight.divide(total, 4, BigDecimal.ROUND_HALF_UP);
-        }
-    }
-    
-    /**
-     * Get the top three emotions by weight
-     * Used for determining which emotions dominate a user's preferences
-     * Returns emotions sorted by weight in descending order
-     * 
-     * @return List of top 3 emotion names (e.g., ["sad", "fear", "angry"])
-     */
-    public java.util.List<String> getTopThreeEmotions() {
-        java.util.Map<String, BigDecimal> weights = new java.util.HashMap<>();
-        weights.put("sad", sadWeight);
-        weights.put("fear", fearWeight);
-        weights.put("angry", angryWeight);
-        weights.put("happy", happyWeight);
-        weights.put("conflicted", conflictedWeight);
-        weights.put("surprised", surprisedWeight);
-        
-        return weights.entrySet().stream()
-            .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
-            .limit(3)
-            .map(java.util.Map.Entry::getKey)
-            .collect(java.util.stream.Collectors.toList());
+    public Integer getTotalWeight() {
+        return sadWeight + fearWeight + angryWeight
+               + happyWeight + conflictedWeight + surprisedWeight;
     }
     
     /**
@@ -242,34 +208,115 @@ public class UserRecommendationVector {
      * 
      * @return Sum of all emotion weights
      */
-    public BigDecimal getTotalScore() {
+    public Integer getTotalScore() {
         return getTotalWeight();
     }
     
     /**
+     * Get the top three emotions by weight with explicit tie-breaking
+     * Used for determining which emotions dominate a user's preferences
+     * Returns emotions sorted by weight in descending order, with tie-breaking
+     * using priority order: conflicted > surprised > angry > sad > fear > happy
+     * 
+     * @return List of top 3 emotion names (e.g., ["sad", "fear", "angry"])
+     */
+    public List<String> getTopThreeEmotions() {
+        // Create list of emotion-weight pairs with priority information
+        List<EmotionWeightPair> emotionPairs = Arrays.asList(
+            new EmotionWeightPair("conflicted", conflictedWeight, Emotion.CONFLICTED.getPriority()),
+            new EmotionWeightPair("surprised", surprisedWeight, Emotion.SURPRISED.getPriority()),
+            new EmotionWeightPair("angry", angryWeight, Emotion.ANGRY.getPriority()),
+            new EmotionWeightPair("sad", sadWeight, Emotion.SAD.getPriority()),
+            new EmotionWeightPair("fear", fearWeight, Emotion.FEAR.getPriority()),
+            new EmotionWeightPair("happy", happyWeight, Emotion.HAPPY.getPriority())
+        );
+        
+        // Sort by weight descending, then by priority ascending (lower priority number = higher priority)
+        return emotionPairs.stream()
+            .sorted((e1, e2) -> {
+                // First compare by weight (descending)
+                int weightCompare = Integer.compare(e2.weight, e1.weight);
+                if (weightCompare != 0) {
+                    return weightCompare;
+                }
+                // If weights are equal, compare by priority (ascending - lower number = higher priority)
+                return Integer.compare(e1.priority, e2.priority);
+            })
+            .limit(3)
+            .map(pair -> pair.emotion)
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Helper class for emotion-weight pairs with priority for tie-breaking
+     */
+    private static class EmotionWeightPair {
+        final String emotion;
+        final Integer weight;
+        final Integer priority;
+        
+        EmotionWeightPair(String emotion, Integer weight, Integer priority) {
+            this.emotion = emotion;
+            this.weight = weight;
+            this.priority = priority;
+        }
+    }
+    
+    /**
      * Check if this R vector needs halving
-     * Returns true if total score >= 80 (threshold defined in recommendation spec)
+     * Returns true if ANY dimension > 40 (specification requirement)
      * 
      * @return true if R vector should be halved to prevent runaway growth
      */
     public boolean needsHalving() {
-        BigDecimal total = getTotalWeight();
-        BigDecimal threshold = new BigDecimal("80.0");
-        return total.compareTo(threshold) >= 0;
+        return sadWeight > 40 ||
+               fearWeight > 40 ||
+               angryWeight > 40 ||
+               happyWeight > 40 ||
+               conflictedWeight > 40 ||
+               surprisedWeight > 40;
     }
     
     /**
-     * Halve all emotion weights
-     * Used when R vector grows too large (total >= 80)
+     * Halve all emotion weights with value-2 protection
+     * Used when any dimension exceeds 40 to prevent numerical explosion
      * Divides all weights by 2 while maintaining proportions
+     * Dimensions at value 2 are protected and remain unchanged (specification requirement)
+     * Uses standard rounding (round half up)
      */
     public void halveWeights() {
-        BigDecimal two = new BigDecimal("2.0");
-        sadWeight = sadWeight.divide(two, 4, BigDecimal.ROUND_HALF_UP);
-        fearWeight = fearWeight.divide(two, 4, BigDecimal.ROUND_HALF_UP);
-        angryWeight = angryWeight.divide(two, 4, BigDecimal.ROUND_HALF_UP);
-        happyWeight = happyWeight.divide(two, 4, BigDecimal.ROUND_HALF_UP);
-        conflictedWeight = conflictedWeight.divide(two, 4, BigDecimal.ROUND_HALF_UP);
-        surprisedWeight = surprisedWeight.divide(two, 4, BigDecimal.ROUND_HALF_UP);
+        // Halve each weight, but protect values at 2 (minimum threshold)
+        // Round half up: 7/2 = 3.5 → 4, 5/2 = 2.5 → 3
+        if (sadWeight > 2) {
+            sadWeight = (int) Math.round(sadWeight / 2.0);
+        }
+        if (fearWeight > 2) {
+            fearWeight = (int) Math.round(fearWeight / 2.0);
+        }
+        if (angryWeight > 2) {
+            angryWeight = (int) Math.round(angryWeight / 2.0);
+        }
+        if (happyWeight > 2) {
+            happyWeight = (int) Math.round(happyWeight / 2.0);
+        }
+        if (conflictedWeight > 2) {
+            conflictedWeight = (int) Math.round(conflictedWeight / 2.0);
+        }
+        if (surprisedWeight > 2) {
+            surprisedWeight = (int) Math.round(surprisedWeight / 2.0);
+        }
+    }
+    
+    /**
+     * Initialize R vector with default values (all dimensions = 10)
+     * Used for new users matching specification initialization
+     */
+    public void initializeDefaults() {
+        this.sadWeight = 10;
+        this.fearWeight = 10;
+        this.angryWeight = 10;
+        this.happyWeight = 10;
+        this.conflictedWeight = 10;
+        this.surprisedWeight = 10;
     }
 }

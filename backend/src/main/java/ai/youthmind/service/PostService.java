@@ -146,6 +146,9 @@ public class PostService {
     @Autowired
     private VectorSearchService vectorSearchService;
     
+    @Autowired
+    private RVectorUpdateService rVectorUpdateService;
+    
     public Post createPost(UUID userId, PostCreateRequest request) {
         logger.info("========================================");
         logger.info("POST CREATION STARTED");
@@ -270,13 +273,22 @@ public class PostService {
         
         // Update R vector based on post emotion
         try {
-            String emotion = savedPost.getEmotion();
-            if (emotion != null && !emotion.trim().isEmpty()) {
-                logger.info("→ R vector service removed - skipping R vector update for user: {} with emotion: {}", userId, emotion);
-                // rVectorService.updateOnPost(userId, savedPost.getId(), Emotion.valueOf(emotion.toUpperCase()));
-                logger.info("✓ R vector update skipped - service removed");
+            String emotionStr = savedPost.getEmotion();
+            if (emotionStr != null && !emotionStr.trim().isEmpty()) {
+                // Convert string emotion to Emotion enum (using fully qualified name to avoid conflict with events.model.Emotion)
+                ai.youthmind.enums.Emotion emotion = ai.youthmind.enums.Emotion.fromString(emotionStr);
+                
+                if (emotion != null) {
+                    logger.info("→ Updating R vector for user: {} with emotion: {} (post: {})", 
+                               userId, emotion, savedPost.getId());
+                    rVectorUpdateService.updateOnPost(userId, savedPost.getId(), emotion);
+                    logger.info("✓ R vector updated successfully for user: {} with emotion: {}", userId, emotion);
+                } else {
+                    logger.warn("→ Skipping R vector update - invalid emotion string: {} for user: {}", 
+                               emotionStr, userId);
+                }
             } else {
-                logger.warn("→ Skipping R vector update - post emotion is null or empty");
+                logger.warn("→ Skipping R vector update - post emotion is null or empty for user: {}", userId);
             }
         } catch (Exception e) {
             // Log error but don't fail post creation
@@ -777,14 +789,23 @@ public class PostService {
             
             // Update R vector based on post emotion (only on like, not unlike)
             try {
-                String emotion = post.getEmotion();
-                if (emotion != null && !emotion.trim().isEmpty()) {
-                    logger.info("→ Updating R vector for user: {} with emotion: {} (like)", userId, emotion);
-                    // rVectorService.updateOnLike(userId, post.getId(), Emotion.valueOf(emotion.toUpperCase()));
-                    logger.info("R vector service removed - skipping like update");
-                    logger.info("✓ R vector updated successfully - emotion: {} (like)", emotion);
+                String emotionStr = post.getEmotion();
+                if (emotionStr != null && !emotionStr.trim().isEmpty()) {
+                    // Convert string emotion to Emotion enum (using fully qualified name to avoid conflict with events.model.Emotion)
+                    ai.youthmind.enums.Emotion emotion = ai.youthmind.enums.Emotion.fromString(emotionStr);
+                    
+                    if (emotion != null) {
+                        logger.info("→ Updating R vector for user: {} with emotion: {} (like, post: {})", 
+                                   userId, emotion, post.getId());
+                        rVectorUpdateService.updateOnLike(userId, post.getId(), emotion);
+                        logger.info("✓ R vector updated successfully for user: {} with emotion: {} (like)", 
+                                   userId, emotion);
+                    } else {
+                        logger.warn("→ Skipping R vector update - invalid emotion string: {} for user: {} (like)", 
+                                   emotionStr, userId);
+                    }
                 } else {
-                    logger.warn("→ Skipping R vector update - post emotion is null or empty (like)");
+                    logger.warn("→ Skipping R vector update - post emotion is null or empty for user: {} (like)", userId);
                 }
             } catch (Exception e) {
                 // Log error but don't fail the like operation
@@ -898,16 +919,24 @@ public class PostService {
                 Post post = postRepository.findById(postId)
                     .orElseThrow(() -> new ResourceNotFoundException("Post", "id", postId));
                 
-                String emotion = post.getEmotion();
-                if (emotion != null && !emotion.trim().isEmpty()) {
-                    logger.info("→ Updating R vector for user: {} with emotion: {} (view, {}s)", 
-                               userId, emotion, durationSeconds);
-                    // rVectorService.updateOnView(userId, post.getId(), Emotion.valueOf(emotion.toUpperCase()), durationSeconds);
-                    logger.info("R vector service removed - skipping view update");
-                    logger.info("✓ R vector updated successfully - emotion: {}, duration: {}s (view)", 
-                               emotion, durationSeconds);
+                String emotionStr = post.getEmotion();
+                if (emotionStr != null && !emotionStr.trim().isEmpty()) {
+                    // Convert string emotion to Emotion enum (using fully qualified name to avoid conflict with events.model.Emotion)
+                    ai.youthmind.enums.Emotion emotion = ai.youthmind.enums.Emotion.fromString(emotionStr);
+                    
+                    if (emotion != null) {
+                        logger.info("→ Updating R vector for user: {} with emotion: {} (view, {}s, post: {})", 
+                                   userId, emotion, durationSeconds, postId);
+                        rVectorUpdateService.updateOnView(userId, postId, emotion, durationSeconds);
+                        logger.info("✓ R vector updated successfully for user: {} with emotion: {}, duration: {}s (view)", 
+                                   userId, emotion, durationSeconds);
+                    } else {
+                        logger.warn("→ Skipping R vector update - invalid emotion string: {} for user: {} (view, {}s)", 
+                                   emotionStr, userId, durationSeconds);
+                    }
                 } else {
-                    logger.warn("→ Skipping R vector update - post emotion is null or empty (view, {}s)", durationSeconds);
+                    logger.warn("→ Skipping R vector update - post emotion is null or empty for user: {} (view, {}s)", 
+                               userId, durationSeconds);
                 }
             } catch (Exception e) {
                 // Log error but don't fail the view tracking
@@ -915,7 +944,8 @@ public class PostService {
                             userId, durationSeconds, e.getMessage(), e);
             }
         } else {
-            logger.debug("→ Skipping R vector update - duration {}s < 15 seconds threshold", durationSeconds);
+            logger.debug("→ Skipping R vector update - duration {}s < 15 seconds threshold for user: {}", 
+                        durationSeconds, userId);
         }
         
         return postDto;

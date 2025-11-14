@@ -1,5 +1,8 @@
 package ai.youthmind.service;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -569,10 +572,19 @@ public class AIServiceLoadBalancer {
     @lombok.Data
     @lombok.Builder
     public static class ServiceEndpoint {
+        @NotNull(message = "Endpoint ID is required")
+        @NotBlank(message = "Endpoint ID cannot be blank")
         private String endpointId;
-        private String serviceType;
+        
+        private String serviceType; // Set by controller from path parameter
+        
+        @NotNull(message = "URL is required")
+        @NotBlank(message = "URL cannot be blank")
         private String url;
+        
+        @Min(value = 1, message = "Weight must be at least 1")
         private int weight;
+        
         private boolean healthy;
         private int activeConnections;
         private long totalRequests;

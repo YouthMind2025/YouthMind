@@ -26,6 +26,7 @@ public class AutoScalingService {
     private final ConcurrencyManager concurrencyManager;
     private final MetricsService metricsService;
     private final io.micrometer.core.instrument.MeterRegistry meterRegistry;
+    private final java.util.concurrent.Executor backgroundExecutor;
 
     // Scaling thresholds
     private static final double CPU_THRESHOLD_HIGH = 80.0;
@@ -299,7 +300,7 @@ public class AutoScalingService {
                 log.error("Error in manual scaling: {}", e.getMessage(), e);
                 return false;
             }
-        });
+        }, backgroundExecutor);  // Use dedicated executor, not commonPool
     }
 
     // Helper methods
@@ -352,30 +353,53 @@ public class AutoScalingService {
             // Scale up API executor
             org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor apiExecutor = 
                 (org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor) context.getBean("apiExecutor");
-            int newCoreSize = Math.min(apiExecutor.getCorePoolSize() * scaleLevel, 1000);
-            int newMaxSize = Math.min(apiExecutor.getMaxPoolSize() * scaleLevel, 2000);
-            apiExecutor.setCorePoolSize(newCoreSize);
-            apiExecutor.setMaxPoolSize(newMaxSize);
+            if (apiExecutor != null) {
+                int currentCore = apiExecutor.getCorePoolSize();
+                int currentMax = apiExecutor.getMaxPoolSize();
+                int newCoreSize = Math.min(currentCore * scaleLevel, 1000);
+                int newMaxSize = Math.min(currentMax * scaleLevel, 2000);
+                
+                // IMPORTANT: Set maxPoolSize FIRST (so it's large enough for corePoolSize)
+                apiExecutor.setMaxPoolSize(newMaxSize);
+                // Then set corePoolSize (validates against the new maxPoolSize)
+                apiExecutor.setCorePoolSize(newCoreSize);
+            }
             
             // Scale up general executor
             org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor generalExecutor = 
                 (org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor) context.getBean("generalExecutor");
-            generalExecutor.setCorePoolSize(Math.min(generalExecutor.getCorePoolSize() * scaleLevel, 500));
-            generalExecutor.setMaxPoolSize(Math.min(generalExecutor.getMaxPoolSize() * scaleLevel, 1000));
+            if (generalExecutor != null) {
+                int currentCore = generalExecutor.getCorePoolSize();
+                int currentMax = generalExecutor.getMaxPoolSize();
+                int newCoreSize = Math.min(currentCore * scaleLevel, 500);
+                int newMaxSize = Math.min(currentMax * scaleLevel, 1000);
+                
+                // Set maxPoolSize FIRST
+                generalExecutor.setMaxPoolSize(newMaxSize);
+                // Then set corePoolSize
+                generalExecutor.setCorePoolSize(newCoreSize);
+            }
             
             // Scale up database executor
             org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor databaseExecutor = 
                 (org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor) context.getBean("databaseExecutor");
-            databaseExecutor.setCorePoolSize(Math.min(databaseExecutor.getCorePoolSize() * scaleLevel, 200));
-            databaseExecutor.setMaxPoolSize(Math.min(databaseExecutor.getMaxPoolSize() * scaleLevel, 500));
+            if (databaseExecutor != null) {
+                int currentCore = databaseExecutor.getCorePoolSize();
+                int currentMax = databaseExecutor.getMaxPoolSize();
+                int newCoreSize = Math.min(currentCore * scaleLevel, 200);
+                int newMaxSize = Math.min(currentMax * scaleLevel, 500);
+                
+                // Set maxPoolSize FIRST
+                databaseExecutor.setMaxPoolSize(newMaxSize);
+                // Then set corePoolSize
+                databaseExecutor.setCorePoolSize(newCoreSize);
+            }
             
-            log.info("Scaled up thread pools to level {}: API({}/{}), General({}/{}), DB({}/{})", 
-                scaleLevel, newCoreSize, newMaxSize, 
-                generalExecutor.getCorePoolSize(), generalExecutor.getMaxPoolSize(),
-                databaseExecutor.getCorePoolSize(), databaseExecutor.getMaxPoolSize());
+            log.info("Scaled up thread pools to level {}", scaleLevel);
                 
         } catch (Exception e) {
             log.error("Error scaling up thread pools: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to scale thread pools", e);
         }
     }
 

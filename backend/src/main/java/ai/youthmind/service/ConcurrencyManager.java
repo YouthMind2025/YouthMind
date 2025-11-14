@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.Map;
@@ -160,24 +161,103 @@ public class ConcurrencyManager {
         try {
             // Update database connection limits
             int newDbLimit = (int) Math.max(10, Math.min(200, 100 * scaleFactor));
-            databaseConnections.release(); // Release current permits
-            databaseConnections.acquire(newDbLimit); // Acquire new permits
+            int currentDbAvailable = databaseConnections.availablePermits();
+            int dbDelta = newDbLimit - currentDbAvailable;
+            
+            if (dbDelta > 0) {
+                // Increasing capacity: release additional permits
+                databaseConnections.release(dbDelta);
+                log.debug("Increased database connection capacity by {} (new limit: {})", dbDelta, newDbLimit);
+            } else if (dbDelta < 0) {
+                // Decreasing capacity: acquire excess permits (non-blocking with timeout)
+                int excessPermits = -dbDelta;
+                int acquired = 0;
+                long timeoutMs = 100; // 100ms timeout to prevent blocking
+                long endTime = System.currentTimeMillis() + timeoutMs;
+                
+                while (acquired < excessPermits && System.currentTimeMillis() < endTime) {
+                    if (databaseConnections.tryAcquire(100, TimeUnit.MILLISECONDS)) {
+                        acquired++;
+                    }
+                }
+                
+                if (acquired < excessPermits) {
+                    log.warn("Could not acquire all excess database permits. Acquired: {}/{}", 
+                        acquired, excessPermits);
+                } else {
+                    log.debug("Reduced database connection capacity by {} (new limit: {})", 
+                        excessPermits, newDbLimit);
+                }
+            }
             
             // Update AI service connection limits
             int newAiLimit = (int) Math.max(5, Math.min(50, 20 * scaleFactor));
-            aiServiceConnections.release();
-            aiServiceConnections.acquire(newAiLimit);
+            int currentAiAvailable = aiServiceConnections.availablePermits();
+            int aiDelta = newAiLimit - currentAiAvailable;
+            
+            if (aiDelta > 0) {
+                aiServiceConnections.release(aiDelta);
+                log.debug("Increased AI service connection capacity by {} (new limit: {})", 
+                    aiDelta, newAiLimit);
+            } else if (aiDelta < 0) {
+                int excessPermits = -aiDelta;
+                int acquired = 0;
+                long timeoutMs = 100;
+                long endTime = System.currentTimeMillis() + timeoutMs;
+                
+                while (acquired < excessPermits && System.currentTimeMillis() < endTime) {
+                    if (aiServiceConnections.tryAcquire(100, TimeUnit.MILLISECONDS)) {
+                        acquired++;
+                    }
+                }
+                
+                if (acquired < excessPermits) {
+                    log.warn("Could not acquire all excess AI service permits. Acquired: {}/{}", 
+                        acquired, excessPermits);
+                } else {
+                    log.debug("Reduced AI service connection capacity by {} (new limit: {})", 
+                        excessPermits, newAiLimit);
+                }
+            }
             
             // Update vector search connection limits
             int newVectorLimit = (int) Math.max(10, Math.min(100, 50 * scaleFactor));
-            vectorSearchConnections.release();
-            vectorSearchConnections.acquire(newVectorLimit);
+            int currentVectorAvailable = vectorSearchConnections.availablePermits();
+            int vectorDelta = newVectorLimit - currentVectorAvailable;
             
-            log.info("Updated resource limits - DB: {}, AI: {}, Vector: {}", 
-                newDbLimit, newAiLimit, newVectorLimit);
+            if (vectorDelta > 0) {
+                vectorSearchConnections.release(vectorDelta);
+                log.debug("Increased vector search connection capacity by {} (new limit: {})", 
+                    vectorDelta, newVectorLimit);
+            } else if (vectorDelta < 0) {
+                int excessPermits = -vectorDelta;
+                int acquired = 0;
+                long timeoutMs = 100;
+                long endTime = System.currentTimeMillis() + timeoutMs;
+                
+                while (acquired < excessPermits && System.currentTimeMillis() < endTime) {
+                    if (vectorSearchConnections.tryAcquire(100, TimeUnit.MILLISECONDS)) {
+                        acquired++;
+                    }
+                }
+                
+                if (acquired < excessPermits) {
+                    log.warn("Could not acquire all excess vector search permits. Acquired: {}/{}", 
+                        acquired, excessPermits);
+                } else {
+                    log.debug("Reduced vector search connection capacity by {} (new limit: {})", 
+                        excessPermits, newVectorLimit);
+                }
+            }
+            
+            log.info("Updated resource limits - DB: {} (available: {}), AI: {} (available: {}), Vector: {} (available: {})", 
+                newDbLimit, databaseConnections.availablePermits(),
+                newAiLimit, aiServiceConnections.availablePermits(),
+                newVectorLimit, vectorSearchConnections.availablePermits());
                 
         } catch (Exception e) {
             log.error("Error updating resource limits: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to update resource limits", e);
         }
     }
 

@@ -31,7 +31,7 @@ public abstract class BaseIntegrationTest {
      * Can be overridden by subclasses for additional setup.
      */
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         // Base setup - can be overridden by subclasses
         // The TestContainersConfig will handle database setup
     }
