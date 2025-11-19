@@ -6,20 +6,28 @@ This document outlines the comprehensive CORS (Cross-Origin Resource Sharing) co
 
 The CORS configuration provides environment-specific settings to ensure secure cross-origin requests while maintaining functionality across development, staging, and production environments.
 
+**CRITICAL SECURITY NOTE:** This configuration has been hardened to prevent the critical security vulnerability of allowing wildcard origins (`*`) with credentials enabled. This vulnerability allows external domains to make authenticated requests to your API. All configurations now use explicit origin allowlists.
+
 ## Environment-Specific Configurations
 
 ### Development Environment (`dev`)
 
 **Profile:** `dev`  
-**Configuration:** `application-dev.yaml`
+**Configuration:** `application-dev.yaml` and `CorsConfig.java`
 
-- **Origins:** Wildcard (`*`) - allows all origins for development flexibility
+- **Origins:** Explicit localhost origins only:
+  - `http://localhost:3000`
+  - `http://localhost:3001`
+  - `http://127.0.0.1:3000`
+  - `http://127.0.0.1:3001`
 - **Methods:** All HTTP methods (GET, POST, PUT, DELETE, OPTIONS, PATCH)
 - **Headers:** All headers (`*`)
 - **Credentials:** Enabled
 - **Max Age:** 3600 seconds (1 hour)
 
-**Use Case:** Local development with various frontend frameworks and tools.
+**Use Case:** Local development with explicit localhost origins for security.
+
+**Security:** Uses explicit origins instead of wildcard to prevent external domains from making authenticated requests, even in development.
 
 ### Staging Environment (`staging`)
 
@@ -101,10 +109,17 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' '
 
 The main CORS configuration class that provides environment-specific CORS settings:
 
-- `devCorsConfigurationSource()` - Development configuration
-- `stagingCorsConfigurationSource()` - Staging configuration  
-- `prodCorsConfigurationSource()` - Production configuration
-- `defaultCorsConfigurationSource()` - Fallback configuration
+- `devCorsConfigurationSource()` - Development configuration with explicit localhost origins
+- `stagingCorsConfigurationSource()` - Staging configuration with restricted origins
+- `prodCorsConfigurationSource()` - Production configuration with strict domain allowlist
+- `defaultCorsConfigurationSource()` - Fallback configuration that requires explicit origins when credentials are enabled
+- `validateCorsConfiguration()` - Security validation that prevents wildcard origins with credentials
+
+**Security Features:**
+- Automatic validation of CORS configuration at bean creation time
+- Throws `IllegalStateException` if wildcard origins are detected with credentials enabled
+- Clear error messages explaining security violations
+- Prevents application startup with insecure CORS configuration
 
 ### SecurityConfig.java
 
@@ -209,33 +224,87 @@ Common CORS issues and solutions:
 
 ## Best Practices
 
-1. **Never use wildcard origins in production**
-2. **Always specify exact domains in production**
-3. **Use HTTPS in production environments**
-4. **Regularly audit allowed origins**
-5. **Monitor CORS-related security events**
-6. **Test CORS configuration in staging before production deployment**
-7. **Keep CORS configuration in version control**
-8. **Document any CORS exceptions or special cases**
+1. **NEVER use wildcard origins (`*`) with credentials enabled** - This applies to ALL environments, including development. The application enforces this at startup.
+
+2. **Always specify exact domains/origins** - Use explicit allowlists in all environments (development, staging, production).
+
+3. **Use HTTPS in production environments** - All production origins should use HTTPS.
+
+4. **Regularly audit allowed origins** - Review and remove unused origins periodically.
+
+5. **Monitor CORS-related security events** - Track origin validation failures and preflight request patterns.
+
+6. **Test CORS configuration in staging before production deployment** - Verify all frontend applications work with restricted origins.
+
+7. **Keep CORS configuration in version control** - Use `app.cors.*` properties in YAML files, not `spring.web.cors.*`.
+
+8. **Remove controller-level `@CrossOrigin` annotations** - Let the global `CorsConfig` handle all CORS configuration consistently.
+
+9. **Single source of truth** - Use only `CorsConfig.java` for CORS configuration. Do not use conflicting YAML properties.
+
+10. **Fail fast on invalid configuration** - The application validates CORS configuration at startup and will not start with insecure settings.
 
 ## Security Considerations
 
-1. **Origin Validation:** Only allow trusted domains
-2. **Credential Handling:** Be cautious with `allowCredentials: true`
-3. **Header Restrictions:** Limit allowed headers to necessary ones
-4. **Method Restrictions:** Only allow required HTTP methods
-5. **Regular Audits:** Periodically review and update CORS settings
-6. **Monitoring:** Implement logging and monitoring for CORS violations
+### Critical Security Rules
 
-## Migration from Wildcard CORS
+1. **NEVER use wildcard origins (`*`) with credentials enabled** - This is a critical security vulnerability that allows external domains to make authenticated requests to your API. The application will throw an `IllegalStateException` at startup if this configuration is detected.
 
-If migrating from wildcard CORS configuration:
+2. **Always use explicit origin allowlists** - Even in development, specify exact origins (e.g., `http://localhost:3000`) instead of wildcards.
+
+3. **Origin Validation:** Only allow trusted domains - Regularly audit and review allowed origins.
+
+4. **Credential Handling:** When `allowCredentials: true`, you MUST specify explicit origins. Wildcard origins are automatically rejected.
+
+5. **Header Restrictions:** Limit allowed headers to necessary ones to reduce attack surface.
+
+6. **Method Restrictions:** Only allow required HTTP methods.
+
+7. **Regular Audits:** Periodically review and update CORS settings.
+
+8. **Monitoring:** Implement logging and monitoring for CORS violations.
+
+### Automatic Security Validation
+
+The `CorsConfig.java` class includes automatic validation that:
+- Prevents wildcard origins (`*` or `**`) when credentials are enabled
+- Throws `IllegalStateException` at application startup if invalid configuration is detected
+- Provides clear error messages explaining the security issue
+
+This ensures that even if configuration is misconfigured, the application will fail fast with a clear security error rather than starting with a vulnerable configuration.
+
+## Security Fixes Applied (2024)
+
+### Critical Security Vulnerability Fixed
+
+The application previously allowed wildcard origins (`*`) with credentials enabled, which is a critical security vulnerability. This has been fixed:
+
+1. **Development Profile:** Changed from wildcard (`*`) to explicit localhost origins:
+   - `http://localhost:3000`
+   - `http://localhost:3001`
+   - `http://127.0.0.1:3000`
+   - `http://127.0.0.1:3001`
+
+2. **Controller-Level Overrides Removed:** Removed `@CrossOrigin(origins = "*")` annotations from 8 controllers to ensure consistent global CORS configuration.
+
+3. **Configuration Cleanup:** Removed conflicting `spring.web.cors.*` properties from YAML files that were not being used.
+
+4. **Automatic Validation:** Added `validateCorsConfiguration()` method that prevents wildcard origins with credentials at application startup.
+
+5. **Default Fallback Security:** Updated default fallback configuration to require explicit origins when credentials are enabled.
+
+### Migration from Wildcard CORS
+
+If you need to add additional origins:
 
 1. **Identify all frontend domains** that need access
-2. **Test in staging environment** with restricted origins
-3. **Update frontend applications** to use correct origins
-4. **Deploy to production** with specific domain allowlist
-5. **Monitor for any CORS errors** and adjust as needed
+2. **Add explicit origins** to the appropriate profile configuration in `CorsConfig.java` or via `app.cors.allowed-origins` property
+3. **Test in staging environment** with restricted origins
+4. **Update frontend applications** to use correct origins
+5. **Deploy to production** with specific domain allowlist
+6. **Monitor for any CORS errors** and adjust as needed
+
+**Note:** The application will now refuse to start if wildcard origins are configured with credentials enabled, ensuring this vulnerability cannot be accidentally reintroduced.
 
 ## Support
 

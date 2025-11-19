@@ -20,7 +20,6 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/v1/interaction")
-@CrossOrigin(origins = "*")
 public class InteractionProcessingController {
     
     private static final Logger logger = LoggerFactory.getLogger(InteractionProcessingController.class);

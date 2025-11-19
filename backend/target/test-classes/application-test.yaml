@@ -33,15 +33,6 @@ spring:
       enabled: false
       repositories:
         enabled: false
-  
-  # Test CORS configuration
-  web:
-    cors:
-      allowed-origins: "*"
-      allowed-methods: "*"
-      allowed-headers: "*"
-      allow-credentials: true
-      max-age: 3600
 
 # Test CORS Configuration
 app:

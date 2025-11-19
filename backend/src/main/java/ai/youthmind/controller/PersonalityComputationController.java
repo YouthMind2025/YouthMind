@@ -24,7 +24,6 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/personality")
-@CrossOrigin(origins = "*")
 @Tag(name = "Personality Computation", description = "AI-powered personality analysis and computation endpoints")
 public class PersonalityComputationController {
     

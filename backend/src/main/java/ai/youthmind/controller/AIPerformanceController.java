@@ -23,7 +23,6 @@ import java.util.concurrent.CompletableFuture;
  */
 @RestController
 @RequestMapping("/api/ai/performance")
-@CrossOrigin(origins = "*")
 public class AIPerformanceController {
     
     private static final Logger logger = LoggerFactory.getLogger(AIPerformanceController.class);

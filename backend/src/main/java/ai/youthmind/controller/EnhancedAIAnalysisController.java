@@ -29,7 +29,6 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/ai-analysis")
-@CrossOrigin(origins = "*")
 @Tag(name = "Enhanced AI Analysis", description = "AI-powered psychological analysis and vector processing endpoints")
 public class EnhancedAIAnalysisController {
     

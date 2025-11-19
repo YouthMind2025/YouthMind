@@ -27,7 +27,6 @@ import java.util.*;
 @RequestMapping("/api/insights")
 @Tag(name = "User Insights")
 @SecurityRequirement(name = "bearer-jwt")
-@CrossOrigin(origins = "*")
 public class InsightsController {
 
     private static final String INSIGHTS_KEY_PREFIX = "youthmind:insights:";

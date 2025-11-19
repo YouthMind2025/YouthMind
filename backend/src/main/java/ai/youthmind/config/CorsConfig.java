@@ -15,9 +15,13 @@ import java.util.List;
  * Environment-specific CORS configuration for YouthMind Backend
  * 
  * This configuration provides different CORS settings based on the active profile:
- * - dev: Permissive settings for development
+ * - dev: Secure settings for development with explicit localhost origins
  * - staging: Restricted settings for staging environment
  * - prod: Strict production settings with domain allowlist
+ * 
+ * SECURITY: Never use wildcard origins (*) with credentials enabled.
+ * This is a critical security vulnerability that allows external domains
+ * to make authenticated requests.
  */
 @Configuration
 public class CorsConfig {
@@ -41,20 +45,31 @@ public class CorsConfig {
     private long maxAge;
 
     /**
-     * Development CORS configuration - permissive for local development
+     * Development CORS configuration - secure with explicit localhost origins
+     * SECURITY: Uses explicit localhost origins instead of wildcard to prevent
+     * external domains from making authenticated requests.
      */
     @Bean("corsConfigurationSource")
     @Profile("dev")
     public CorsConfigurationSource devCorsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Allow all origins for development
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        // Use explicit localhost origins for development (SECURITY: no wildcard with credentials)
+        List<String> devOrigins = Arrays.asList(
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001"
+        );
+        configuration.setAllowedOrigins(devOrigins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Total-Count"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
+        
+        // Validate configuration
+        validateCorsConfiguration(configuration);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -86,6 +101,9 @@ public class CorsConfig {
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Total-Count"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(1800L); // 30 minutes
+        
+        // Validate configuration
+        validateCorsConfiguration(configuration);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -130,6 +148,9 @@ public class CorsConfig {
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(600L); // 10 minutes for production
         
+        // Validate configuration
+        validateCorsConfiguration(configuration);
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
@@ -137,6 +158,8 @@ public class CorsConfig {
 
     /**
      * Default CORS configuration (fallback)
+     * SECURITY: Requires explicit origins when credentials are enabled.
+     * Throws exception if wildcard origins are used with credentials.
      */
     @Bean("corsConfigurationSource")
     @Profile("!dev & !staging & !prod")
@@ -146,6 +169,15 @@ public class CorsConfig {
         // Parse from configuration
         List<String> origins = parseAllowedOrigins();
         if (origins.isEmpty()) {
+            // SECURITY: Cannot use wildcard with credentials enabled
+            if (allowCredentials) {
+                throw new IllegalStateException(
+                    "CORS configuration error: Cannot use wildcard origins (*) when credentials are enabled. " +
+                    "This is a critical security vulnerability. Please specify explicit origins in " +
+                    "app.cors.allowed-origins configuration property."
+                );
+            }
+            // Only allow wildcard if credentials are disabled
             configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         } else {
             configuration.setAllowedOrigins(origins);
@@ -156,6 +188,9 @@ public class CorsConfig {
         configuration.setExposedHeaders(Arrays.asList(exposedHeaders.split(",")));
         configuration.setAllowCredentials(allowCredentials);
         configuration.setMaxAge(maxAge);
+        
+        // Validate configuration
+        validateCorsConfiguration(configuration);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -174,5 +209,48 @@ public class CorsConfig {
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
                 .toList();
+    }
+
+    /**
+     * Validate CORS configuration to prevent security vulnerabilities
+     * 
+     * SECURITY: Throws IllegalStateException if wildcard origins are used with credentials enabled.
+     * This is a critical security vulnerability that allows external domains to make authenticated requests.
+     * 
+     * @param configuration The CORS configuration to validate
+     * @throws IllegalStateException if wildcard origins are used with credentials enabled
+     */
+    private void validateCorsConfiguration(CorsConfiguration configuration) {
+        if (configuration.getAllowCredentials() != null && configuration.getAllowCredentials()) {
+            // Check if wildcard patterns are used
+            if (configuration.getAllowedOriginPatterns() != null && 
+                !configuration.getAllowedOriginPatterns().isEmpty()) {
+                boolean hasWildcard = configuration.getAllowedOriginPatterns().stream()
+                    .anyMatch(pattern -> "*".equals(pattern) || "**".equals(pattern));
+                
+                if (hasWildcard) {
+                    throw new IllegalStateException(
+                        "CORS SECURITY VIOLATION: Cannot use wildcard origin patterns (* or **) " +
+                        "when credentials are enabled. This allows external domains to make authenticated " +
+                        "requests to your API. Please specify explicit origins instead of wildcards."
+                    );
+                }
+            }
+            
+            // Check if wildcard origins are used (deprecated but still possible)
+            if (configuration.getAllowedOrigins() != null && 
+                !configuration.getAllowedOrigins().isEmpty()) {
+                boolean hasWildcard = configuration.getAllowedOrigins().stream()
+                    .anyMatch(origin -> "*".equals(origin));
+                
+                if (hasWildcard) {
+                    throw new IllegalStateException(
+                        "CORS SECURITY VIOLATION: Cannot use wildcard origin (*) " +
+                        "when credentials are enabled. This allows external domains to make authenticated " +
+                        "requests to your API. Please specify explicit origins instead of wildcards."
+                    );
+                }
+            }
+        }
     }
 }

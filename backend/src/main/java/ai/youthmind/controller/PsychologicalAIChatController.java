@@ -19,7 +19,6 @@ import java.util.concurrent.CompletableFuture;
  */
 @RestController
 @RequestMapping("/api/ai/psychology")
-@CrossOrigin(origins = "*")
 public class PsychologicalAIChatController {
     
     private static final Logger logger = LoggerFactory.getLogger(PsychologicalAIChatController.class);

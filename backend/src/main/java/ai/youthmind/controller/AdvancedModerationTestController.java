@@ -15,7 +15,6 @@ import java.util.*;
  */
 @RestController
 @RequestMapping("/api/test/advanced-moderation")
-@CrossOrigin(origins = "*")
 public class AdvancedModerationTestController {
     
     @Autowired

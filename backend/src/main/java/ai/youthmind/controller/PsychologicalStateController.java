@@ -28,7 +28,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/psychological-state")
 @Tag(name = "Psychological State Management", description = "Manage user psychological states and state updates")
-@CrossOrigin(origins = "*")
 public class PsychologicalStateController {
     
     private static final Logger logger = LoggerFactory.getLogger(PsychologicalStateController.class);

@@ -57,15 +57,6 @@ spring:
           timeout: 3000
           writetimeout: 5000
 
-  # CORS configuration
-  web:
-    cors:
-      allowed-origins: "*"
-      allowed-methods: "*"
-      allowed-headers: "*"
-      allow-credentials: true
-      max-age: 3600
-
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET:bb7d84d73df9334e3d00632cb9db09330d73e20261db3b1e665ac41c166aae0e2b0102d01ef9f6c31748a7bc7f8f1e5fe5cf60437324ffd837cf6eaf97ba3fe9db2095e8faec51ce87ba782b5f37b75cf05c6efbfc8404413621b9b257201ce79fb9a3f13f797a7a4d9d9b5c901d2eb0c0e1cae862d1e8c7e8c40d4dc5c5393ebd20a1590cfda77d2017050f078fd9595e442f7d980719953917448a139b515f9b8d27e8f8587dfedd5c1bcf5b4a4f0d3fa83b15a5822ce969659c255742b75089edcd2c200de663684b736ef4c2796a8b9b68461d8ee0f13899f54e81f93d99df5665c2a878f08747bbffa8ed58b32997a44140e87585838b7fde51c703b8a6}
