@@ -271,7 +271,10 @@ public class RecommendationEventPublisher {
     private void checkAndRecordHalvingEvent(UUID userId) {
         try {
             if (userId != null) {
-                vectorRepository.findCurrentByUserId(userId)
+                // Fixed: Changed from findCurrentByUserId() to findFirstByUserIdOrderByVersionDesc()
+                // to prevent NonUniqueResultException when multiple vector versions exist
+                // Old code: vectorRepository.findCurrentByUserId(userId)
+                vectorRepository.findFirstByUserIdOrderByVersionDesc(userId)
                     .ifPresent(vector -> {
                         if (vector.needsHalving()) {
                             rvectorHalvingEventsTotal.increment();
@@ -397,8 +400,11 @@ public class RecommendationEventPublisher {
     private void logRVectorEventMetrics(UserInteractionEvent event) {
         try {
             // Fetch current R vector before update
+            // Fixed: Changed from findCurrentByUserId() to findFirstByUserIdOrderByVersionDesc()
+            // to prevent NonUniqueResultException when multiple vector versions exist
+            // Old code: UserRecommendationVector beforeVector = vectorRepository.findCurrentByUserId(event.getUserId()).orElse(null);
             UserRecommendationVector beforeVector = vectorRepository
-                .findCurrentByUserId(event.getUserId()).orElse(null);
+                .findFirstByUserIdOrderByVersionDesc(event.getUserId()).orElse(null);
             
             if (beforeVector != null) {
                 Map<String, Double> beforeValues = extractTopEmotions(beforeVector);

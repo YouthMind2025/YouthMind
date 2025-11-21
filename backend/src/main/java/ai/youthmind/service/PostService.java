@@ -149,6 +149,9 @@ public class PostService {
     @Autowired
     private RVectorUpdateService rVectorUpdateService;
     
+    @Autowired
+    private ObjectMapper objectMapper;
+    
     public Post createPost(UUID userId, PostCreateRequest request) {
         logger.info("========================================");
         logger.info("POST CREATION STARTED");
@@ -311,9 +314,8 @@ public class PostService {
             Map<String, Object> aiMetadata = new HashMap<>();
             if (aiMetadataJson != null && !aiMetadataJson.isEmpty()) {
                 try {
-                    // Parse existing JSON metadata
-                    ObjectMapper mapper = new ObjectMapper();
-                    aiMetadata = mapper.readValue(aiMetadataJson, Map.class);
+                    // Parse existing JSON metadata using configured ObjectMapper
+                    aiMetadata = objectMapper.readValue(aiMetadataJson, Map.class);
                 } catch (Exception e) {
                     // If parsing fails, start with empty map
                     aiMetadata = new HashMap<>();
@@ -354,9 +356,8 @@ public class PostService {
             aiMetadata.put("analysis_timestamp", LocalDateTime.now());
             aiMetadata.put("analysis_version", "1.0");
             
-            // Convert metadata back to JSON string
-            ObjectMapper mapper2 = new ObjectMapper();
-            String aiMetadataJsonFinal = mapper2.writeValueAsString(aiMetadata);
+            // Convert metadata back to JSON string using configured ObjectMapper
+            String aiMetadataJsonFinal = objectMapper.writeValueAsString(aiMetadata);
             
             // Update post with psychological metadata
             logger.info("→ Updating post with psychological metadata...");

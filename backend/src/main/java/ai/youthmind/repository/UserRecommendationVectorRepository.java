@@ -22,7 +22,16 @@ public interface UserRecommendationVectorRepository extends JpaRepository<UserRe
     
     /**
      * Find the current (latest version) recommendation vector for a user
+     * Uses Spring Data JPA's findFirstBy pattern to automatically limit to 1 result
+     * This prevents NonUniqueResultException when multiple vectors exist for the same user
      */
+    Optional<UserRecommendationVector> findFirstByUserIdOrderByVersionDesc(UUID userId);
+    
+    /**
+     * @deprecated Use findFirstByUserIdOrderByVersionDesc instead. This method is kept for backward compatibility
+     * but may throw NonUniqueResultException if multiple vectors exist.
+     */
+    @Deprecated
     @Query("SELECT rv FROM UserRecommendationVector rv WHERE rv.userId = :userId ORDER BY rv.version DESC")
     Optional<UserRecommendationVector> findCurrentByUserId(@Param("userId") UUID userId);
     

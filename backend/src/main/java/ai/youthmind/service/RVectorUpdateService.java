@@ -237,7 +237,10 @@ public class RVectorUpdateService {
      * @return Current UserRecommendationVector (or newly created default)
      */
     public UserRecommendationVector getOrCreateCurrentVector(UUID userId) {
-        Optional<UserRecommendationVector> currentOpt = vectorRepository.findCurrentByUserId(userId);
+        // Fixed: Changed from findCurrentByUserId() to findFirstByUserIdOrderByVersionDesc()
+        // to prevent NonUniqueResultException when multiple vector versions exist
+        // Old code: Optional<UserRecommendationVector> currentOpt = vectorRepository.findCurrentByUserId(userId);
+        Optional<UserRecommendationVector> currentOpt = vectorRepository.findFirstByUserIdOrderByVersionDesc(userId);
         
         if (currentOpt.isPresent()) {
             return currentOpt.get();
@@ -255,7 +258,10 @@ public class RVectorUpdateService {
      * @return Current UserRecommendationVector or null
      */
     public UserRecommendationVector getCurrentVector(UUID userId) {
-        return vectorRepository.findCurrentByUserId(userId).orElse(null);
+        // Fixed: Changed from findCurrentByUserId() to findFirstByUserIdOrderByVersionDesc()
+        // to prevent NonUniqueResultException when multiple vector versions exist
+        // Old code: return vectorRepository.findCurrentByUserId(userId).orElse(null);
+        return vectorRepository.findFirstByUserIdOrderByVersionDesc(userId).orElse(null);
     }
     
     /**

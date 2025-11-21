@@ -62,7 +62,7 @@ public class Post {
     @Column(name = "topics")
     private String topics;
     
-    @Column(name = "ai_metadata")
+    @Column(name = "ai_metadata", columnDefinition = "TEXT")
     private String aiMetadata;
 
     @Column(name = "flagged", nullable = false)
