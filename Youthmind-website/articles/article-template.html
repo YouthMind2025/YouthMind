@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Article Title - YouthMind</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .article-page {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        .article-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .article-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 15px;
+            line-height: 1.2;
+        }
+        .article-meta {
+            color: #6b7280;
+            font-size: 1.1rem;
+        }
+        .article-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #374151;
+        }
+        .article-content img {
+            max-width: 100%;
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+        }
+        .back-button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+        .article-cover-image {
+            max-width: 100%;
+            height: 400px;
+            border-radius: 15px;
+            margin: 20px 0;
+            background: #f3f4f6;
+            overflow: hidden;
+        }
+        .article-cover-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+            border-radius: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="article-page">
+        <a href="../index.html" class="back-button">← Back to Home</a>
+        
+        <article>
+            <header class="article-header">
+                <h1 class="article-title" id="articleTitle">Article Title</h1>
+                <div class="article-meta">
+                    <span id="articleDate">Date</span> • By YouthMind Team
+                </div>
+            </header>
+            
+            <div id="articleCoverImage" class="article-cover-image"></div>
+            
+            <div class="article-content" id="articleContent">
+                <!-- Article content will be loaded here -->
+            </div>
+        </article>
+    </div>
+
+    <script>
+        // Get article ID from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const articleId = urlParams.get('id');
+        
+        if (articleId) {
+            loadArticleContent(articleId);
+        } else {
+            document.getElementById('articleContent').innerHTML = '<p>Article not found.</p>';
+        }
+        
+        async function loadArticleContent(articleId) {
+            try {
+                // Check if this is a post or article
+                const urlParams = new URLSearchParams(window.location.search);
+                const type = urlParams.get('type');
+                
+                if (type === 'post') {
+                    // Handle posts - load from posts.json
+                    await loadPostContent(articleId.replace('post_', ''));
+                } else {
+                    // Handle articles - load from backend API
+                    await loadArticleFromBackend(articleId);
+                }
+            } catch (error) {
+                console.error('Error loading content:', error);
+                document.getElementById('articleContent').innerHTML = '<p>Error loading content.</p>';
+            }
+        }
+        
+        async function loadArticleFromBackend(articleId) {
+            try {
+                // Try to detect if we're running in development (localhost) or production
+                const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const baseUrl = isDevelopment ? 'http://localhost:8080' : ''; // Use relative path in production
+                
+                const response = await fetch(`${baseUrl}/v1/articles`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const articles = data.data || data;
+                
+                // Find the specific article
+                const article = articles.find(a => a.id === articleId);
+                
+                if (article) {
+                    // Update page title
+                    document.title = `${article.title} - YouthMind`;
+                    
+                    // Update article title
+                    document.getElementById('articleTitle').textContent = article.title;
+                    
+                    // Update article date
+                    const date = article.date || new Date(article.createdAt).getFullYear().toString();
+                    document.getElementById('articleDate').textContent = date;
+                    
+                    // Extract and display first image from article content at the top
+                    const coverImage = document.getElementById('articleCoverImage');
+                    let firstImageSrc = '';
+                    
+                    if (article.content) {
+                        // Create a temporary div to parse the HTML content
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = article.content;
+                        
+                        // Find the first image in the content
+                        const firstImg = tempDiv.querySelector('img');
+                        if (firstImg) {
+                            firstImageSrc = firstImg.getAttribute('src');
+                            // Remove the first image from content to avoid duplication
+                            firstImg.remove();
+                            // Update content without the first image
+                            document.getElementById('articleContent').innerHTML = tempDiv.innerHTML;
+                        }
+                    }
+                    
+                    // Display the first image at the top if found, otherwise use cover image
+                    if (firstImageSrc) {
+                        coverImage.innerHTML = `<img src="${firstImageSrc}" alt="${article.title}">`;
+                        coverImage.style.display = 'block';
+                    } else if (article.cover || article.coverImage) {
+                        const imgSrc = article.cover || article.coverImage;
+                        coverImage.innerHTML = `<img src="${imgSrc}" alt="${article.title}">`;
+                        coverImage.style.display = 'block';
+                    } else {
+                        coverImage.style.display = 'none';
+                    }
+                    
+                    // If no content was set above, set it now
+                    if (!document.getElementById('articleContent').innerHTML.trim()) {
+                        document.getElementById('articleContent').innerHTML = article.content || '<p>Content not available.</p>';
+                    }
+                } else {
+                    document.getElementById('articleContent').innerHTML = '<p>Article not found.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading article from backend:', error);
+                document.getElementById('articleContent').innerHTML = '<p>Error loading article content.</p>';
+            }
+        }
+        
+        async function loadPostContent(postId) {
+            try {
+                // Load posts manifest
+                const postsResponse = await fetch('../assets/Posts/posts.json');
+                const posts = await postsResponse.json();
+                
+                // Find the specific post
+                const post = posts.find(p => p.id === postId);
+                
+                if (post) {
+                    // Load the actual post content
+                    const postResponse = await fetch(`../assets/Posts/${post.file}`);
+                    const postData = await postResponse.json();
+                    
+                    // Update page title
+                    document.title = `${postData.title} - YouthMind`;
+                    
+                    // Update post title
+                    document.getElementById('articleTitle').textContent = postData.title;
+                    
+                    // Update post date
+                    document.getElementById('articleDate').textContent = postData.date;
+                    
+                    // Extract and display first image from post content at the top
+                    const coverImage = document.getElementById('articleCoverImage');
+                    let firstImageSrc = '';
+                    
+                    if (postData.content) {
+                        // Create a temporary div to parse the HTML content
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = postData.content;
+                        
+                        // Find the first image in the content
+                        const firstImg = tempDiv.querySelector('img');
+                        if (firstImg) {
+                            firstImageSrc = firstImg.getAttribute('src');
+                            // Remove the first image from content to avoid duplication
+                            firstImg.remove();
+                            // Update content without the first image
+                            document.getElementById('articleContent').innerHTML = tempDiv.innerHTML;
+                        }
+                    }
+                    
+                    // Display the first image at the top if found
+                    if (firstImageSrc) {
+                        coverImage.innerHTML = `<img src="${firstImageSrc}" alt="${postData.title}">`;
+                        coverImage.style.display = 'block';
+                    } else {
+                        // Hide cover image for posts if no image in content
+                        coverImage.style.display = 'none';
+                    }
+                    
+                    // If no content was set above, set it now
+                    if (!document.getElementById('articleContent').innerHTML.trim()) {
+                        document.getElementById('articleContent').innerHTML = postData.content || '<p>Content not available.</p>';
+                    }
+                } else {
+                    document.getElementById('articleContent').innerHTML = '<p>Post not found.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading post:', error);
+                document.getElementById('articleContent').innerHTML = '<p>Error loading post content.</p>';
+            }
+        }
+    </script>
+</body>
+</html>

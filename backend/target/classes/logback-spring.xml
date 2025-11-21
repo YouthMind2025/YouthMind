@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    
+    <!-- Console appender with JSON format for production -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>correlationId</includeMdcKeyName>
+            <includeMdcKeyName>userId</includeMdcKeyName>
+            <includeMdcKeyName>sessionId</includeMdcKeyName>
+            <includeMdcKeyName>operation</includeMdcKeyName>
+            <includeMdcKeyName>blockNumber</includeMdcKeyName>
+            <includeMdcKeyName>vectorVersion</includeMdcKeyName>
+            <includeMdcKeyName>eventType</includeMdcKeyName>
+            <includeMdcKeyName>eventId</includeMdcKeyName>
+            <customFields>{"application":"youthmind-backend","service":"recommendation-engine"}</customFields>
+        </encoder>
+    </appender>
+    
+    <!-- Recommendation-specific file appender -->
+    <appender name="RECOMMENDATION_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/recommendation.log</file>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>correlationId</includeMdcKeyName>
+            <includeMdcKeyName>userId</includeMdcKeyName>
+            <includeMdcKeyName>sessionId</includeMdcKeyName>
+            <includeMdcKeyName>operation</includeMdcKeyName>
+            <includeMdcKeyName>blockNumber</includeMdcKeyName>
+            <includeMdcKeyName>vectorVersion</includeMdcKeyName>
+            <includeMdcKeyName>eventType</includeMdcKeyName>
+            <includeMdcKeyName>eventId</includeMdcKeyName>
+            <customFields>{"application":"youthmind-backend","service":"recommendation-engine"}</customFields>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/recommendation-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+    </appender>
+    
+    <!-- Async appender for better performance -->
+    <appender name="ASYNC_RECOMMENDATION_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="RECOMMENDATION_FILE"/>
+        <queueSize>1024</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>false</includeCallerData>
+    </appender>
+    
+    <!-- Recommendation event logger -->
+    <logger name="ai.youthmind.events" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_RECOMMENDATION_FILE"/>
+        <appender-ref ref="JSON_CONSOLE"/>
+    </logger>
+    
+    <!-- Feed block generator logger -->
+    <logger name="ai.youthmind.service.FeedBlockGeneratorService" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_RECOMMENDATION_FILE"/>
+        <appender-ref ref="JSON_CONSOLE"/>
+    </logger>
+    
+    <!-- State update rule engine logger -->
+    <logger name="ai.youthmind.service.StateUpdateRuleEngine" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_RECOMMENDATION_FILE"/>
+        <appender-ref ref="JSON_CONSOLE"/>
+    </logger>
+    
+    <!-- Psychological state service logger -->
+    <logger name="ai.youthmind.service.PsychologicalStateService" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_RECOMMENDATION_FILE"/>
+        <appender-ref ref="JSON_CONSOLE"/>
+    </logger>
+    
+    <!-- Correlation ID filter logger -->
+    <logger name="ai.youthmind.filter.CorrelationIdFilter" level="DEBUG" additivity="false">
+        <appender-ref ref="JSON_CONSOLE"/>
+    </logger>
+    
+    <!-- Root logger with JSON console -->
+    <root level="INFO">
+        <appender-ref ref="JSON_CONSOLE"/>
+    </root>
+</configuration>

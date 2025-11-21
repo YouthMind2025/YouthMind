@@ -1,0 +1,320 @@
+package ai.youthmind.repository;
+
+import ai.youthmind.entity.Post;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface PostRepository extends JpaRepository<Post, UUID> {
+    
+    List<Post> findByUserId(UUID userId);
+    
+    List<Post> findByUserIdOrderByCreatedAtDesc(UUID userId);
+    
+    List<Post> findByEmotion(String emotion);
+    
+    List<Post> findByUserIdAndEmotion(UUID userId, String emotion);
+    
+    // Retrieve posts that have been flagged for moderation
+    List<Post> findByFlaggedTrue();
+    
+    // Find flagged posts by specific user
+    List<Post> findByUserIdAndFlaggedTrue(UUID userId);
+    
+    // Count flagged posts
+    long countByFlaggedTrue();
+    
+    // Filtering with pagination
+    Page<Post> findByEmotionIgnoreCase(String emotion, Pageable pageable);
+
+    Page<Post> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+
+    Page<Post> findByEmotionIgnoreCaseAndCreatedAtBetween(String emotion, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+    
+    // Enhanced methods from backend branch
+    Page<Post> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+    
+    Page<Post> findByEmotion(String emotion, Pageable pageable);
+    
+    Page<Post> findByEmotionOrderByCreatedAtDesc(String emotion, Pageable pageable);
+    
+    Page<Post> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    
+    Page<Post> findAllByOrderByResonanceDesc(Pageable pageable);
+    
+    Page<Post> findAllByOrderByViewDesc(Pageable pageable);
+    
+    // Enhanced search methods for POST-006
+    @Query("SELECT p FROM Post p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> searchPosts(@Param("query") String query, Pageable pageable);
+    
+    @Query("SELECT p FROM Post p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "AND LOWER(p.emotion) = LOWER(:emotion) " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> searchPostsByEmotion(@Param("query") String query, @Param("emotion") String emotion, Pageable pageable);
+    
+    // Search with optional emotion filter
+    @Query("SELECT p FROM Post p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "AND (:emotion IS NULL OR LOWER(p.emotion) = LOWER(:emotion)) " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> searchPostsWithOptionalEmotion(@Param("query") String query, @Param("emotion") String emotion, Pageable pageable);
+    
+    // Search with relevance scoring (for future enhancement)
+    @Query("SELECT p FROM Post p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "AND (:emotion IS NULL OR LOWER(p.emotion) = LOWER(:emotion)) " +
+           "ORDER BY " +
+           "CASE WHEN LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) THEN 3 " +
+                "WHEN LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) THEN 2 " +
+                "ELSE 1 END DESC, " +
+           "p.createdAt DESC")
+    Page<Post> searchPostsWithRelevance(@Param("query") String query, @Param("emotion") String emotion, Pageable pageable);
+    
+    // Non-paginated versions for advanced search
+    @Query("SELECT p FROM Post p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "ORDER BY p.createdAt DESC")
+    List<Post> searchPosts(@Param("query") String query);
+    
+    @Query("SELECT p FROM Post p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "AND LOWER(p.emotion) = LOWER(:emotion) " +
+           "ORDER BY p.createdAt DESC")
+    List<Post> searchPostsByEmotion(@Param("query") String query, @Param("emotion") String emotion);
+    
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.resonance DESC")
+    Page<Post> findTrendingPosts(@Param("since") LocalDateTime since, Pageable pageable);
+    
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.view DESC")
+    Page<Post> findMostViewedPosts(@Param("since") LocalDateTime since, Pageable pageable);
+    
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.collect DESC")
+    Page<Post> findMostBookmarkedPosts(@Param("since") LocalDateTime since, Pageable pageable);
+    
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since AND (:emotion IS NULL OR p.emotion = :emotion) ORDER BY p.resonance DESC")
+    List<Post> findMostLikedPosts(@Param("since") LocalDateTime since, @Param("emotion") String emotion, Pageable pageable);
+    
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since AND (:emotion IS NULL OR p.emotion = :emotion) ORDER BY p.view DESC")
+    List<Post> findMostViewedPosts(@Param("since") LocalDateTime since, @Param("emotion") String emotion, Pageable pageable);
+    
+    /**
+     * Atomically increment the view count for a post
+     * This method uses a native SQL query for better performance
+     */
+    @Query(value = "UPDATE posts SET view_count = view_count + 1 WHERE id = :postId", nativeQuery = true)
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void incrementViewCount(@Param("postId") UUID postId);
+    
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since AND (:emotion IS NULL OR p.emotion = :emotion) ORDER BY p.collect DESC")
+    List<Post> findMostBookmarkedPosts(@Param("since") LocalDateTime since, @Param("emotion") String emotion, Pageable pageable);
+    
+    /**
+     * Find posts sorted by popularity score with time decay
+     * Popularity score = (resonance * 2 + view + collect * 3) * time_decay_factor
+     * Time decay factor = 0.95^(hours_since_creation)
+     */
+    @Query("SELECT p FROM Post p WHERE (:emotion IS NULL OR LOWER(p.emotion) = LOWER(:emotion)) " +
+           "ORDER BY " +
+           "(p.resonance * 2.0 + p.view + p.collect * 3.0) * " +
+           "POWER(0.95, TIMESTAMPDIFF(HOUR, p.createdAt, CURRENT_TIMESTAMP)) DESC")
+    Page<Post> findPostsByPopularity(@Param("emotion") String emotion, Pageable pageable);
+
+    Page<Post> findByFlaggedTrue(Pageable pageable);
+
+    long countByFlaggedTrueAndFlaggedAtAfter(LocalDateTime date);
+
+    long countByCreatedAtAfter(LocalDateTime date);
+    
+    void deleteByUserId(UUID userId);
+    
+    /**
+     * Find posts by topics containing the given tag (case-insensitive)
+     */
+    Page<Post> findByTopicsContainingIgnoreCase(String tag, Pageable pageable);
+    
+    /**
+     * Find posts by topics containing tag AND (content containing term OR title containing term)
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "LOWER(p.topics) LIKE LOWER(CONCAT('%', :tag, '%')) AND " +
+           "(LOWER(p.content) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
+           "LOWER(p.title) LIKE LOWER(CONCAT('%', :term, '%'))) " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> findByTopicsContainingIgnoreCaseAndContentContainingIgnoreCaseOrTitleContainingIgnoreCase(
+        @Param("tag") String tag, 
+        @Param("term") String term, 
+        Pageable pageable);
+    
+    /**
+     * Find posts by emotion with view count greater than or equal to threshold after a specific date
+     */
+    Page<Post> findByEmotionIgnoreCaseAndCreatedAtAfterAndViewGreaterThanEqual(
+        String emotion, 
+        LocalDateTime createdAt, 
+        int viewThreshold, 
+        Pageable pageable);
+    
+    /**
+     * Find posts by emotion with view count between min and max after a specific date
+     */
+    Page<Post> findByEmotionIgnoreCaseAndCreatedAtAfterAndViewBetween(
+        String emotion, 
+        LocalDateTime createdAt, 
+        int minView, 
+        int maxView, 
+        Pageable pageable);
+    
+    /**
+     * Find posts by emotion with view count less than threshold after a specific date
+     */
+    Page<Post> findByEmotionIgnoreCaseAndCreatedAtAfterAndViewLessThan(
+        String emotion, 
+        LocalDateTime createdAt, 
+        int viewThreshold, 
+        Pageable pageable);
+    
+    /**
+     * Find posts by emotion created after a specific date
+     */
+    Page<Post> findByEmotionIgnoreCaseAndCreatedAtAfter(
+        String emotion, 
+        LocalDateTime createdAt, 
+        Pageable pageable);
+    
+    // ==================== RECOMMENDATION ENGINE QUERIES ====================
+
+    /**
+     * Find posts by emotion with time range and view count filters
+     * Used for hot/normal/cold post selection in recommendation engine
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.createdAt > :afterDate AND " +
+           "p.view BETWEEN :minViews AND :maxViews AND " +
+           "p.flagged = false " +
+           "ORDER BY p.createdAt DESC")
+    List<Post> findByEmotionAndTimeAndViewRange(
+        @Param("emotion") String emotion,
+        @Param("afterDate") LocalDateTime afterDate,
+        @Param("minViews") Integer minViews,
+        @Param("maxViews") Integer maxViews,
+        Pageable pageable
+    );
+
+    /**
+     * Find hot posts by emotion (>= 100 views, within time range)
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.createdAt > :since AND " +
+           "p.view >= 100 AND " +
+           "p.flagged = false " +
+           "ORDER BY p.view DESC, p.createdAt DESC")
+    List<Post> findHotPostsByEmotion(
+        @Param("emotion") String emotion,
+        @Param("since") LocalDateTime since,
+        Pageable pageable
+    );
+
+    /**
+     * Find normal posts by emotion (50-99 views, within time range)
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.createdAt > :since AND " +
+           "p.view >= 50 AND p.view < 100 AND " +
+           "p.flagged = false " +
+           "ORDER BY p.createdAt DESC")
+    List<Post> findNormalPostsByEmotion(
+        @Param("emotion") String emotion,
+        @Param("since") LocalDateTime since,
+        Pageable pageable
+    );
+
+    /**
+     * Find cold posts by emotion (< 50 views, within time range)
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.createdAt > :since AND " +
+           "p.view < 50 AND " +
+           "p.flagged = false " +
+           "ORDER BY p.createdAt DESC")
+    List<Post> findColdPostsByEmotion(
+        @Param("emotion") String emotion,
+        @Param("since") LocalDateTime since,
+        Pageable pageable
+    );
+
+    /**
+     * Find posts with emotion distribution (for balanced feed)
+     * Excludes posts the user has already seen
+     */
+    @Query("SELECT p FROM Post p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.createdAt > :since AND " +
+           "p.id NOT IN :excludedPostIds AND " +
+           "p.flagged = false " +
+           "ORDER BY FUNCTION('RANDOM')")
+    List<Post> findByEmotionExcludingSeen(
+        @Param("emotion") String emotion,
+        @Param("since") LocalDateTime since,
+        @Param("excludedPostIds") List<UUID> excludedPostIds,
+        Pageable pageable
+    );
+
+    /**
+     * Count posts by emotion in time range (for availability check)
+     */
+    @Query("SELECT COUNT(p) FROM Post p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.createdAt > :since AND " +
+           "p.flagged = false")
+    Long countByEmotionSince(
+        @Param("emotion") String emotion,
+        @Param("since") LocalDateTime since
+    );
+
+    /**
+     * Find posts by emotion for feed generation (excludes already seen)
+     * Uses random sampling for variety
+     */
+    @Query(value = "SELECT * FROM posts p WHERE " +
+           "p.emotion = :emotion AND " +
+           "p.created_at > :since AND " +
+           "p.id NOT IN :excludedIds AND " +
+           "p.flagged = false " +
+           "ORDER BY RANDOM() " +
+           "LIMIT :limit", nativeQuery = true)
+    List<Post> findRandomByEmotionExcluding(
+        @Param("emotion") String emotion,
+        @Param("since") LocalDateTime since,
+        @Param("excludedIds") List<UUID> excludedIds,
+        @Param("limit") int limit
+    );
+} 

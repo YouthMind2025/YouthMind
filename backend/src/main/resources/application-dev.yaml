@@ -1,0 +1,106 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: youthmind-backend
+  
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  h2:
+    console:
+      enabled: true
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # Recreate schema on startup for dev
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+  flyway:
+    enabled: false  # Disable Flyway for H2 (PostgreSQL-specific syntax not compatible)
+  
+  # Redis configuration - will use embedded Redis if available
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      connect-timeout: 2000ms
+      # Graceful handling - don't fail startup if Redis is unavailable
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+        shutdown-timeout: 100ms
+
+  # Email configuration for OTP sending
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: liyin20200613@gmail.com
+    password: eesy sqna oyvh aoeu
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:bb7d84d73df9334e3d00632cb9db09330d73e20261db3b1e665ac41c166aae0e2b0102d01ef9f6c31748a7bc7f8f1e5fe5cf60437324ffd837cf6eaf97ba3fe9db2095e8faec51ce87ba782b5f37b75cf05c6efbfc8404413621b9b257201ce79fb9a3f13f797a7a4d9d9b5c901d2eb0c0e1cae862d1e8c7e8c40d4dc5c5393ebd20a1590cfda77d2017050f078fd9595e442f7d980719953917448a139b515f9b8d27e8f8587dfedd5c1bcf5b4a4f0d3fa83b15a5822ce969659c255742b75089edcd2c200de663684b736ef4c2796a8b9b68461d8ee0f13899f54e81f93d99df5665c2a878f08747bbffa8ed58b32997a44140e87585838b7fde51c703b8a6}
+  expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days in milliseconds
+
+# Rate limiting configuration for development (relaxed limits)
+rate:
+  limit:
+    anonymous:
+      default: 1000
+      sensitive: 100
+    authenticated:
+      default: 2000
+      sensitive: 1000
+
+# Admin Configuration
+admin:
+  secret-key: ${ADMIN_SECRET_KEY:YOUTHMIND_ADMIN_2024}
+
+# Embedding Configuration
+embedding:
+  versioning:
+    enabled: true
+    default-version: "v1"
+    auto-migration: false
+    max-versions: 5
+    version-header: "X-Model-Version"
+    version-param: "modelVersion"
+  models:
+    v1:
+      path: "classpath:models/bge-small-v1/model.onnx"
+      name: "bge-small-v1"
+      enabled: true
+      max-length: 512
+      normalize: true
+      tokenizer-config: "classpath:models/bge-small-v1/tokenizer.json"
+      vocab-file: "classpath:models/bge-small-v1/vocab.txt"
+
+# Logging
+logging:
+  level:
+    ai.youthmind: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    # Redis logging - only show errors to avoid noise
+    org.springframework.data.redis: WARN 

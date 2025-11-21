@@ -1,0 +1,43 @@
+groups:
+  - name: recommendation_event_processing
+    interval: 30s
+    rules:
+      - alert: RecommendationEventQueueDepthHigh
+        expr: recommendation_event_queue_depth > 1000
+        for: 5m
+        labels:
+          severity: warning
+          component: event_processing
+        annotations:
+          summary: "Recommendation event queue depth is high"
+          description: "Queue depth for stream {{ $labels.stream_name }} is {{ $value }} messages (threshold: 1000)"
+      
+      - alert: RecommendationEventQueueDepthCritical
+        expr: recommendation_event_queue_depth > 5000
+        for: 2m
+        labels:
+          severity: critical
+          component: event_processing
+        annotations:
+          summary: "Recommendation event queue depth is critically high"
+          description: "Queue depth for stream {{ $labels.stream_name }} is {{ $value }} messages (threshold: 5000)"
+      
+      - alert: RecommendationEventProcessingFailureRateHigh
+        expr: rate(recommendation_events_failed_total[5m]) / rate(recommendation_events_processed_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: event_processing
+        annotations:
+          summary: "Recommendation event processing failure rate is high"
+          description: "Failure rate for event type {{ $labels.event_type }} is {{ $value | humanizePercentage }} (threshold: 5%)"
+      
+      - alert: RecommendationEventProcessingStalled
+        expr: rate(recommendation_events_processed_total[10m]) == 0
+        for: 10m
+        labels:
+          severity: warning
+          component: event_processing
+        annotations:
+          summary: "Recommendation event processing appears stalled"
+          description: "No events have been processed for event type {{ $labels.event_type }} in the last 10 minutes"

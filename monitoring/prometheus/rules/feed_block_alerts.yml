@@ -1,0 +1,43 @@
+groups:
+  - name: feed_block_generation
+    interval: 30s
+    rules:
+      - alert: FeedBlockGenerationSlow
+        expr: histogram_quantile(0.95, rate(feed_block_generation_duration_seconds_bucket[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          component: feed_generation
+        annotations:
+          summary: "Feed block generation is slow"
+          description: "95th percentile of feed block generation duration is {{ $value }}s (threshold: 0.5s)"
+      
+      - alert: FeedBlockGenerationVerySlow
+        expr: histogram_quantile(0.95, rate(feed_block_generation_duration_seconds_bucket[5m])) > 1.0
+        for: 1m
+        labels:
+          severity: critical
+          component: feed_generation
+        annotations:
+          summary: "Feed block generation is critically slow"
+          description: "95th percentile of feed block generation duration is {{ $value }}s (threshold: 1.0s)"
+      
+      - alert: FeedBlockCacheHitRateLow
+        expr: rate(feed_block_cache_hits_total[5m]) / (rate(feed_block_cache_hits_total[5m]) + rate(feed_block_cache_misses_total[5m])) < 0.3
+        for: 5m
+        labels:
+          severity: warning
+          component: feed_generation
+        annotations:
+          summary: "Feed block cache hit rate is low"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (threshold: 30%)"
+      
+      - alert: PostSelectionSlow
+        expr: histogram_quantile(0.95, rate(feed_block_post_selection_duration_seconds_bucket[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          component: feed_generation
+        annotations:
+          summary: "Post selection for emotion {{ $labels.emotion }} is slow"
+          description: "95th percentile of post selection duration for {{ $labels.emotion }} is {{ $value }}s (threshold: 0.5s)"
