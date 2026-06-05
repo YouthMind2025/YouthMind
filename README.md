@@ -1,4 +1,4 @@
-# YouthMind (SaySomething App)
+# YouthMind (Youniverse App)
 
 
 **YouthMind** is a next-generation mobile application designed to revolutionize youth mental health support through cutting-edge AI technology, anonymous community engagement, and personalized emotional intelligence.
